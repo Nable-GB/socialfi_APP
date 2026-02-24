@@ -1,0 +1,426 @@
+// ============================================================================
+// Hybrid Web3 SocialFi & Ad-Tech DApp — Prisma Schema
+// ============================================================================
+// Database: PostgreSQL
+// ORM:      Prisma
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  USER
+  MERCHANT
+  ADMIN
+}
+
+enum AuthProvider {
+  EMAIL        // Web2: email + password
+  WALLET       // Web3: wallet signature (SIWE)
+  GOOGLE       // OAuth (future)
+}
+
+enum PostType {
+  ORGANIC      // Regular user post
+  SPONSORED    // Injected via AdCampaign
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  GIF
+  NONE
+}
+
+enum InteractionType {
+  LIKE
+  COMMENT
+  SHARE
+  VIEW         // Tracked for ad impressions
+  BOOKMARK
+}
+
+enum PaymentMethod {
+  FIAT_STRIPE
+  CRYPTO_USDT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum CampaignStatus {
+  DRAFT
+  PENDING_PAYMENT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum RewardType {
+  AD_VIEW           // User viewed a sponsored post
+  AD_ENGAGEMENT     // User liked/commented/shared a sponsored post
+  REFERRAL_BONUS    // 5% cut from referred user's earnings
+  WITHDRAWAL        // User withdrew tokens (negative)
+  AIRDROP           // Manual or promotional distribution
+  SIGNUP_BONUS      // One-time signup reward
+}
+
+enum RewardStatus {
+  PENDING           // Credited off-chain, not yet distributed
+  CONFIRMED         // Verified and ready for batch distribution
+  DISTRIBUTED       // On-chain tx completed
+  FAILED            // Distribution attempt failed
+}
+
+enum BatchStatus {
+  PENDING
+  PROCESSING
+  CONFIRMED
+  FAILED
+}
+
+// ============================================================================
+// USER — Web2/Web3 Auth + Referral Tracking
+// ============================================================================
+
+model User {
+  id              String    @id @default(uuid())
+  
+  // --- Authentication ---
+  email           String?   @unique          // Web2 login (nullable for wallet-only users)
+  passwordHash    String?                     // bcrypt hash (nullable for wallet-only users)
+  authProvider    AuthProvider @default(EMAIL)
+  
+  // --- Web3 ---
+  walletAddress   String?   @unique          // Ethereum/Polygon wallet address
+  nonce           String?                     // Random nonce for SIWE signature verification
+  
+  // --- Profile ---
+  username        String    @unique
+  displayName     String?
+  avatarUrl       String?
+  bio             String?
+  role            UserRole  @default(USER)
+  isVerified      Boolean   @default(false)
+  
+  // --- Referral / Affiliate System ---
+  referralCode    String    @unique          // Auto-generated unique code
+  referredBy      User?     @relation("Referrals", fields: [referredById], references: [id])
+  referredById    String?
+  referrals       User[]    @relation("Referrals") // Users this person referred
+  
+  // --- Off-chain Token Balance ---
+  offChainBalance Decimal   @default(0) @db.Decimal(20, 8) // Accumulated but undistributed tokens
+  totalEarned     Decimal   @default(0) @db.Decimal(20, 8) // Lifetime earnings
+  totalWithdrawn  Decimal   @default(0) @db.Decimal(20, 8) // Lifetime withdrawals
+  
+  // --- Timestamps ---
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLoginAt     DateTime?
+
+  // --- Relations ---
+  posts           SocialPost[]
+  interactions    PostInteraction[]
+  adCampaigns     AdCampaign[]        // Campaigns created (merchants only)
+  rewards         RewardTransaction[] @relation("UserRewards")
+  referralRewards RewardTransaction[] @relation("ReferralSource") // Rewards generated from this user's activity for their referrer
+  followers       Follow[]            @relation("Following")      // Users who follow this user
+  following       Follow[]            @relation("Followers")      // Users this user follows
+
+  @@index([walletAddress])
+  @@index([referralCode])
+  @@index([referredById])
+  @@map("users")
+}
+
+// ============================================================================
+// SOCIAL POST — Organic + Sponsored
+// ============================================================================
+
+model SocialPost {
+  id              String    @id @default(uuid())
+  
+  // --- Author ---
+  author          User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId        String
+  
+  // --- Content ---
+  content         String    @db.Text         // Post text body
+  mediaUrl        String?                     // Image/video URL
+  mediaType       MediaType @default(NONE)
+  
+  // --- Post Classification ---
+  type            PostType  @default(ORGANIC)
+  
+  // --- Sponsored Post Link ---
+  adCampaign      AdCampaign? @relation(fields: [adCampaignId], references: [id], onDelete: SetNull)
+  adCampaignId    String?
+  
+  // --- Denormalized Counters (for fast feed queries) ---
+  likesCount      Int       @default(0)
+  commentsCount   Int       @default(0)
+  sharesCount     Int       @default(0)
+  viewsCount      Int       @default(0)
+  bookmarksCount  Int       @default(0)
+  
+  // --- Reward Config (for sponsored posts) ---
+  rewardPerView       Decimal? @db.Decimal(20, 8) // Tokens earned per view
+  rewardPerEngagement Decimal? @db.Decimal(20, 8) // Tokens earned per like/comment/share
+  
+  // --- State ---
+  isActive        Boolean   @default(true)
+  isPinned        Boolean   @default(false)
+  
+  // --- Timestamps ---
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // --- Relations ---
+  interactions    PostInteraction[]
+  rewards         RewardTransaction[]
+
+  @@index([authorId])
+  @@index([type])
+  @@index([adCampaignId])
+  @@index([createdAt(sort: Desc)])
+  @@map("social_posts")
+}
+
+// ============================================================================
+// POST INTERACTION — Likes, Comments, Shares, Views, Bookmarks
+// ============================================================================
+
+model PostInteraction {
+  id              String          @id @default(uuid())
+  
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  
+  post            SocialPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId          String
+  
+  type            InteractionType
+  
+  // --- Comment-specific ---
+  commentText     String?   @db.Text
+  
+  // --- Timestamps ---
+  createdAt       DateTime  @default(now())
+
+  // Prevent duplicate likes/bookmarks per user per post
+  @@unique([userId, postId, type], name: "unique_user_post_interaction")
+  @@index([postId, type])
+  @@map("post_interactions")
+}
+
+// ============================================================================
+// FOLLOW — Social Graph
+// ============================================================================
+
+model Follow {
+  id              String    @id @default(uuid())
+  
+  follower        User      @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  followerId      String
+  
+  following       User      @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  followingId     String
+  
+  createdAt       DateTime  @default(now())
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+// ============================================================================
+// AD PACKAGE — Predefined Tiers Merchants Can Purchase
+// ============================================================================
+
+model AdPackage {
+  id              String    @id @default(uuid())
+  
+  name            String                     // e.g. "Starter", "Growth", "Enterprise"
+  description     String?   @db.Text
+  
+  // --- Pricing ---
+  priceFiat       Decimal   @db.Decimal(10, 2)  // Price in USD
+  priceCrypto     Decimal   @db.Decimal(20, 8)  // Price in USDT
+  
+  // --- Deliverables ---
+  impressions     Int                          // Guaranteed impressions
+  durationDays    Int                          // Campaign duration in days
+  maxPosts        Int       @default(1)        // Number of sponsored posts allowed
+  
+  // --- Reward Pool ---
+  totalRewardPool Decimal   @db.Decimal(20, 8)  // Tokens allocated for user rewards
+  
+  // --- State ---
+  isActive        Boolean   @default(true)
+  sortOrder       Int       @default(0)
+  
+  // --- Timestamps ---
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // --- Relations ---
+  campaigns       AdCampaign[]
+
+  @@map("ad_packages")
+}
+
+// ============================================================================
+// AD CAMPAIGN — Merchant's Active Campaign (Stripe / USDT Payment Tracking)
+// ============================================================================
+
+model AdCampaign {
+  id              String         @id @default(uuid())
+  
+  // --- Merchant ---
+  merchant        User           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchantId      String
+  
+  // --- Package ---
+  adPackage       AdPackage      @relation(fields: [adPackageId], references: [id])
+  adPackageId     String
+  
+  // --- Campaign Content ---
+  title           String
+  description     String?        @db.Text
+  targetUrl       String?                     // External link (product page, mint page)
+  
+  // --- Payment ---
+  paymentMethod   PaymentMethod
+  paymentStatus   PaymentStatus  @default(PENDING)
+  amountPaid      Decimal        @db.Decimal(20, 8) @default(0)
+  
+  // Fiat (Stripe)
+  stripeSessionId   String?      @unique      // Stripe Checkout Session ID
+  stripePaymentId   String?      @unique      // Stripe Payment Intent ID
+  
+  // Crypto (USDT)
+  cryptoTxHash      String?      @unique      // On-chain deposit transaction hash
+  cryptoFromAddress String?                    // Depositor wallet address
+  
+  // --- Delivery Tracking ---
+  impressionsTotal     Int       @default(0)  // From AdPackage
+  impressionsDelivered Int       @default(0)  // Actual views served
+  
+  // --- Reward Pool ---
+  rewardPoolTotal      Decimal   @db.Decimal(20, 8) @default(0) // Total tokens for rewards
+  rewardPoolDistributed Decimal  @db.Decimal(20, 8) @default(0) // Tokens already distributed
+  
+  // --- Campaign State ---
+  status          CampaignStatus @default(DRAFT)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  
+  // --- Timestamps ---
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // --- Relations ---
+  posts           SocialPost[]
+  rewards         RewardTransaction[]
+
+  @@index([merchantId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@map("ad_campaigns")
+}
+
+// ============================================================================
+// REWARD TRANSACTION — Off-Chain Ledger (the core Engage-to-Earn record)
+// ============================================================================
+
+model RewardTransaction {
+  id              String        @id @default(uuid())
+  
+  // --- Recipient ---
+  user            User          @relation("UserRewards", fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  
+  // --- Reward Details ---
+  type            RewardType
+  amount          Decimal       @db.Decimal(20, 8) // Positive = earned, Negative = withdrawn
+  description     String?
+  
+  // --- Source References ---
+  relatedPost     SocialPost?   @relation(fields: [relatedPostId], references: [id], onDelete: SetNull)
+  relatedPostId   String?
+  
+  relatedCampaign AdCampaign?   @relation(fields: [relatedCampaignId], references: [id], onDelete: SetNull)
+  relatedCampaignId String?
+  
+  // --- Referral Tracking ---
+  // If type == REFERRAL_BONUS, this points to the referred user whose action triggered the bonus
+  sourceUser      User?         @relation("ReferralSource", fields: [sourceUserId], references: [id], onDelete: SetNull)
+  sourceUserId    String?
+  referralRate    Decimal?      @db.Decimal(5, 4) // e.g. 0.0500 = 5%
+  
+  // --- Distribution Status ---
+  status          RewardStatus  @default(PENDING)
+  
+  // --- On-chain Settlement ---
+  distributionBatch   DistributionBatch? @relation(fields: [distributionBatchId], references: [id])
+  distributionBatchId String?
+  onChainTxHash       String?            // Individual tx hash (if not batched)
+  
+  // --- Timestamps ---
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, type])
+  @@index([userId, status])
+  @@index([relatedCampaignId])
+  @@index([distributionBatchId])
+  @@index([createdAt(sort: Desc)])
+  @@map("reward_transactions")
+}
+
+// ============================================================================
+// DISTRIBUTION BATCH — On-Chain Batch Payouts via Escrow Contract
+// ============================================================================
+
+model DistributionBatch {
+  id              String      @id @default(uuid())
+  
+  // --- On-chain Details ---
+  txHash          String?     @unique        // Smart contract transaction hash
+  contractAddress String?                     // Escrow contract address used
+  chainId         Int?                        // Network chain ID (e.g. 137 for Polygon)
+  
+  // --- Batch Summary ---
+  totalAmount     Decimal     @db.Decimal(20, 8)
+  recipientCount  Int
+  
+  // --- State ---
+  status          BatchStatus @default(PENDING)
+  errorMessage    String?     @db.Text
+  
+  // --- Timestamps ---
+  createdAt       DateTime    @default(now())
+  processedAt     DateTime?
+  confirmedAt     DateTime?
+
+  // --- Relations ---
+  rewards         RewardTransaction[]
+
+  @@index([status])
+  @@map("distribution_batches")
+}

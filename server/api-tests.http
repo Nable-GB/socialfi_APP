@@ -1,0 +1,346 @@
+# ============================================================
+# SocialFi DApp — API Test Collection
+# ============================================================
+# ใช้ VS Code Extension: "REST Client" (humao.rest-client)
+# หรือ copy ไปใส่ใน Postman / Insomnia
+#
+# วิธีใช้ใน VS Code:
+#   1. ติดตั้ง extension "REST Client"
+#   2. คลิก "Send Request" เหนือแต่ละ request
+#   3. ผลลัพธ์จะขึ้นที่ด้านขวา
+# ============================================================
+
+@baseUrl = http://localhost:4000
+@contentType = application/json
+
+# ── Copy JWT token มาวางตรงนี้หลัง login ─────────────────────
+@userToken = PASTE_TOKEN_HERE
+@merchantToken = PASTE_MERCHANT_TOKEN_HERE
+@postId = PASTE_POST_ID_HERE
+@sponsoredPostId = PASTE_SPONSORED_POST_ID_HERE
+
+
+###############################################################
+# 1. HEALTH CHECK
+###############################################################
+
+### 1.1 ตรวจสอบ server ทำงานอยู่ไหม
+GET {{baseUrl}}/api/health
+
+
+###############################################################
+# 2. AUTH — Web2 (Email/Password)
+###############################################################
+
+### 2.1 สมัครสมาชิกใหม่ (User ทั่วไป)
+# ✅ คาดหวัง: 201 + { token, user }
+POST {{baseUrl}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "testuser@example.com",
+  "password": "Password123!",
+  "username": "testuser_01",
+  "displayName": "Test User",
+  "referralCode": "ALICE001"
+}
+
+###
+
+### 2.2 ล็อกอิน (User ที่มาจาก seed)
+# ✅ คาดหวัง: 200 + { token, user }
+# 👉 Copy "token" ไปวางใน @userToken บนสุด
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "alice@example.com",
+  "password": "Password123!"
+}
+
+###
+
+### 2.3 ล็อกอิน Merchant
+# ✅ คาดหวัง: 200 + { token, user }
+# 👉 Copy "token" ไปวางใน @merchantToken บนสุด
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "merchant@nftstore.io",
+  "password": "Password123!"
+}
+
+###
+
+### 2.4 ดูโปรไฟล์ตัวเอง (ต้องใส่ @userToken ก่อน)
+# ✅ คาดหวัง: 200 + { user: { id, email, username, offChainBalance, ... } }
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{userToken}}
+
+###
+
+### 2.5 ทดสอบ login ผิด password
+# ✅ คาดหวัง: 401 + { error: "Invalid email or password" }
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "alice@example.com",
+  "password": "WrongPassword!"
+}
+
+###
+
+### 2.6 ทดสอบสมัคร email ซ้ำ
+# ✅ คาดหวัง: 409 + { error: "Email or username already taken" }
+POST {{baseUrl}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "alice@example.com",
+  "password": "Password123!",
+  "username": "alice_duplicate"
+}
+
+
+###############################################################
+# 3. AUTH — Web3 (Sign-In with Ethereum)
+###############################################################
+
+### 3.1 ขอ Nonce สำหรับ wallet address
+# ✅ คาดหวัง: 200 + { nonce: "..." }
+GET {{baseUrl}}/api/auth/nonce/0x742d35Cc6634C0532925a3b8D4C9B0BaE29E5123
+
+###
+# หมายเหตุ: SIWE verify ต้องใช้ signature จริงจาก MetaMask
+# ทดสอบ flow นี้ผ่าน Frontend ที่เชื่อมกับ wallet
+
+
+###############################################################
+# 4. SOCIAL FEED
+###############################################################
+
+### 4.1 ดูฟีด (ไม่ต้อง login — public)
+# ✅ คาดหวัง: 200 + { feed: [...], nextCursor, hasMore }
+# ✅ จะมีทั้ง organic posts และ sponsored posts ปะปนกัน
+GET {{baseUrl}}/api/feed
+
+###
+
+### 4.2 ดูฟีดแบบ paginated
+# ✅ คาดหวัง: 200 + feed อีกหน้า (ถ้ามีข้อมูลพอ)
+GET {{baseUrl}}/api/feed?limit=5
+
+###
+
+### 4.3 ดูฟีดในฐานะ User ที่ login (จะเห็น rewardClaimed, userInteractions)
+# ✅ คาดหวัง: 200 + feed มี rewardClaimed: false/true บน sponsored posts
+GET {{baseUrl}}/api/feed
+Authorization: Bearer {{userToken}}
+
+###
+
+### 4.4 สร้างโพสต์ใหม่
+# ✅ คาดหวัง: 201 + { post: { id, content, type: "ORGANIC", ... } }
+# 👉 Copy "id" ของโพสต์นี้ไปวางใน @postId บนสุด
+POST {{baseUrl}}/api/feed/posts
+Content-Type: {{contentType}}
+Authorization: Bearer {{userToken}}
+
+{
+  "content": "ทดสอบโพสต์จาก REST Client! SocialFi กำลังจะขึ้น Production แล้ว 🚀",
+  "mediaType": "NONE"
+}
+
+###
+
+### 4.5 ไลค์โพสต์ (toggle — กด 2 ครั้งจะ unlike)
+# ✅ คาดหวัง: 201 + { interaction } ครั้งแรก, { removed: true } ครั้งที่สอง
+POST {{baseUrl}}/api/feed/posts/{{postId}}/interact
+Content-Type: {{contentType}}
+Authorization: Bearer {{userToken}}
+
+{
+  "type": "LIKE"
+}
+
+###
+
+### 4.6 คอมเมนต์บนโพสต์
+# ✅ คาดหวัง: 201 + { interaction: { type: "COMMENT", commentText: "..." } }
+POST {{baseUrl}}/api/feed/posts/{{postId}}/interact
+Content-Type: {{contentType}}
+Authorization: Bearer {{userToken}}
+
+{
+  "type": "COMMENT",
+  "commentText": "โพสต์ดีมากเลย! 🔥"
+}
+
+###
+
+### 4.7 แชร์โพสต์
+# ✅ คาดหวัง: 201 + { interaction }
+POST {{baseUrl}}/api/feed/posts/{{postId}}/interact
+Content-Type: {{contentType}}
+Authorization: Bearer {{userToken}}
+
+{
+  "type": "SHARE"
+}
+
+###
+
+### 4.8 ทดสอบโพสต์โดยไม่ login
+# ✅ คาดหวัง: 401 Unauthorized
+POST {{baseUrl}}/api/feed/posts
+Content-Type: {{contentType}}
+
+{
+  "content": "ไม่ควรโพสต์ได้"
+}
+
+
+###############################################################
+# 5. ADS & CAMPAIGNS
+###############################################################
+
+### 5.1 ดูรายการ Ad Packages ทั้งหมด (public)
+# ✅ คาดหวัง: 200 + { packages: [Starter, Growth, Enterprise] }
+GET {{baseUrl}}/api/ads/packages
+
+###
+
+### 5.2 ดูรายการแคมเปญของ Merchant
+# ✅ คาดหวัง: 200 + { campaigns: [...] }
+GET {{baseUrl}}/api/ads/campaigns
+Authorization: Bearer {{merchantToken}}
+
+###
+
+### 5.3 สร้าง Stripe Checkout (Merchant เท่านั้น)
+# ✅ คาดหวัง: 200 + { checkoutUrl, campaignId, sessionId }
+# ⚠️  ต้องใส่ STRIPE_SECRET_KEY จริงใน .env ก่อน
+POST {{baseUrl}}/api/ads/checkout
+Content-Type: {{contentType}}
+Authorization: Bearer {{merchantToken}}
+
+{
+  "adPackageId": "pkg-growth",
+  "campaignTitle": "New NFT Collection Launch",
+  "campaignDescription": "Exclusive drop for early community members",
+  "targetUrl": "https://example.com/nft"
+}
+
+###
+
+### 5.4 ทดสอบ User ปกติ สร้าง checkout (ไม่ใช่ Merchant)
+# ✅ คาดหวัง: 403 Forbidden
+POST {{baseUrl}}/api/ads/checkout
+Content-Type: {{contentType}}
+Authorization: Bearer {{userToken}}
+
+{
+  "adPackageId": "pkg-starter",
+  "campaignTitle": "Unauthorized Campaign"
+}
+
+
+###############################################################
+# 6. REWARDS — Engage-to-Earn
+###############################################################
+
+### 6.1 ดูยอดเหรียญปัจจุบัน
+# ✅ คาดหวัง: 200 + { balance: "10.5", totalEarned: "10.5", pendingRewards: 1 }
+GET {{baseUrl}}/api/rewards/balance
+Authorization: Bearer {{userToken}}
+
+###
+
+### 6.2 เคลมรางวัล VIEW บน Sponsored Post
+# ✅ คาดหวัง: 200 + { success: true, reward: { type: "AD_VIEW", amount: "0.05" } }
+# ⚠️  ต้องใส่ @sponsoredPostId ก่อน (ดู post id จาก GET /api/feed)
+POST {{baseUrl}}/api/rewards/claim
+Content-Type: {{contentType}}
+Authorization: Bearer {{userToken}}
+
+{
+  "postId": "{{sponsoredPostId}}",
+  "type": "VIEW"
+}
+
+###
+
+### 6.3 เคลมซ้ำ (ไม่ควรสำเร็จ)
+# ✅ คาดหวัง: 409 + { error: "Reward already claimed for this post" }
+POST {{baseUrl}}/api/rewards/claim
+Content-Type: {{contentType}}
+Authorization: Bearer {{userToken}}
+
+{
+  "postId": "{{sponsoredPostId}}",
+  "type": "VIEW"
+}
+
+###
+
+### 6.4 เคลมรางวัล ENGAGEMENT (ต้องไลค์/คอมเมนต์ก่อน)
+# ✅ คาดหวัง: 200 + { reward: { type: "AD_ENGAGEMENT", amount: "0.1" } }
+POST {{baseUrl}}/api/rewards/claim
+Content-Type: {{contentType}}
+Authorization: Bearer {{userToken}}
+
+{
+  "postId": "{{sponsoredPostId}}",
+  "type": "ENGAGEMENT"
+}
+
+###
+
+### 6.5 ดูประวัติรางวัลทั้งหมด
+# ✅ คาดหวัง: 200 + { rewards: [...], hasMore: false }
+GET {{baseUrl}}/api/rewards/history
+Authorization: Bearer {{userToken}}
+
+###
+
+### 6.6 ดูประวัติรางวัลกรอง type
+# ✅ คาดหวัง: 200 + เฉพาะ AD_VIEW transactions
+GET {{baseUrl}}/api/rewards/history?type=AD_VIEW
+Authorization: Bearer {{userToken}}
+
+###
+
+### 6.7 ดูยอดเหรียญหลังเคลม (ต้องเพิ่มจากเดิม)
+# ✅ คาดหวัง: balance สูงกว่า 10.5
+GET {{baseUrl}}/api/rewards/balance
+Authorization: Bearer {{userToken}}
+
+###
+
+### 6.8 ทดสอบเคลมโดยไม่ login
+# ✅ คาดหวัง: 401 Unauthorized
+POST {{baseUrl}}/api/rewards/claim
+Content-Type: {{contentType}}
+
+{
+  "postId": "{{sponsoredPostId}}",
+  "type": "VIEW"
+}
+
+
+###############################################################
+# 7. ERROR HANDLING
+###############################################################
+
+### 7.1 Route ที่ไม่มีอยู่
+# ✅ คาดหวัง: 404 + { error: "Not found" }
+GET {{baseUrl}}/api/nonexistent
+
+###
+
+### 7.2 ส่ง JWT ที่ expire/ผิด
+# ✅ คาดหวัง: 401 + { error: "Invalid or expired token" }
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer invalid.jwt.token.here
