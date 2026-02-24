@@ -11,7 +11,7 @@ import crypto from "node:crypto";
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
+  return jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as any);
 }
 
 function generateReferralCode(): string {
@@ -151,7 +151,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
 export async function getNonce(req: Request, res: Response): Promise<void> {
   try {
-    const { address } = req.params;
+    const address = req.params.address as string;
 
     if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
       res.status(400).json({ error: "Invalid wallet address" });

@@ -51,7 +51,6 @@ export async function getFeed(req: Request, res: Response): Promise<void> {
         type: "SPONSORED",
         adCampaign: {
           status: "ACTIVE",
-          impressionsDelivered: { lt: prisma.raw`"impressionsTotal"` } as any,
         },
       },
       orderBy: { createdAt: "desc" },
@@ -208,7 +207,7 @@ const interactSchema = z.object({
 
 export async function interactWithPost(req: Request, res: Response): Promise<void> {
   try {
-    const { id: postId } = req.params;
+    const postId = req.params.id as string;
     const data = interactSchema.parse(req.body);
     const userId = req.user!.userId;
 
