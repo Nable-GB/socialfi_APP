@@ -16,9 +16,19 @@ import { handleStripeWebhook } from "./webhooks/stripe.webhook.js";
 const app = express();
 
 // ── CORS ────────────────────────────────────────────────────────────────────
+const allowedOrigins = [
+  env.FRONTEND_URL,
+  "http://localhost:5173",
+  "http://localhost:4173",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: (origin, cb) => {
+      // allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin || allowedOrigins.some(o => origin.startsWith(o!))) return cb(null, true);
+      cb(null, false);
+    },
     credentials: true,
   })
 );
