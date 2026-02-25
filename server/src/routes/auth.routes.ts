@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { register, login, getNonce, verifySiwe, getMe, refreshTokenHandler } from "../controllers/auth.controller.js";
+import {
+  register, login, getNonce, verifySiwe, getMe, refreshTokenHandler,
+  sendVerificationEmail, verifyEmail, forgotPassword, resetPassword,
+} from "../controllers/auth.controller.js";
 import { requireAuth } from "../middleware/auth.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
 
@@ -15,6 +18,14 @@ router.post("/siwe/verify", authLimiter, verifySiwe);
 
 // ── Token Refresh ────────────────────────────────────────────────────────────
 router.post("/refresh", authLimiter, refreshTokenHandler);
+
+// ── Email Verification ───────────────────────────────────────────────────────
+router.post("/send-verification", requireAuth, sendVerificationEmail);
+router.get("/verify-email", verifyEmail);
+
+// ── Password Reset ───────────────────────────────────────────────────────────
+router.post("/forgot-password", authLimiter, forgotPassword);
+router.post("/reset-password", authLimiter, resetPassword);
 
 // ── Profile ─────────────────────────────────────────────────────────────────
 router.get("/me", requireAuth, getMe);

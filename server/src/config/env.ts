@@ -33,4 +33,9 @@ export const env = {
 
   // Rewards
   REFERRAL_RATE: parseFloat(optional("REFERRAL_RATE", "0.05")),
+
+  // Email (SendGrid)
+  SENDGRID_API_KEY: optional("SENDGRID_API_KEY", ""),
+  FROM_EMAIL: optional("FROM_EMAIL", "noreply@socialfi.app"),
+  FROM_NAME: optional("FROM_NAME", "SocialFi"),
 } as const;

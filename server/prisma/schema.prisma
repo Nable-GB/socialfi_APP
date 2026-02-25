@@ -129,6 +129,15 @@ model User {
   totalEarned     Decimal   @default(0) @db.Decimal(20, 8) // Lifetime earnings
   totalWithdrawn  Decimal   @default(0) @db.Decimal(20, 8) // Lifetime withdrawals
   
+  // --- Email Verification ---
+  emailVerified         Boolean   @default(false)
+  emailVerifyToken      String?   @unique
+  emailVerifyExpiresAt  DateTime?
+
+  // --- Password Reset ---
+  passwordResetToken    String?   @unique
+  passwordResetExpiresAt DateTime?
+
   // --- Timestamps ---
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

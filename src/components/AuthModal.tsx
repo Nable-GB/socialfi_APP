@@ -4,14 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
-import { Wallet, Mail, Lock, User, Zap, RefreshCw } from "lucide-react";
+import { authApi } from "../lib/api";
+import { Wallet, Mail, Lock, User, Zap, RefreshCw, ArrowLeft } from "lucide-react";
 
 interface AuthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-type Mode = "login" | "register";
+type Mode = "login" | "register" | "forgot";
 
 export function AuthModal({ open, onOpenChange }: AuthModalProps) {
   const { login, register } = useAuth();
@@ -66,6 +67,20 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) { toast.error("Please enter your email address"); return; }
+    try {
+      setIsLoading(true);
+      await authApi.forgotPassword(email);
+      toast.success("Reset link sent! Check your inbox.");
+      setMode("login");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send reset email");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Demo quick-login for testing
   const demoLogin = async (demoEmail: string) => {
     try {
@@ -98,8 +113,29 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
         </DialogHeader>
 
         <div className="space-y-3 pt-2">
-          {/* Email */}
-          <div className="relative">
+          {/* Forgot Password mode */}
+          {mode === "forgot" && (
+            <>
+              <p className="text-xs text-slate-400">Enter your email and we'll send a reset link.</p>
+              <div className="relative">
+                <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Input type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleForgotPassword()}
+                  className="bg-slate-800 border-slate-700 text-white pl-9 placeholder:text-slate-500" />
+              </div>
+              <Button onClick={handleForgotPassword} disabled={isLoading} className="w-full py-5 font-bold text-sm"
+                style={{ background: "linear-gradient(135deg, #f59e0b, #ef4444)" }}>
+                {isLoading ? <><RefreshCw size={15} className="animate-spin mr-2" /> Sending...</> : "Send Reset Link"}
+              </Button>
+              <button onClick={() => setMode("login")}
+                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 mx-auto">
+                <ArrowLeft size={12} /> Back to Sign In
+              </button>
+            </>
+          )}
+
+          {/* Email (login/register) */}
+          {mode !== "forgot" && <div className="relative">
             <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <Input
               type="email"
@@ -109,7 +145,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
               onKeyDown={(e) => e.key === "Enter" && mode === "login" && handleLogin()}
               className="bg-slate-800 border-slate-700 text-white pl-9 placeholder:text-slate-500"
             />
-          </div>
+          </div>}
 
           {/* Username (register only) */}
           {mode === "register" && (
@@ -137,18 +173,28 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
             </div>
           )}
 
-          {/* Password */}
-          <div className="relative">
-            <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-            <Input
-              type="password"
-              placeholder={mode === "register" ? "Password (min 8 chars)" : "Password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && mode === "login" && handleLogin()}
-              className="bg-slate-800 border-slate-700 text-white pl-9 placeholder:text-slate-500"
-            />
-          </div>
+          {/* Password (login/register only) */}
+          {mode !== "forgot" && (
+            <div>
+              <div className="relative">
+                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Input
+                  type="password"
+                  placeholder={mode === "register" ? "Password (min 8 chars)" : "Password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && mode === "login" && handleLogin()}
+                  className="bg-slate-800 border-slate-700 text-white pl-9 placeholder:text-slate-500"
+                />
+              </div>
+              {mode === "login" && (
+                <button onClick={() => setMode("forgot")}
+                  className="text-xs text-slate-500 hover:text-cyan-400 transition-colors mt-1.5 block text-right w-full">
+                  Forgot password?
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Referral Code (register only) */}
           {mode === "register" && (
@@ -160,48 +206,45 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
             />
           )}
 
-          {/* Submit */}
-          <Button
-            onClick={mode === "login" ? handleLogin : handleRegister}
-            disabled={isLoading}
-            className="w-full py-5 font-bold text-sm"
-            style={{
-              background: "linear-gradient(135deg, #22d3ee, #6366f1)",
-              boxShadow: "0 4px 15px rgba(34,211,238,0.25)",
-            }}
-          >
-            {isLoading ? (
-              <><RefreshCw size={15} className="animate-spin mr-2" /> Loading...</>
-            ) : mode === "login" ? (
-              "Sign In"
-            ) : (
-              "Create Account"
-            )}
-          </Button>
-
-          {/* Toggle mode */}
-          <p className="text-center text-xs text-slate-500">
-            {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button
-              onClick={() => { setMode(mode === "login" ? "register" : "login"); reset(); }}
-              className="text-cyan-400 hover:text-cyan-300 font-medium"
+          {/* Submit (login/register only) */}
+          {mode !== "forgot" && <>
+            <Button
+              onClick={mode === "login" ? handleLogin : handleRegister}
+              disabled={isLoading}
+              className="w-full py-5 font-bold text-sm"
+              style={{
+                background: "linear-gradient(135deg, #22d3ee, #6366f1)",
+                boxShadow: "0 4px 15px rgba(34,211,238,0.25)",
+              }}
             >
-              {mode === "login" ? "Sign up" : "Sign in"}
-            </button>
-          </p>
+              {isLoading ? (
+                <><RefreshCw size={15} className="animate-spin mr-2" /> Loading...</>
+              ) : mode === "login" ? "Sign In" : "Create Account"}
+            </Button>
 
-          {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-700/50" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-slate-900 px-2 text-slate-500">or use demo account</span>
-            </div>
-          </div>
+            {/* Toggle mode */}
+            <p className="text-center text-xs text-slate-500">
+              {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
+              <button
+                onClick={() => { setMode(mode === "login" ? "register" : "login"); reset(); }}
+                className="text-cyan-400 hover:text-cyan-300 font-medium"
+              >
+                {mode === "login" ? "Sign up" : "Sign in"}
+              </button>
+            </p>
 
-          {/* Demo accounts */}
-          <div className="grid grid-cols-2 gap-2">
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-700/50" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-slate-900 px-2 text-slate-500">or use demo account</span>
+              </div>
+            </div>
+
+            {/* Demo accounts */}
+            <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => demoLogin("alice@example.com")}
               disabled={isLoading}
@@ -220,7 +263,8 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 <Zap size={12} /> Demo Merchant
               </span>
             </button>
-          </div>
+            </div>
+          </>}
         </div>
       </DialogContent>
     </Dialog>

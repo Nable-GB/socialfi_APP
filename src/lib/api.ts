@@ -102,6 +102,24 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  sendVerification: () =>
+    request<{ success: boolean; message: string }>("/api/auth/send-verification", { method: "POST" }),
+
+  verifyEmail: (token: string) =>
+    request<{ success: boolean; message: string }>(`/api/auth/verify-email?token=${token}`),
+
+  forgotPassword: (email: string) =>
+    request<{ success: boolean; message: string }>("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (token: string, newPassword: string) =>
+    request<{ success: boolean; message: string }>("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, newPassword }),
+    }),
 };
 
 // ─── Feed ─────────────────────────────────────────────────────────────────────

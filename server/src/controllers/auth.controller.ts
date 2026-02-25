@@ -7,6 +7,7 @@ import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
 import type { JwtPayload } from "../middleware/auth.js";
 import crypto from "node:crypto";
+import { sendEmail, emailVerificationTemplate, passwordResetTemplate, welcomeEmailTemplate } from "../services/email.service.js";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -329,6 +330,169 @@ export async function getMe(req: Request, res: Response): Promise<void> {
     res.json({ user });
   } catch (err) {
     console.error("GetMe error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// ─── POST /api/auth/send-verification — Send email verification link ─────────
+
+export async function sendVerificationEmail(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user || !user.email) {
+      res.status(400).json({ error: "No email address on this account" });
+      return;
+    }
+    if (user.emailVerified) {
+      res.status(400).json({ error: "Email already verified" });
+      return;
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { emailVerifyToken: token, emailVerifyExpiresAt: expiresAt },
+    });
+
+    const verifyUrl = `${env.FRONTEND_URL}/verify-email?token=${token}`;
+    const tpl = emailVerificationTemplate(user.username, verifyUrl);
+    await sendEmail({ to: user.email, ...tpl });
+
+    res.json({ success: true, message: "Verification email sent" });
+  } catch (err) {
+    console.error("SendVerification error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// ─── GET /api/auth/verify-email?token=… — Verify email ─────────────────────
+
+export async function verifyEmail(req: Request, res: Response): Promise<void> {
+  try {
+    const token = req.query.token as string;
+    if (!token) {
+      res.status(400).json({ error: "Token is required" });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { emailVerifyToken: token } });
+
+    if (!user) {
+      res.status(400).json({ error: "Invalid or expired verification token" });
+      return;
+    }
+    if (user.emailVerifyExpiresAt && user.emailVerifyExpiresAt < new Date()) {
+      res.status(400).json({ error: "Verification link has expired. Please request a new one." });
+      return;
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerifyToken: null,
+        emailVerifyExpiresAt: null,
+      },
+    });
+
+    // Send welcome email after verification
+    if (user.email) {
+      const tpl = welcomeEmailTemplate(user.username, env.FRONTEND_URL);
+      await sendEmail({ to: user.email, ...tpl }).catch(() => {}); // non-blocking
+    }
+
+    res.json({ success: true, message: "Email verified successfully" });
+  } catch (err) {
+    console.error("VerifyEmail error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// ─── POST /api/auth/forgot-password — Request password reset ─────────────────
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+export async function forgotPassword(req: Request, res: Response): Promise<void> {
+  try {
+    const { email } = forgotPasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    // Always return success to prevent user enumeration
+    if (!user || !user.passwordHash) {
+      res.json({ success: true, message: "If an account exists with this email, a reset link has been sent." });
+      return;
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordResetToken: token, passwordResetExpiresAt: expiresAt },
+    });
+
+    const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${token}`;
+    const tpl = passwordResetTemplate(user.username, resetUrl);
+    await sendEmail({ to: user.email!, ...tpl });
+
+    res.json({ success: true, message: "If an account exists with this email, a reset link has been sent." });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid email address" });
+      return;
+    }
+    console.error("ForgotPassword error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// ─── POST /api/auth/reset-password — Set new password with token ─────────────
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  try {
+    const { token, newPassword } = resetPasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { passwordResetToken: token } });
+
+    if (!user) {
+      res.status(400).json({ error: "Invalid or expired reset token" });
+      return;
+    }
+    if (user.passwordResetExpiresAt && user.passwordResetExpiresAt < new Date()) {
+      res.status(400).json({ error: "Reset link has expired. Please request a new one." });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetExpiresAt: null,
+      },
+    });
+
+    res.json({ success: true, message: "Password reset successfully. You can now log in." });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Validation failed", details: err.errors });
+      return;
+    }
+    console.error("ResetPassword error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }

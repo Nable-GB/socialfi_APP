@@ -4,7 +4,7 @@ import {
   Heart, MessageCircle, Share2,
   Zap, Star, ShoppingBag, ChevronUp, Flame, Award, Shield,
   ExternalLink, RefreshCw, Sparkles, Crown, Image,
-  CheckCircle, Globe, Settings, LogOut
+  CheckCircle, Globe, Settings, LogOut, Mail, X
 } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import { useFeed } from "./hooks/useFeed";
@@ -17,7 +17,10 @@ import { CreateAdPage } from "./components/CreateAdPage";
 import { ExplorePage } from "./components/ExplorePage";
 import { ProfilePage } from "./components/ProfilePage";
 import { SettingsPage } from "./components/SettingsPage";
+import { VerifyEmailPage } from "./components/VerifyEmailPage";
+import { ResetPasswordPage } from "./components/ResetPasswordPage";
 import type { ApiPost } from "./lib/api";
+import { authApi } from "./lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -694,9 +697,35 @@ export default function App() {
   const [mobileTab, setMobileTab] = useState("feed");
   const [activeNav, setActiveNav] = useState("feed");
   const [authOpen, setAuthOpen] = useState(false);
+  const [verifyBannerDismissed, setVerifyBannerDismissed] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
+
+  // ── URL-based special pages ────────────────────────────────────────────────
+  const urlParams = new URLSearchParams(window.location.search);
+  const verifyToken = window.location.pathname === "/verify-email" ? urlParams.get("token") : null;
+  const resetToken = window.location.pathname === "/reset-password" ? urlParams.get("token") : null;
+
+  if (verifyToken) {
+    return <VerifyEmailPage token={verifyToken} onDone={() => { window.history.replaceState({}, "", "/"); window.location.reload(); }} />;
+  }
+  if (resetToken) {
+    return <ResetPasswordPage token={resetToken} onDone={() => { window.history.replaceState({}, "", "/"); window.location.reload(); }} />;
+  }
 
   const handleClaimReward = async (_postId: string, _type: 'VIEW' | 'ENGAGEMENT') => {
     await onRewardClaimed('0');
+  };
+
+  const handleSendVerification = async () => {
+    setSendingVerification(true);
+    try {
+      await authApi.sendVerification();
+      toast.success("Verification email sent! Check your inbox.");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to send verification email");
+    } finally {
+      setSendingVerification(false);
+    }
   };
 
   const displayBalance = parseFloat(balance).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -706,10 +735,34 @@ export default function App() {
     return <LoginPage />;
   }
 
+  // Email verification banner — show if user has email but not verified
+  const showVerifyBanner = user?.email && !(user as any).emailVerified && !verifyBannerDismissed;
+
   return (
     <div className="bg-mesh min-h-screen">
       <Header onOpenAuth={() => setAuthOpen(true)} />
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
+
+      {/* Email Verification Banner */}
+      {showVerifyBanner && (
+        <div className="sticky top-14 z-40 w-full"
+          style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(234,88,12,0.1))", borderBottom: "1px solid rgba(245,158,11,0.25)" }}>
+          <div className="max-w-screen-xl mx-auto px-4 py-2.5 flex items-center gap-3">
+            <Mail size={15} className="text-amber-400 flex-shrink-0" />
+            <p className="text-xs text-amber-300 flex-1">
+              <strong>Verify your email</strong> to unlock all features and secure your account.
+            </p>
+            <button onClick={handleSendVerification} disabled={sendingVerification}
+              className="text-xs font-semibold text-amber-400 hover:text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg transition-all disabled:opacity-50 flex items-center gap-1 flex-shrink-0">
+              {sendingVerification ? <RefreshCw size={11} className="animate-spin" /> : null}
+              {sendingVerification ? "Sending..." : "Send link"}
+            </button>
+            <button onClick={() => setVerifyBannerDismissed(true)} className="text-slate-500 hover:text-slate-300 flex-shrink-0">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-screen-xl mx-auto px-4">
 
