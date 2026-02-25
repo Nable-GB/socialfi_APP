@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { authApi, tokenStorage, type ApiUser } from "../lib/api";
+import { SiweMessage } from "siwe";
 
 interface AuthContextValue {
   user: ApiUser | null;
@@ -14,6 +15,7 @@ interface AuthContextValue {
     displayName?: string;
     referralCode?: string;
   }) => Promise<void>;
+  walletLogin: (address: string, signMessage: (msg: string) => Promise<string>) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -54,6 +56,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(newUser);
   }, []);
 
+  const walletLogin = useCallback(async (address: string, signMessage: (msg: string) => Promise<string>) => {
+    // 1. Get nonce from backend (creates user if new)
+    const { nonce } = await authApi.getNonce(address);
+
+    // 2. Create SIWE message
+    const domain = window.location.host;
+    const origin = window.location.origin;
+    const siweMessage = new SiweMessage({
+      domain,
+      address,
+      statement: "Sign in to SocialFi with your Ethereum wallet",
+      uri: origin,
+      version: "1",
+      chainId: 11155111, // Sepolia
+      nonce,
+    });
+    const messageStr = siweMessage.prepareMessage();
+
+    // 3. Sign with wallet
+    const signature = await signMessage(messageStr);
+
+    // 4. Verify on backend → get JWT
+    const { token: newToken, user: newUser } = await authApi.verifySiwe({
+      message: messageStr,
+      signature,
+    });
+
+    tokenStorage.set(newToken);
+    setToken(newToken);
+    setUser(newUser);
+  }, []);
+
   const logout = useCallback(() => {
     tokenStorage.clear();
     setToken(null);
@@ -75,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         login,
         register,
+        walletLogin,
         logout,
         refreshUser,
       }}

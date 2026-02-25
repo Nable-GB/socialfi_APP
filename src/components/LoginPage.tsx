@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useWallet } from "../hooks/useWallet";
 import { toast } from "sonner";
-import { Mail, Lock, User, RefreshCw, Wallet, Zap } from "lucide-react";
+import { Mail, Lock, User, RefreshCw, Wallet, Zap, CheckCircle, AlertTriangle } from "lucide-react";
 
 type Mode = "login" | "register";
 
 export function LoginPage() {
-  const { login, register } = useAuth();
+  const { login, register, walletLogin } = useAuth();
+  const wallet = useWallet();
   const [mode, setMode] = useState<Mode>("login");
   const [isLoading, setIsLoading] = useState(false);
+  const [walletConnecting, setWalletConnecting] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,6 +25,38 @@ export function LoginPage() {
     setDisplayName(""); setReferralCode("");
   };
 
+  // ─── MetaMask Connect + SIWE Login ───────────────────────────────────────
+  const handleWalletConnect = async () => {
+    if (!wallet.hasMetaMask) {
+      toast.error("MetaMask not detected! Please install MetaMask extension.", { duration: 5000 });
+      window.open("https://metamask.io/download/", "_blank");
+      return;
+    }
+
+    try {
+      setWalletConnecting(true);
+
+      // 1. Connect MetaMask + switch to Sepolia
+      const address = await wallet.connect();
+      setWalletAddress(address);
+      toast.success(`Wallet connected! ${address.slice(0, 6)}...${address.slice(-4)}`, { duration: 3000 });
+
+      // 2. Sign in via SIWE
+      await walletLogin(address, wallet.signMessage);
+      toast.success("Welcome to SocialFi! 🎉🦊");
+    } catch (err: any) {
+      if (err?.code === 4001) {
+        toast.error("Connection rejected by user");
+      } else {
+        toast.error(err instanceof Error ? err.message : "Wallet connection failed");
+      }
+      setWalletAddress(null);
+    } finally {
+      setWalletConnecting(false);
+    }
+  };
+
+  // ─── Email Login ─────────────────────────────────────────────────────────
   const handleLogin = async () => {
     if (!email || !password) { toast.error("Please fill in all fields"); return; }
     try {
@@ -34,6 +70,7 @@ export function LoginPage() {
     }
   };
 
+  // ─── Email Register ──────────────────────────────────────────────────────
   const handleRegister = async () => {
     if (!email || !password || !username) {
       toast.error("Email, password, and username are required");
@@ -69,6 +106,8 @@ export function LoginPage() {
     else handleRegister();
   };
 
+  const shortAddr = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : null;
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8"
       style={{ background: "linear-gradient(135deg, #eef2f7 0%, #e4eaf3 50%, #dce5f0 100%)" }}>
@@ -91,27 +130,51 @@ export function LoginPage() {
           {mode === "login" ? "Sign in to continue" : "Create your account"}
         </p>
 
-        {/* Connect Wallet button */}
+        {/* ══════════════ Connect Wallet (MetaMask) ══════════════ */}
         {mode === "login" && (
           <>
             <button
-              onClick={() => toast.info("Wallet connect coming soon! Use email login for now.")}
-              className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-medium text-sm hover:bg-slate-50 transition-colors shadow-sm"
+              onClick={handleWalletConnect}
+              disabled={walletConnecting || isLoading}
+              className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 text-slate-800 font-semibold text-sm hover:from-orange-100 hover:to-amber-100 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Wallet size={18} className="text-slate-500" />
-              Connect Wallet
+              {walletConnecting ? (
+                <><RefreshCw size={16} className="animate-spin text-orange-500" /> Connecting MetaMask...</>
+              ) : walletAddress ? (
+                <><CheckCircle size={16} className="text-green-500" /> Connected: {shortAddr}</>
+              ) : (
+                <>
+                  <svg width="20" height="20" viewBox="0 0 35 33" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M32.96 1L19.67 10.88L22.15 4.95L32.96 1Z" fill="#E2761B" stroke="#E2761B" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2.04 1L15.21 10.97L12.85 4.95L2.04 1Z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M28.17 23.53L24.61 29.01L32.23 31.11L34.44 23.65L28.17 23.53Z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M0.58 23.65L2.77 31.11L10.39 29.01L6.83 23.53L0.58 23.65Z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M9.95 14.42L7.81 17.62L15.35 17.96L15.08 9.82L9.95 14.42Z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M25.05 14.42L19.84 9.73L19.67 17.96L27.19 17.62L25.05 14.42Z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M10.39 29.01L14.89 26.82L10.99 23.7L10.39 29.01Z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M20.11 26.82L24.61 29.01L24.01 23.7L20.11 26.82Z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Connect with MetaMask
+                </>
+              )}
             </button>
+
+            {/* Sepolia badge */}
+            <div className="flex items-center justify-center gap-1.5 mt-2.5">
+              <div className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 6px #34d399" }} />
+              <span className="text-[10px] font-mono text-slate-400">Sepolia Testnet (ETH)</span>
+            </div>
 
             {/* OR divider */}
             <div className="flex items-center gap-3 my-6">
               <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-xs text-slate-400 font-medium">OR</span>
+              <span className="text-xs text-slate-400 font-medium">OR USE EMAIL</span>
               <div className="flex-1 h-px bg-slate-200" />
             </div>
           </>
         )}
 
-        {/* Form */}
+        {/* ══════════════ Email Form ══════════════ */}
         <form onSubmit={handleSubmit} className="space-y-4">
 
           {/* Email */}
@@ -178,7 +241,7 @@ export function LoginPage() {
             </div>
           </div>
 
-          {/* Referral Code (register) */}
+          {/* Referral Code (register + login) */}
           {mode === "register" && (
             <div>
               <label className="block text-sm font-medium text-slate-700 text-center mb-1.5">Referral Code</label>
@@ -223,6 +286,16 @@ export function LoginPage() {
             </button>
           </div>
         </div>
+
+        {/* MetaMask not installed warning */}
+        {!wallet.hasMetaMask && mode === "login" && (
+          <div className="flex items-center gap-2 mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+            <AlertTriangle size={14} className="text-amber-500 flex-shrink-0" />
+            <p className="text-xs text-amber-700">
+              <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer" className="font-semibold underline">Install MetaMask</a> to connect your wallet
+            </p>
+          </div>
+        )}
 
         {/* Demo divider */}
         <div className="flex items-center gap-3 my-5">
