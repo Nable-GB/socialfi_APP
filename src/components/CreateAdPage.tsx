@@ -3,20 +3,19 @@ import { Zap, Target, Globe, FileText, ArrowRight, CheckCircle, Sparkles, Refres
 import { toast } from "sonner";
 import { adsApi } from "../lib/api";
 import type { ApiAdPackage } from "../lib/api";
-import { useAuth } from "../contexts/AuthContext";
-
 export function CreateAdPage() {
-  const { user } = useAuth();
   const [packages, setPackages] = useState<ApiAdPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPkg, setSelectedPkg] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [submitting, setSubmitting] = useState(false);
+  const [created, setCreated] = useState<{ title: string; id: string } | null>(null);
 
   // Form fields
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [targetUrl, setTargetUrl] = useState("");
+  const [postContent, setPostContent] = useState("");
 
   useEffect(() => {
     loadPackages();
@@ -39,32 +38,38 @@ export function CreateAdPage() {
     }
   };
 
-  const handleCheckout = async () => {
+  const handleCreateCampaign = async () => {
     if (!selectedPkg || !title.trim()) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    if (user?.role !== "MERCHANT") {
-      toast.info("Merchant role required. Contact admin to upgrade your account.");
-      return;
-    }
-
     try {
       setSubmitting(true);
-      const res = await adsApi.createCheckout({
+      const res = await adsApi.createCampaign({
         adPackageId: selectedPkg,
         campaignTitle: title,
         campaignDescription: description || undefined,
         targetUrl: targetUrl || undefined,
+        content: postContent || undefined,
       });
-      // Redirect to Stripe checkout
-      window.location.href = res.checkoutUrl;
+      toast.success(res.message);
+      setCreated({ title: res.campaign.title, id: res.campaign.id });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create checkout");
+      toast.error(err instanceof Error ? err.message : "Failed to create campaign");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const resetForm = () => {
+    setStep(1);
+    setSelectedPkg(null);
+    setTitle("");
+    setDescription("");
+    setTargetUrl("");
+    setPostContent("");
+    setCreated(null);
   };
 
   const selectedPackage = packages.find(p => p.id === selectedPkg);
@@ -224,6 +229,17 @@ export function CreateAdPage() {
                 className="w-full px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Sponsored Post Content</label>
+              <textarea
+                value={postContent}
+                onChange={e => setPostContent(e.target.value)}
+                placeholder="Write the post that will appear in users' feeds (optional)"
+                rows={3}
+                className="w-full px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 resize-none"
+              />
+            </div>
           </div>
 
           <div className="flex justify-between">
@@ -240,8 +256,29 @@ export function CreateAdPage() {
         </div>
       )}
 
-      {/* Step 3: Review & Pay */}
-      {step === 3 && selectedPackage && (
+      {/* Success State */}
+      {created && (
+        <div className="glass rounded-2xl p-8 border border-emerald-500/20 text-center" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.08), rgba(99,102,241,0.05))" }}>
+          <div className="text-5xl mb-4">🎉</div>
+          <h2 className="text-xl font-bold text-white mb-2">Campaign Created!</h2>
+          <p className="text-sm text-slate-400 mb-1">Your campaign <strong className="text-white">"{created.title}"</strong> is now active.</p>
+          <p className="text-xs text-slate-500 font-mono mb-6">ID: {created.id}</p>
+          {postContent && (
+            <div className="glass rounded-xl p-4 border border-slate-700/10 mb-6 text-left">
+              <p className="text-xs text-slate-500 mb-1">Sponsored Post</p>
+              <p className="text-sm text-slate-300">{postContent}</p>
+            </div>
+          )}
+          <button onClick={resetForm}
+            className="px-6 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)", boxShadow: "0 4px 15px rgba(99,102,241,0.3)" }}>
+            Create Another Campaign
+          </button>
+        </div>
+      )}
+
+      {/* Step 3: Review & Launch */}
+      {step === 3 && selectedPackage && !created && (
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <Target size={18} className="text-indigo-400" /> Review & Launch
@@ -272,6 +309,12 @@ export function CreateAdPage() {
                 </a>
               </div>
             )}
+            {postContent && (
+              <div className="pb-3 border-b border-slate-700/20">
+                <span className="text-sm text-slate-400 block mb-1">Sponsored Post</span>
+                <span className="text-sm text-slate-300">{postContent}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between pb-3 border-b border-slate-700/20">
               <span className="text-sm text-slate-400">Impressions</span>
               <span className="text-sm font-mono text-white">{selectedPackage.impressions.toLocaleString()}</span>
@@ -292,24 +335,16 @@ export function CreateAdPage() {
             </div>
           </div>
 
-          {user?.role !== "MERCHANT" && (
-            <div className="glass rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
-              <p className="text-sm text-amber-400 flex items-center gap-2">
-                <Zap size={14} /> Your account role is <strong>{user?.role}</strong>. Merchant role is required to create campaigns. Contact admin to upgrade.
-              </p>
-            </div>
-          )}
-
           <div className="flex justify-between">
             <button onClick={() => setStep(2)} className="px-5 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white border border-slate-700/30 hover:bg-slate-800/50 transition-all">
               Back
             </button>
             <button
-              onClick={handleCheckout}
+              onClick={handleCreateCampaign}
               disabled={submitting}
               className="px-8 py-3 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
               style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)", boxShadow: "0 4px 20px rgba(99,102,241,0.35)" }}>
-              {submitting ? <><RefreshCw size={15} className="animate-spin" /> Processing...</> : <><Zap size={16} /> Pay & Launch Campaign</>}
+              {submitting ? <><RefreshCw size={15} className="animate-spin" /> Creating...</> : <><Zap size={16} /> Launch Campaign</>}
             </button>
           </div>
         </div>

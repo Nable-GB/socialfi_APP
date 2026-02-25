@@ -114,6 +114,18 @@ export const rewardsApi = {
 export const adsApi = {
   getPackages: () => request<{ packages: ApiAdPackage[] }>("/api/ads/packages"),
 
+  createCampaign: (body: {
+    adPackageId: string;
+    campaignTitle: string;
+    campaignDescription?: string;
+    targetUrl?: string;
+    content?: string;
+  }) =>
+    request<{ success: boolean; campaign: any; message: string }>(
+      "/api/ads/campaigns",
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
   createCheckout: (body: {
     adPackageId: string;
     campaignTitle: string;
@@ -124,6 +136,9 @@ export const adsApi = {
       "/api/ads/checkout",
       { method: "POST", body: JSON.stringify(body) }
     ),
+
+  getMyCampaigns: () =>
+    request<{ campaigns: any[] }>("/api/ads/campaigns"),
 };
 
 // ─── API Types ────────────────────────────────────────────────────────────────

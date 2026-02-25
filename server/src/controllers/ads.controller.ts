@@ -9,10 +9,18 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 // ─── Validation ─────────────────────────────────────────────────────────────
 
 const checkoutSchema = z.object({
-  adPackageId: z.string().uuid(),
+  adPackageId: z.string().min(1),
   campaignTitle: z.string().min(1).max(200),
   campaignDescription: z.string().max(2000).optional(),
   targetUrl: z.string().url().optional(),
+});
+
+const createCampaignSchema = z.object({
+  adPackageId: z.string().min(1),
+  campaignTitle: z.string().min(1).max(200),
+  campaignDescription: z.string().max(2000).optional(),
+  targetUrl: z.string().url().optional(),
+  content: z.string().min(1).max(5000).optional(),
 });
 
 // ─── GET /api/ads/packages — List available ad packages ────────────────────
@@ -118,7 +126,74 @@ export async function createCheckout(req: Request, res: Response): Promise<void>
   }
 }
 
-// ─── GET /api/ads/campaigns — List merchant's own campaigns ────────────────
+// ─── POST /api/ads/campaigns — Create campaign directly (no Stripe) ────────
+
+export async function createCampaign(req: Request, res: Response): Promise<void> {
+  try {
+    const data = createCampaignSchema.parse(req.body);
+    const userId = req.user!.userId;
+
+    // Fetch the ad package
+    const adPackage = await prisma.adPackage.findUnique({
+      where: { id: data.adPackageId },
+    });
+    if (!adPackage || !adPackage.isActive) {
+      res.status(404).json({ error: "Ad package not found" });
+      return;
+    }
+
+    // Create campaign (ACTIVE immediately for demo)
+    const campaign = await prisma.adCampaign.create({
+      data: {
+        merchantId: userId,
+        adPackageId: adPackage.id,
+        title: data.campaignTitle,
+        description: data.campaignDescription,
+        targetUrl: data.targetUrl,
+        paymentMethod: "CRYPTO_USDT",
+        paymentStatus: "COMPLETED",
+        amountPaid: adPackage.priceFiat,
+        impressionsTotal: adPackage.impressions,
+        rewardPoolTotal: adPackage.totalRewardPool,
+        status: "ACTIVE",
+        startsAt: new Date(),
+        endsAt: new Date(Date.now() + adPackage.durationDays * 24 * 60 * 60 * 1000),
+      },
+      include: {
+        adPackage: { select: { name: true, impressions: true, durationDays: true } },
+      },
+    });
+
+    // Optionally create a sponsored post
+    if (data.content) {
+      await prisma.socialPost.create({
+        data: {
+          authorId: userId,
+          content: data.content,
+          type: "SPONSORED",
+          adCampaignId: campaign.id,
+          rewardPerView: adPackage.totalRewardPool.div(adPackage.impressions > 0 ? adPackage.impressions : 1),
+          rewardPerEngagement: adPackage.totalRewardPool.div(adPackage.impressions > 0 ? adPackage.impressions / 5 : 1),
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      campaign,
+      message: `Campaign "${campaign.title}" created successfully!`,
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Validation failed", details: err.errors });
+      return;
+    }
+    console.error("CreateCampaign error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// ─── GET /api/ads/campaigns — List user's own campaigns ─────────────────────
 
 export async function getMyCampaigns(req: Request, res: Response): Promise<void> {
   try {
