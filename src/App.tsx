@@ -23,6 +23,7 @@ import { NotificationCenter } from "./components/NotificationCenter";
 import { NFTMarketplacePage } from "./components/NFTMarketplacePage";
 import { MyNFTsPage } from "./components/MyNFTsPage";
 import { ReferralPage } from "./components/ReferralPage";
+import { AnalyticsPage } from "./components/AnalyticsPage";
 import { VerifyEmailPage } from "./components/VerifyEmailPage";
 import { ResetPasswordPage } from "./components/ResetPasswordPage";
 import type { ApiPost } from "./lib/api";
@@ -442,6 +443,7 @@ function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string
     { id: "nft-market", icon: Image, label: "NFT Market" },
     { id: "my-nfts", icon: Image, label: "My NFTs" },
     { id: "referrals", icon: Users, label: "Referrals" },
+    { id: "analytics", icon: TrendingUp, label: "Analytics" },
     { id: "transactions", icon: ArrowUpRight, label: "Transactions" },
     { id: "settings", icon: Settings, label: "Settings" },
     ...(useAuth().user?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: "Admin" }] : []),
@@ -811,6 +813,7 @@ export default function App() {
             {activeNav === "nft-market" && <NFTMarketplacePage />}
             {activeNav === "my-nfts" && <MyNFTsPage />}
             {activeNav === "referrals" && <ReferralPage />}
+            {activeNav === "analytics" && <AnalyticsPage />}
             {activeNav === "admin" && <AdminPage />}
           </main>
 
@@ -856,6 +859,7 @@ export default function App() {
           {mobileTab === "nft-market" && <NFTMarketplacePage />}
           {mobileTab === "my-nfts" && <MyNFTsPage />}
           {mobileTab === "referrals" && <ReferralPage />}
+          {mobileTab === "analytics" && <AnalyticsPage />}
           {mobileTab === "explore" && <ExplorePage />}
         </div>
       </div>

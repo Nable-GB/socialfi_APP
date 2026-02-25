@@ -297,6 +297,12 @@ export const adminApi = {
     ),
 };
 
+// ─── Analytics ────────────────────────────────────────────────────────────────
+export const analyticsApi = {
+  getMyAnalytics: () => request<any>("/api/analytics/me"),
+  getPlatformAnalytics: () => request<any>("/api/analytics/platform"),
+};
+
 // ─── Uploads ──────────────────────────────────────────────────────────────────
 export const uploadApi = {
   avatar: async (file: File): Promise<{ success: boolean; url: string; key: string }> => {

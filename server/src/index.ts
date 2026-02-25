@@ -20,6 +20,7 @@ import notificationsRoutes from "./routes/notifications.routes.js";
 import nftRoutes from "./routes/nft.routes.js";
 import referralRoutes from "./routes/referral.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
 import { handleStripeWebhook } from "./webhooks/stripe.webhook.js";
 
 const app = express();
@@ -96,13 +97,28 @@ app.use("/api/notifications", notificationsRoutes);
 app.use("/api/nfts", nftRoutes);
 app.use("/api/referrals", referralRoutes);
 app.use("/api/uploads", uploadRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 // ── Health Check ────────────────────────────────────────────────────────────
-app.get("/api/health", (_req, res) => {
+const serverStartTime = Date.now();
+app.get("/api/health", async (_req, res) => {
+  let dbStatus = "ok";
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch {
+    dbStatus = "error";
+  }
+  const mem = process.memoryUsage();
   res.json({
-    status: "ok",
+    status: dbStatus === "ok" ? "ok" : "degraded",
     timestamp: new Date().toISOString(),
     env: env.NODE_ENV,
+    uptime: Math.floor((Date.now() - serverStartTime) / 1000),
+    db: dbStatus,
+    memory: {
+      rss: `${Math.round(mem.rss / 1024 / 1024)}MB`,
+      heap: `${Math.round(mem.heapUsed / 1024 / 1024)}/${Math.round(mem.heapTotal / 1024 / 1024)}MB`,
+    },
   });
 });
 
