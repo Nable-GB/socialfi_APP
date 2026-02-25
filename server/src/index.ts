@@ -5,6 +5,7 @@ import { env } from "./config/env.js";
 import { captureRawBody } from "./middleware/rawBody.js";
 import { requireAuth } from "./middleware/auth.js";
 import type { JwtPayload } from "./middleware/auth.js";
+import prisma from "./lib/prisma.js";
 
 // ── Route Imports ───────────────────────────────────────────────────────────
 import authRoutes from "./routes/auth.routes.js";
@@ -89,11 +90,32 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: "Internal server error" });
 });
 
+// ── Auto-seed Ad Packages if empty ───────────────────────────────────────────
+async function autoSeed() {
+  try {
+    const count = await prisma.adPackage.count();
+    if (count === 0) {
+      console.log("📦 No Ad Packages found — auto-seeding...");
+      await prisma.adPackage.createMany({
+        data: [
+          { id: "pkg-starter", name: "Starter", description: "Perfect for small businesses testing the platform.", priceFiat: 49.0, priceCrypto: 49.0, impressions: 5000, durationDays: 7, maxPosts: 1, totalRewardPool: 500, sortOrder: 1 },
+          { id: "pkg-growth", name: "Growth", description: "Best value for growing brands.", priceFiat: 149.0, priceCrypto: 149.0, impressions: 20000, durationDays: 14, maxPosts: 3, totalRewardPool: 2000, sortOrder: 2 },
+          { id: "pkg-enterprise", name: "Enterprise", description: "Maximum reach for serious advertisers.", priceFiat: 499.0, priceCrypto: 499.0, impressions: 100000, durationDays: 30, maxPosts: 10, totalRewardPool: 10000, sortOrder: 3 },
+        ],
+      });
+      console.log("✅ Ad Packages seeded successfully");
+    }
+  } catch (err) {
+    console.error("Auto-seed warning:", err);
+  }
+}
+
 // ── Start Server ────────────────────────────────────────────────────────────
-app.listen(env.PORT, () => {
+app.listen(env.PORT, async () => {
   console.log(`🚀 SocialFi API server running on http://localhost:${env.PORT}`);
   console.log(`   Environment: ${env.NODE_ENV}`);
   console.log(`   Frontend:    ${env.FRONTEND_URL}`);
+  await autoSeed();
 });
 
 export default app;
