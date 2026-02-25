@@ -29,7 +29,11 @@ export const env = {
   // Blockchain
   RPC_URL: optional("RPC_URL", ""),
   ESCROW_CONTRACT_ADDRESS: optional("ESCROW_CONTRACT_ADDRESS", ""),
+  TOKEN_CONTRACT_ADDRESS: optional("TOKEN_CONTRACT_ADDRESS", ""),
+  OPERATOR_PRIVATE_KEY: optional("OPERATOR_PRIVATE_KEY", ""),
   CHAIN_ID: parseInt(optional("CHAIN_ID", "137"), 10),
+  MIN_WITHDRAWAL: parseFloat(optional("MIN_WITHDRAWAL", "10")),
+  MAX_WITHDRAWAL: parseFloat(optional("MAX_WITHDRAWAL", "10000")),
 
   // Rewards
   REFERRAL_RATE: parseFloat(optional("REFERRAL_RATE", "0.05")),

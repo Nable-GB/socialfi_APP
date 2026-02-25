@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { claimReward, getRewardHistory, getBalance } from "../controllers/rewards.controller.js";
+import { claimReward, getRewardHistory, getBalance, requestWithdrawal, getTransactions } from "../controllers/rewards.controller.js";
 import { requireAuth } from "../middleware/auth.js";
 import { rewardLimiter } from "../middleware/rateLimiter.js";
 
@@ -9,7 +9,9 @@ const router = Router();
 router.use(requireAuth);
 
 router.post("/claim", rewardLimiter, claimReward);
-router.get("/history", getRewardHistory);
+router.post("/withdraw", rewardLimiter, requestWithdrawal);
 router.get("/balance", getBalance);
+router.get("/history", getRewardHistory);
+router.get("/transactions", getTransactions);
 
 export default router;

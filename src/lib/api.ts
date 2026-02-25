@@ -203,6 +203,20 @@ export const rewardsApi = {
     if (params?.limit) qs.set("limit", String(params.limit));
     return request<{ rewards: ApiReward[]; hasMore: boolean }>(`/api/rewards/history?${qs.toString()}`);
   },
+
+  withdraw: (body: { amount: number; walletAddress?: string }) =>
+    request<{ success: boolean; status: string; txHash: string | null; explorerUrl: string | null; amount: number; walletAddress: string; message: string }>(
+      "/api/rewards/withdraw",
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  getTransactions: (params?: { cursor?: string; limit?: number; type?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.cursor) qs.set("cursor", params.cursor);
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.type) qs.set("type", params.type);
+    return request<{ transactions: ApiTransaction[]; nextCursor: string | null; hasMore: boolean }>(`/api/rewards/transactions?${qs.toString()}`);
+  },
 };
 
 // ─── Ads ──────────────────────────────────────────────────────────────────────
@@ -294,6 +308,18 @@ export interface ApiReward {
   amount: string;
   description?: string;
   status: string;
+  createdAt: string;
+  relatedPost?: { id: string; content: string };
+  relatedCampaign?: { id: string; title: string };
+}
+
+export interface ApiTransaction {
+  id: string;
+  type: string;
+  amount: string;
+  description?: string;
+  status: string;
+  onChainTxHash?: string;
   createdAt: string;
   relatedPost?: { id: string; content: string };
   relatedCampaign?: { id: string; title: string };

@@ -4,7 +4,7 @@ import {
   Heart, MessageCircle, Share2,
   Zap, Star, ShoppingBag, ChevronUp, Flame, Award, Shield,
   ExternalLink, RefreshCw, Sparkles, Crown, Image,
-  CheckCircle, Globe, Settings, LogOut, Mail, X
+  CheckCircle, Globe, Settings, LogOut, Mail, X, ArrowUpRight
 } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import { useFeed } from "./hooks/useFeed";
@@ -17,6 +17,7 @@ import { CreateAdPage } from "./components/CreateAdPage";
 import { ExplorePage } from "./components/ExplorePage";
 import { ProfilePage } from "./components/ProfilePage";
 import { SettingsPage } from "./components/SettingsPage";
+import { TransactionsPage } from "./components/TransactionsPage";
 import { VerifyEmailPage } from "./components/VerifyEmailPage";
 import { ResetPasswordPage } from "./components/ResetPasswordPage";
 import type { ApiPost } from "./lib/api";
@@ -445,6 +446,7 @@ function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string
     { id: "create", icon: PlusSquare, label: "Create Ad" },
     { id: "profile", icon: User, label: "My Profile" },
     { id: "explore", icon: Globe, label: "Explore" },
+    { id: "transactions", icon: ArrowUpRight, label: "Transactions" },
     { id: "settings", icon: Settings, label: "Settings" },
   ];
 
@@ -777,6 +779,7 @@ export default function App() {
             {activeNav === "profile" && <ProfilePage />}
             {activeNav === "explore" && <ExplorePage />}
             {activeNav === "settings" && <SettingsPage />}
+            {activeNav === "transactions" && <TransactionsPage />}
           </main>
 
           <aside className="space-y-4 sticky top-14 pt-6 max-h-[calc(100vh-3.5rem)] overflow-y-auto">
@@ -815,6 +818,9 @@ export default function App() {
           {mobileTab === "market" && <MarketplacePage />}
           {mobileTab === "create" && <CreateAdPage />}
           {mobileTab === "profile" && <ProfilePage />}
+          {mobileTab === "transactions" && <TransactionsPage />}
+          {mobileTab === "settings" && <SettingsPage />}
+          {mobileTab === "explore" && <ExplorePage />}
         </div>
       </div>
 
