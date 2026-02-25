@@ -297,6 +297,13 @@ export const adminApi = {
     ),
 };
 
+// ─── Referral ─────────────────────────────────────────────────────────────────
+export const referralApi = {
+  getStats: () => request<any>("/api/referrals/stats"),
+  getLeaderboard: () => request<{ leaderboard: any[] }>("/api/referrals/leaderboard"),
+  getTiers: () => request<{ tiers: any[] }>("/api/referrals/tiers"),
+};
+
 // ─── NFT ──────────────────────────────────────────────────────────────────────
 export const nftApi = {
   mint: (body: { name: string; description?: string; imageUrl: string; collection?: string; rarity?: string; attributes?: { trait_type: string; value: string }[] }) =>

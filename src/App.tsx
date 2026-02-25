@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Home, TrendingUp, PlusSquare, User, Wallet, Search,
+  Home, TrendingUp, PlusSquare, User, Users, Wallet, Search,
   Heart, MessageCircle, Share2,
   Zap, Star, ShoppingBag, ChevronUp, Flame, Award, Shield,
   ExternalLink, RefreshCw, Sparkles, Crown, Image,
@@ -22,6 +22,7 @@ import { AdminPage } from "./components/AdminPage";
 import { NotificationCenter } from "./components/NotificationCenter";
 import { NFTMarketplacePage } from "./components/NFTMarketplacePage";
 import { MyNFTsPage } from "./components/MyNFTsPage";
+import { ReferralPage } from "./components/ReferralPage";
 import { VerifyEmailPage } from "./components/VerifyEmailPage";
 import { ResetPasswordPage } from "./components/ResetPasswordPage";
 import type { ApiPost } from "./lib/api";
@@ -440,6 +441,7 @@ function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string
     { id: "explore", icon: Globe, label: "Explore" },
     { id: "nft-market", icon: Image, label: "NFT Market" },
     { id: "my-nfts", icon: Image, label: "My NFTs" },
+    { id: "referrals", icon: Users, label: "Referrals" },
     { id: "transactions", icon: ArrowUpRight, label: "Transactions" },
     { id: "settings", icon: Settings, label: "Settings" },
     ...(useAuth().user?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: "Admin" }] : []),
@@ -777,6 +779,7 @@ export default function App() {
             {activeNav === "transactions" && <TransactionsPage />}
             {activeNav === "nft-market" && <NFTMarketplacePage />}
             {activeNav === "my-nfts" && <MyNFTsPage />}
+            {activeNav === "referrals" && <ReferralPage />}
             {activeNav === "admin" && <AdminPage />}
           </main>
 
@@ -821,6 +824,7 @@ export default function App() {
           {mobileTab === "admin" && <AdminPage />}
           {mobileTab === "nft-market" && <NFTMarketplacePage />}
           {mobileTab === "my-nfts" && <MyNFTsPage />}
+          {mobileTab === "referrals" && <ReferralPage />}
           {mobileTab === "explore" && <ExplorePage />}
         </div>
       </div>

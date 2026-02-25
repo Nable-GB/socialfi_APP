@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
+import { getTier } from "../controllers/referral.controller.js";
 
 // ─── Revenue Split Constants ────────────────────────────────────────────────
 // When a merchant pays for an ad package, the reward pool is split as follows:
@@ -74,18 +75,21 @@ export async function creditAdViewReward(
     });
 
     if (user?.referredById) {
-      const referralAmount = new Prisma.Decimal(rewardAmount.toNumber() * env.REFERRAL_RATE);
+      // Count how many users this referrer has referred (for tier calculation)
+      const referrerReferralCount = await tx.user.count({ where: { referredById: user.referredById } });
+      const tier = getTier(referrerReferralCount);
+      const referralAmount = new Prisma.Decimal(rewardAmount.toNumber() * tier.rate);
 
       await tx.rewardTransaction.create({
         data: {
           userId: user.referredById,
           type: "REFERRAL_BONUS",
           amount: referralAmount,
-          description: `Affiliate bonus from referred user's ad view`,
+          description: `${tier.label} affiliate bonus from referred user's ad view`,
           relatedPostId: postId,
           relatedCampaignId: campaignId,
           sourceUserId: userId,
-          referralRate: new Prisma.Decimal(env.REFERRAL_RATE),
+          referralRate: new Prisma.Decimal(tier.rate),
           status: "PENDING",
         },
       });
@@ -140,18 +144,20 @@ export async function creditAdEngagementReward(
     });
 
     if (user?.referredById) {
-      const referralAmount = new Prisma.Decimal(rewardAmount.toNumber() * env.REFERRAL_RATE);
+      const referrerReferralCount = await tx.user.count({ where: { referredById: user.referredById } });
+      const tier = getTier(referrerReferralCount);
+      const referralAmount = new Prisma.Decimal(rewardAmount.toNumber() * tier.rate);
 
       await tx.rewardTransaction.create({
         data: {
           userId: user.referredById,
           type: "REFERRAL_BONUS",
           amount: referralAmount,
-          description: `Affiliate bonus from referred user's ad engagement`,
+          description: `${tier.label} affiliate bonus from referred user's ad engagement`,
           relatedPostId: postId,
           relatedCampaignId: campaignId,
           sourceUserId: userId,
-          referralRate: new Prisma.Decimal(env.REFERRAL_RATE),
+          referralRate: new Prisma.Decimal(tier.rate),
           status: "PENDING",
         },
       });
