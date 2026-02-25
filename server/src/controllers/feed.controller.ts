@@ -297,3 +297,34 @@ export async function interactWithPost(req: Request, res: Response): Promise<voi
     res.status(500).json({ error: "Internal server error" });
   }
 }
+
+// ─── DELETE /api/feed/posts/:id — Soft-delete a post ────────────────────────
+
+export async function deletePost(req: Request, res: Response): Promise<void> {
+  try {
+    const postId = req.params.id as string;
+    const userId = req.user!.userId;
+
+    const post = await prisma.socialPost.findUnique({ where: { id: postId } });
+    if (!post || !post.isActive) {
+      res.status(404).json({ error: "Post not found" });
+      return;
+    }
+
+    if (post.authorId !== userId) {
+      res.status(403).json({ error: "Cannot delete another user's post" });
+      return;
+    }
+
+    // Soft delete — preserve for analytics / reward history
+    await prisma.socialPost.update({
+      where: { id: postId },
+      data: { isActive: false },
+    });
+
+    res.json({ success: true, message: "Post deleted" });
+  } catch (err) {
+    console.error("DeletePost error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}

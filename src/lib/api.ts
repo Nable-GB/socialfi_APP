@@ -124,6 +124,43 @@ export const feedApi = {
       `/api/feed/posts/${postId}/interact`,
       { method: "POST", body: JSON.stringify(body) }
     ),
+
+  deletePost: (postId: string) =>
+    request<{ success: boolean }>(`/api/feed/posts/${postId}`, { method: "DELETE" }),
+};
+
+// ─── Users ──────────────────────────────────────────────────────────────
+export const usersApi = {
+  getProfile: (userId: string) =>
+    request<{ user: ApiUser & { posts: ApiPost[]; isFollowing: boolean } }>(`/api/users/${userId}`),
+
+  search: (q: string, limit = 20) => {
+    const qs = new URLSearchParams({ q, limit: String(limit) });
+    return request<{ users: (ApiUser & { isFollowing: boolean })[] }>(`/api/users/search?${qs}`);
+  },
+
+  updateProfile: (body: { displayName?: string; bio?: string; avatarUrl?: string }) =>
+    request<{ user: ApiUser }>("/api/users/profile", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  changePassword: (body: { currentPassword: string; newPassword: string }) =>
+    request<{ success: boolean; message: string }>("/api/users/change-password", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  linkWallet: (walletAddress: string) =>
+    request<{ user: ApiUser; message: string }>("/api/users/link-wallet", {
+      method: "POST",
+      body: JSON.stringify({ walletAddress }),
+    }),
+
+  toggleFollow: (userId: string) =>
+    request<{ following: boolean; message: string }>(`/api/users/${userId}/follow`, {
+      method: "POST",
+    }),
 };
 
 // ─── Rewards ──────────────────────────────────────────────────────────────────
@@ -194,6 +231,7 @@ export interface ApiUser {
   referralCode: string;
   offChainBalance?: string;
   totalEarned?: string;
+  isVerified?: boolean;
   _count?: { followers: number; following: number; posts: number };
 }
 

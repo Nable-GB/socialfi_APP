@@ -1,19 +1,92 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { Settings, Bell, Shield, Eye, Palette, Globe, Save, CheckCircle } from "lucide-react";
+import { useWallet } from "../hooks/useWallet";
+import { usersApi } from "../lib/api";
+import { Settings, Bell, Shield, Eye, Palette, Globe, Save, CheckCircle, Lock, Wallet, User, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button onClick={onChange}
+      className={`rounded-full transition-all relative flex-shrink-0`}
+      style={{ width: 40, height: 22, background: checked ? "#22d3ee" : "#334155" }}>
+      <div className={`w-4 h-4 rounded-full bg-white shadow-sm absolute top-1 transition-all ${checked ? "left-5" : "left-1"}`} />
+    </button>
+  );
+}
+
 export function SettingsPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const wallet = useWallet();
+
+  // Profile edit state
+  const [displayName, setDisplayName] = useState(user?.displayName ?? "");
+  const [bio, setBio] = useState(user?.bio ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? "");
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  // Password change state
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [savingPw, setSavingPw] = useState(false);
+
+  // UI state
   const [notifications, setNotifications] = useState({ likes: true, comments: true, follows: true, rewards: true, ads: false });
   const [privacy, setPrivacy] = useState({ publicProfile: true, showBalance: false, showEmail: false });
   const [theme, setTheme] = useState("dark");
-
-  const handleSave = () => {
-    toast.success("Settings saved! ✅");
-  };
+  const [linkingWallet, setLinkingWallet] = useState(false);
 
   if (!user) return null;
+
+  const handleSaveProfile = async () => {
+    if (!displayName.trim()) { toast.error("Display name cannot be empty"); return; }
+    setSavingProfile(true);
+    try {
+      await usersApi.updateProfile({
+        displayName: displayName.trim(),
+        bio: bio.trim(),
+        avatarUrl: avatarUrl.trim() || undefined,
+      });
+      await refreshUser();
+      toast.success("Profile updated!");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to update profile");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPw || !newPw) { toast.error("Please fill in all password fields"); return; }
+    if (newPw !== confirmPw) { toast.error("New passwords do not match"); return; }
+    if (newPw.length < 8) { toast.error("New password must be at least 8 characters"); return; }
+    setSavingPw(true);
+    try {
+      await usersApi.changePassword({ currentPassword: currentPw, newPassword: newPw });
+      toast.success("Password changed successfully!");
+      setCurrentPw(""); setNewPw(""); setConfirmPw("");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to change password");
+    } finally {
+      setSavingPw(false);
+    }
+  };
+
+  const handleLinkWallet = async () => {
+    if (!wallet.hasMetaMask) { toast.error("Please install MetaMask"); return; }
+    setLinkingWallet(true);
+    try {
+      const address = wallet.address || await wallet.connect();
+      await usersApi.linkWallet(address);
+      await refreshUser();
+      toast.success("Wallet linked successfully!");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to link wallet");
+    } finally {
+      setLinkingWallet(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -30,18 +103,18 @@ export function SettingsPage() {
         </div>
       </div>
 
-      {/* Account */}
+      {/* Account Info (read-only) */}
       <div className="glass rounded-2xl p-5 border border-slate-700/10">
         <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
-          <Shield size={15} className="text-cyan-400" /> Account
+          <Shield size={15} className="text-cyan-400" /> Account Info
         </h3>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {[
-            { label: "Email", value: user.email ?? "Not set" },
+            { label: "Email", value: user.email ?? "Not set (wallet account)" },
             { label: "Username", value: `@${user.username}` },
-            { label: "Display Name", value: user.displayName ?? user.username },
             { label: "Role", value: user.role },
             { label: "Referral Code", value: user.referralCode },
+            { label: "Wallet", value: user.walletAddress ? `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}` : "Not linked" },
           ].map(item => (
             <div key={item.label} className="flex items-center justify-between py-2.5 border-b border-slate-700/10 last:border-0">
               <span className="text-sm text-slate-400">{item.label}</span>
@@ -50,6 +123,84 @@ export function SettingsPage() {
           ))}
         </div>
       </div>
+
+      {/* Edit Profile */}
+      <div className="glass rounded-2xl p-5 border border-slate-700/10">
+        <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
+          <User size={15} className="text-indigo-400" /> Edit Profile
+        </h3>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">Display Name</label>
+            <input value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={60}
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
+              placeholder="Your display name" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">Bio <span className="text-slate-600">{bio.length}/300</span></label>
+            <textarea value={bio} onChange={e => setBio(e.target.value)} maxLength={300} rows={3}
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600 resize-none"
+              placeholder="Tell us about yourself..." />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">Avatar URL</label>
+            <input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
+              placeholder="https://..." />
+          </div>
+          <button onClick={handleSaveProfile} disabled={savingProfile}
+            className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, #22d3ee, #6366f1)" }}>
+            {savingProfile ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+            {savingProfile ? "Saving..." : "Save Profile"}
+          </button>
+        </div>
+      </div>
+
+      {/* Change Password — only for email accounts */}
+      {user.email && (
+        <div className="glass rounded-2xl p-5 border border-slate-700/10">
+          <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
+            <Lock size={15} className="text-amber-400" /> Change Password
+          </h3>
+          <div className="space-y-3">
+            {[
+              { label: "Current Password", value: currentPw, set: setCurrentPw },
+              { label: "New Password", value: newPw, set: setNewPw },
+              { label: "Confirm New Password", value: confirmPw, set: setConfirmPw },
+            ].map(({ label, value, set }) => (
+              <div key={label}>
+                <label className="text-xs text-slate-400 mb-1 block">{label}</label>
+                <input type="password" value={value} onChange={e => set(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
+                  placeholder="••••••••" />
+              </div>
+            ))}
+            <button onClick={handleChangePassword} disabled={savingPw}
+              className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, #f59e0b, #ef4444)" }}>
+              {savingPw ? <RefreshCw size={14} className="animate-spin" /> : <Lock size={14} />}
+              {savingPw ? "Changing..." : "Change Password"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Link Wallet — only if no wallet linked */}
+      {!user.walletAddress && (
+        <div className="glass rounded-2xl p-5 border border-slate-700/10">
+          <h3 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
+            <Wallet size={15} className="text-emerald-400" /> Link MetaMask Wallet
+          </h3>
+          <p className="text-xs text-slate-400 mb-4">Link your wallet to enable crypto features and Web3 login.</p>
+          <button onClick={handleLinkWallet} disabled={linkingWallet}
+            className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.8), rgba(234,88,12,0.8))" }}>
+            {linkingWallet ? <RefreshCw size={14} className="animate-spin" /> : <Wallet size={14} />}
+            {linkingWallet ? "Linking..." : "Link Wallet"}
+          </button>
+        </div>
+      )}
 
       {/* Notifications */}
       <div className="glass rounded-2xl p-5 border border-slate-700/10">
@@ -66,12 +217,7 @@ export function SettingsPage() {
           ] as const).map(item => (
             <div key={item.key} className="flex items-center justify-between py-2">
               <span className="text-sm text-slate-300">{item.label}</span>
-              <button
-                onClick={() => setNotifications(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
-                className={`w-10 h-5.5 rounded-full transition-all relative ${notifications[item.key] ? "bg-cyan-500" : "bg-slate-700"}`}
-                style={{ width: 40, height: 22 }}>
-                <div className={`w-4 h-4 rounded-full bg-white shadow-sm absolute top-1 transition-all ${notifications[item.key] ? "left-5" : "left-1"}`} />
-              </button>
+              <ToggleSwitch checked={notifications[item.key]} onChange={() => setNotifications(prev => ({ ...prev, [item.key]: !prev[item.key] }))} />
             </div>
           ))}
         </div>
@@ -90,12 +236,7 @@ export function SettingsPage() {
           ] as const).map(item => (
             <div key={item.key} className="flex items-center justify-between py-2">
               <span className="text-sm text-slate-300">{item.label}</span>
-              <button
-                onClick={() => setPrivacy(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
-                className={`rounded-full transition-all relative ${privacy[item.key] ? "bg-cyan-500" : "bg-slate-700"}`}
-                style={{ width: 40, height: 22 }}>
-                <div className={`w-4 h-4 rounded-full bg-white shadow-sm absolute top-1 transition-all ${privacy[item.key] ? "left-5" : "left-1"}`} />
-              </button>
+              <ToggleSwitch checked={privacy[item.key]} onChange={() => setPrivacy(prev => ({ ...prev, [item.key]: !prev[item.key] }))} />
             </div>
           ))}
         </div>
@@ -134,13 +275,6 @@ export function SettingsPage() {
           <option value="ja">日本語</option>
         </select>
       </div>
-
-      {/* Save */}
-      <button onClick={handleSave}
-        className="w-full py-3.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
-        style={{ background: "linear-gradient(135deg, #22d3ee, #6366f1)", boxShadow: "0 4px 15px rgba(34,211,238,0.25)" }}>
-        <Save size={16} /> Save Settings
-      </button>
     </div>
   );
 }

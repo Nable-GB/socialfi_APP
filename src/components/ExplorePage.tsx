@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { Search, TrendingUp, Flame, Users, Hash, Star, Globe } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Search, TrendingUp, Flame, Users, Hash, Star, Globe, RefreshCw, UserCheck } from "lucide-react";
+import { usersApi, type ApiUser } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
 
 const TRENDING_TOPICS = [
@@ -11,38 +13,62 @@ const TRENDING_TOPICS = [
   { tag: "#SocialFi", posts: "2.9K", trend: "+210%" },
 ];
 
-const SUGGESTED_USERS = [
-  { username: "0xnova", displayName: "0xNova", bio: "DeFi researcher • Full-time degen", followers: "12.4K", avatar: "/images/avatar-0xnova.jpg", verified: true },
-  { username: "voxelqueen", displayName: "VoxelQueen", bio: "3D artist • NFT creator • Building worlds", followers: "28.1K", avatar: "/images/avatar-voxelqueen.jpg", verified: true },
-  { username: "defirebel", displayName: "DeFi Rebel", bio: "Yield farming strategies & alpha", followers: "9.2K", avatar: "/images/avatar-defirebel.jpg", verified: false },
-  { username: "cryptopulse", displayName: "CryptoPulse", bio: "On-chain analyst • Data-driven insights", followers: "15.7K", avatar: "/images/avatar-cryptopulse.jpg", verified: true },
-  { username: "neonarc", displayName: "NeonArc", bio: "Pixel art • Generative art • AI x Crypto", followers: "7.8K", avatar: "/images/avatar-neonarc.jpg", verified: false },
-];
-
-const TRENDING_POSTS = [
-  { author: "0xNova", content: "Just discovered a new yield farming strategy that's generating 40% APY. Thread 🧵👇", likes: 342, comments: 89 },
-  { author: "VoxelQueen", content: "My new collection 'Ethereal Voids' drops tomorrow at 2PM UTC. 1000 unique pieces, each one procedurally generated. Who's ready? 🎨", likes: 1205, comments: 234 },
-  { author: "CryptoPulse", content: "On-chain data shows whale accumulation at ATH levels. Something big is brewing... 📊", likes: 567, comments: 123 },
-];
+type SearchUser = ApiUser & { isFollowing: boolean };
 
 export function ExplorePage() {
+  const { isAuthenticated } = useAuth();
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"trending" | "people" | "topics">("trending");
-  const [following, setFollowing] = useState<Set<string>>(new Set());
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [followingSet, setFollowingSet] = useState<Set<string>>(new Set());
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const toggleFollow = (username: string) => {
-    setFollowing(prev => {
-      const next = new Set(prev);
-      if (next.has(username)) {
-        next.delete(username);
-        toast.success(`Unfollowed @${username}`);
-      } else {
-        next.add(username);
-        toast.success(`Following @${username}! 🎉`);
-      }
-      return next;
-    });
+  const doSearch = useCallback(async (q: string) => {
+    if (!q.trim()) { setSearchResults([]); return; }
+    setSearching(true);
+    try {
+      const { users } = await usersApi.search(q);
+      setSearchResults(users);
+      // Seed following state from results
+      const followed = new Set(users.filter(u => u.isFollowing).map(u => u.id));
+      setFollowingSet(followed);
+    } catch {
+      // ignore search errors
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (activeTab === "people") {
+      debounceRef.current = setTimeout(() => doSearch(search), 400);
+    }
+  }, [search, activeTab, doSearch]);
+
+  // When switching to People tab, load initial results
+  useEffect(() => {
+    if (activeTab === "people") doSearch(search || "a");
+  }, [activeTab]); // eslint-disable-line
+
+  const handleToggleFollow = async (user: SearchUser) => {
+    if (!isAuthenticated) { toast.error("Please sign in to follow users"); return; }
+    try {
+      const { following, message } = await usersApi.toggleFollow(user.id);
+      setFollowingSet(prev => {
+        const next = new Set(prev);
+        if (following) next.add(user.id); else next.delete(user.id);
+        return next;
+      });
+      toast.success(message);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to follow user");
+    }
   };
+
+  const avatarFallback = (name: string) =>
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1e293b&color=22d3ee&bold=true`;
 
   return (
     <div className="space-y-5">
@@ -50,11 +76,12 @@ export function ExplorePage() {
       <div className="glass rounded-2xl p-4 border border-slate-700/10">
         <div className="relative">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+          {searching && <RefreshCw size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 animate-spin" />}
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search people, topics, posts..."
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
+            className="w-full pl-10 pr-10 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
           />
         </div>
         <div className="flex gap-2 mt-3">
@@ -81,7 +108,11 @@ export function ExplorePage() {
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <TrendingUp size={18} className="text-cyan-400" /> Trending Now
           </h2>
-          {TRENDING_POSTS.map((post, i) => (
+          {[
+            { author: "0xNova", content: "Just discovered a new yield farming strategy that's generating 40% APY. Thread 🧵👇", likes: 342, comments: 89 },
+            { author: "VoxelQueen", content: "My new collection 'Ethereal Voids' drops tomorrow at 2PM UTC. 1000 unique pieces, each procedurally generated. Who's ready? 🎨", likes: 1205, comments: 234 },
+            { author: "CryptoPulse", content: "On-chain data shows whale accumulation at ATH levels. Something big is brewing... 📊", likes: 567, comments: 123 },
+          ].map((post, i) => (
             <div key={i} className="glass rounded-2xl p-5 border border-slate-700/10 hover:border-slate-600/30 transition-all cursor-pointer">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-indigo-500 flex items-center justify-center text-xs font-bold text-white">
@@ -92,7 +123,7 @@ export function ExplorePage() {
               </div>
               <p className="text-sm text-slate-300 leading-relaxed">{post.content}</p>
               <div className="flex gap-4 mt-3 text-xs text-slate-500 font-mono">
-                <span>❤️ {post.likes}</span>
+                <span>❤️ {post.likes.toLocaleString()}</span>
                 <span>💬 {post.comments}</span>
               </div>
             </div>
@@ -100,36 +131,54 @@ export function ExplorePage() {
         </div>
       )}
 
-      {/* People */}
+      {/* People — Real API */}
       {activeTab === "people" && (
         <div className="space-y-3">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Users size={18} className="text-indigo-400" /> Suggested for You
+            <Users size={18} className="text-indigo-400" />
+            {search ? `Results for "${search}"` : "Suggested for You"}
           </h2>
-          {SUGGESTED_USERS.filter(u =>
-            !search || u.username.includes(search.toLowerCase()) || u.displayName.toLowerCase().includes(search.toLowerCase())
-          ).map(user => (
-            <div key={user.username} className="glass rounded-2xl p-4 border border-slate-700/10 flex items-center gap-4">
-              <img src={user.avatar} alt={user.displayName}
-                className="w-12 h-12 rounded-full object-cover border border-slate-700/40" />
+          {searching && (
+            <div className="flex justify-center py-8">
+              <RefreshCw size={20} className="text-slate-500 animate-spin" />
+            </div>
+          )}
+          {!searching && searchResults.length === 0 && (
+            <div className="glass rounded-2xl p-8 border border-slate-700/10 text-center">
+              <Users size={32} className="text-slate-600 mx-auto mb-2" />
+              <p className="text-sm text-slate-400">No users found{search ? ` for "${search}"` : ""}</p>
+            </div>
+          )}
+          {!searching && searchResults.map(user => (
+            <div key={user.id} className="glass rounded-2xl p-4 border border-slate-700/10 flex items-center gap-4">
+              <img
+                src={user.avatarUrl || avatarFallback(user.displayName ?? user.username)}
+                alt={user.displayName ?? user.username}
+                className="w-12 h-12 rounded-full object-cover border border-slate-700/40"
+                onError={e => { (e.target as HTMLImageElement).src = avatarFallback(user.displayName ?? user.username); }}
+              />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-sm text-white">{user.displayName}</span>
-                  {user.verified && <Star size={12} className="text-cyan-400 fill-cyan-400" />}
+                  <span className="font-semibold text-sm text-white truncate">{user.displayName ?? user.username}</span>
+                  {user.isVerified && <Star size={12} className="text-cyan-400 fill-cyan-400 flex-shrink-0" />}
                 </div>
                 <p className="text-xs text-slate-500 font-mono">@{user.username}</p>
-                <p className="text-xs text-slate-400 mt-0.5 truncate">{user.bio}</p>
+                {user.bio && <p className="text-xs text-slate-400 mt-0.5 truncate">{user.bio}</p>}
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-xs text-slate-500 font-mono mb-1.5">{user.followers}</p>
-                <button
-                  onClick={() => toggleFollow(user.username)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${following.has(user.username)
-                    ? "bg-slate-800 text-slate-400 border border-slate-700"
-                    : "text-white border border-cyan-500/30"}`}
-                  style={!following.has(user.username) ? { background: "linear-gradient(135deg, #22d3ee, #6366f1)" } : {}}>
-                  {following.has(user.username) ? "Following" : "Follow"}
-                </button>
+                <p className="text-xs text-slate-500 font-mono mb-1.5">
+                  {(user._count?.followers ?? 0).toLocaleString()} followers
+                </p>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => handleToggleFollow(user)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${followingSet.has(user.id)
+                      ? "bg-slate-800 text-slate-400 border border-slate-700"
+                      : "text-white border border-cyan-500/30"}`}
+                    style={!followingSet.has(user.id) ? { background: "linear-gradient(135deg, #22d3ee, #6366f1)" } : {}}>
+                    {followingSet.has(user.id) ? <><UserCheck size={11} /> Following</> : "Follow"}
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -167,7 +216,7 @@ export function ExplorePage() {
           <Globe size={20} className="text-cyan-400" />
           <div>
             <p className="text-sm font-bold text-white">Join the SocialFi Community</p>
-            <p className="text-xs text-slate-400 mt-0.5">Connect with 50K+ Web3 enthusiasts, earn tokens, and shape the future of social media.</p>
+            <p className="text-xs text-slate-400 mt-0.5">Connect with Web3 enthusiasts, earn tokens, and shape the future of social media.</p>
           </div>
         </div>
       </div>

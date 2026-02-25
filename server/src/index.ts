@@ -14,6 +14,7 @@ import authRoutes from "./routes/auth.routes.js";
 import feedRoutes from "./routes/feed.routes.js";
 import adsRoutes from "./routes/ads.routes.js";
 import rewardsRoutes from "./routes/rewards.routes.js";
+import usersRoutes from "./routes/users.routes.js";
 import { handleStripeWebhook } from "./webhooks/stripe.webhook.js";
 
 const app = express();
@@ -84,6 +85,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/feed", feedRoutes);
 app.use("/api/ads", adsRoutes);
 app.use("/api/rewards", rewardsRoutes);
+app.use("/api/users", usersRoutes);
 
 // ── Health Check ────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
