@@ -9,6 +9,7 @@ import {
 import { useAuth } from "./contexts/AuthContext";
 import { useFeed } from "./hooks/useFeed";
 import { useRewards } from "./hooks/useRewards";
+import { useWallet } from "./hooks/useWallet";
 import { AuthModal } from "./components/AuthModal";
 import { LoginPage } from "./components/LoginPage";
 import { MarketplacePage } from "./components/MarketplacePage";
@@ -250,11 +251,31 @@ function TopSponsorsWidget() {
 function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { user, isAuthenticated, logout } = useAuth();
   const { balance } = useRewards();
+  const wallet = useWallet();
   const [notifs, setNotifs] = useState(3);
 
   const displayBalance = isAuthenticated
     ? parseFloat(balance).toLocaleString(undefined, { maximumFractionDigits: 2 })
     : "0";
+
+  const shortAddr = wallet.address
+    ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`
+    : null;
+
+  const handleConnectWallet = async () => {
+    try {
+      const addr = await wallet.connect();
+      toast.success(`Wallet connected: ${addr.slice(0, 6)}...${addr.slice(-4)}`);
+    } catch (err: any) {
+      if (err?.code === 4001) {
+        toast.error("Connection rejected by user");
+      } else if (!wallet.hasMetaMask) {
+        toast.error("Please install MetaMask extension");
+      } else {
+        toast.error(err?.message || "Failed to connect wallet");
+      }
+    }
+  };
 
   return (
     <header className="glass sticky top-0 z-50 border-b border-slate-700/10">
@@ -288,6 +309,42 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
               <span className="font-bold text-sm text-cyan-400 font-mono" style={{textShadow:'0 0 12px rgba(34,211,238,0.7)'}}>
                 {displayBalance}
               </span>
+            </div>
+          )}
+
+          {/* MetaMask wallet button — only for logged-in users */}
+          {isAuthenticated && !wallet.address && (
+            <button
+              onClick={handleConnectWallet}
+              disabled={wallet.isConnecting}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-90"
+              style={{
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(234,88,12,0.1))',
+                border: '1px solid rgba(245,158,11,0.35)',
+                color: '#fbbf24',
+                boxShadow: '0 0 10px rgba(245,158,11,0.1)',
+              }}>
+              {wallet.isConnecting ? (
+                <RefreshCw size={13} className="animate-spin" />
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21.3 3L13 8.9l1.5-3.6L21.3 3z" fill="#E17726"/><path d="M2.7 3l8.2 6-1.4-3.7L2.7 3zM18.2 17l-2.2 3.3 4.7 1.3 1.3-4.6h-3.8zM2 17l1.3 4.6 4.7-1.3L5.8 17H2z" fill="#E27625"/></svg>
+              )}
+              <span className="hidden sm:inline">{wallet.isConnecting ? "Connecting..." : "Connect Wallet"}</span>
+            </button>
+          )}
+
+          {/* Connected wallet address chip */}
+          {isAuthenticated && wallet.address && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono"
+              style={{
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(34,211,238,0.08))',
+                border: '1px solid rgba(16,185,129,0.3)',
+              }}>
+              <div className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: '0 0 6px #34d399' }} />
+              <span className="text-emerald-400 font-semibold">{shortAddr}</span>
+              {wallet.isSepolia && (
+                <span className="text-[8px] px-1 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-sans font-bold">Sepolia</span>
+              )}
             </div>
           )}
 
