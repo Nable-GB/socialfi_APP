@@ -45,6 +45,20 @@ export async function claimReward(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // 1b. Prevent claiming rewards on own sponsored posts
+    if (post.authorId === userId) {
+      res.status(403).json({ error: "Cannot claim rewards on your own sponsored post" });
+      return;
+    }
+
+    // 1c. Time-gate: post must be at least 5 seconds old (anti-bot)
+    const MIN_VIEW_SECONDS = 5;
+    const postAgeSeconds = (Date.now() - new Date(post.createdAt).getTime()) / 1000;
+    if (postAgeSeconds < MIN_VIEW_SECONDS) {
+      res.status(429).json({ error: `Please view the post for at least ${MIN_VIEW_SECONDS} seconds before claiming` });
+      return;
+    }
+
     // 2. Check if campaign has remaining impressions
     if (post.adCampaign.impressionsDelivered >= post.adCampaign.impressionsTotal) {
       res.status(400).json({ error: "Campaign has reached its impression limit" });

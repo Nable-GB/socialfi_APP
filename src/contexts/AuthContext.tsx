@@ -43,15 +43,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const { token: newToken, user: newUser } = await authApi.login({ email, password });
+    const { token: newToken, refreshToken, user: newUser } = await authApi.login({ email, password });
     tokenStorage.set(newToken);
+    tokenStorage.setRefresh(refreshToken);
     setToken(newToken);
     setUser(newUser);
   }, []);
 
   const register = useCallback(async (data: Parameters<typeof authApi.register>[0]) => {
-    const { token: newToken, user: newUser } = await authApi.register(data);
+    const { token: newToken, refreshToken, user: newUser } = await authApi.register(data);
     tokenStorage.set(newToken);
+    tokenStorage.setRefresh(refreshToken);
     setToken(newToken);
     setUser(newUser);
   }, []);
@@ -78,12 +80,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const signature = await signMessage(messageStr);
 
     // 4. Verify on backend → get JWT
-    const { token: newToken, user: newUser } = await authApi.verifySiwe({
+    const { token: newToken, refreshToken, user: newUser } = await authApi.verifySiwe({
       message: messageStr,
       signature,
     });
 
     tokenStorage.set(newToken);
+    tokenStorage.setRefresh(refreshToken);
     setToken(newToken);
     setUser(newUser);
   }, []);

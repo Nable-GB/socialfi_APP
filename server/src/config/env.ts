@@ -18,7 +18,9 @@ export const env = {
 
   // Auth
   JWT_SECRET: required("JWT_SECRET"),
-  JWT_EXPIRES_IN: optional("JWT_EXPIRES_IN", "7d"),
+  JWT_EXPIRES_IN: optional("JWT_EXPIRES_IN", "15m"),
+  JWT_REFRESH_SECRET: optional("JWT_REFRESH_SECRET", required("JWT_SECRET") + "_refresh"),
+  JWT_REFRESH_EXPIRES_IN: optional("JWT_REFRESH_EXPIRES_IN", "7d"),
 
   // Stripe
   STRIPE_SECRET_KEY: required("STRIPE_SECRET_KEY"),

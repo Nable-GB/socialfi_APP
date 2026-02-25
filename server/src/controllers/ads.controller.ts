@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { z } from "zod";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
+import { sanitizeText } from "../middleware/sanitize.js";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
@@ -147,8 +148,8 @@ export async function createCampaign(req: Request, res: Response): Promise<void>
       data: {
         merchantId: userId,
         adPackageId: adPackage.id,
-        title: data.campaignTitle,
-        description: data.campaignDescription,
+        title: sanitizeText(data.campaignTitle),
+        description: data.campaignDescription ? sanitizeText(data.campaignDescription) : undefined,
         targetUrl: data.targetUrl,
         paymentMethod: "CRYPTO_USDT",
         paymentStatus: "COMPLETED",
@@ -169,7 +170,8 @@ export async function createCampaign(req: Request, res: Response): Promise<void>
     const impr = adPackage.impressions > 0 ? adPackage.impressions : 1;
     const perView = pool / impr;
     const perEngagement = pool / (impr / 5);
-    const postContent = data.content || `🔥 SPONSORED | ${data.campaignTitle}\n\n${data.campaignDescription || "Check out this campaign!"}\n\n${data.targetUrl ? `👉 ${data.targetUrl}` : ""}`;
+    const rawContent = data.content || `🔥 SPONSORED | ${data.campaignTitle}\n\n${data.campaignDescription || "Check out this campaign!"}\n\n${data.targetUrl ? `👉 ${data.targetUrl}` : ""}`;
+    const postContent = sanitizeText(rawContent);
 
     await prisma.socialPost.create({
       data: {

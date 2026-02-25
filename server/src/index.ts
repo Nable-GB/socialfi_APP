@@ -1,10 +1,12 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import jwt from "jsonwebtoken";
 import { env } from "./config/env.js";
 import { captureRawBody } from "./middleware/rawBody.js";
 import { requireAuth } from "./middleware/auth.js";
 import type { JwtPayload } from "./middleware/auth.js";
+import { globalLimiter } from "./middleware/rateLimiter.js";
 import prisma from "./lib/prisma.js";
 
 // ── Route Imports ───────────────────────────────────────────────────────────
@@ -16,23 +18,36 @@ import { handleStripeWebhook } from "./webhooks/stripe.webhook.js";
 
 const app = express();
 
-// ── CORS ────────────────────────────────────────────────────────────────────
-const allowedOrigins = [
-  env.FRONTEND_URL,
-  "http://localhost:5173",
-  "http://localhost:4173",
-].filter(Boolean);
+// ── Security Headers (Helmet) ────────────────────────────────────────────
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false, // managed by frontend/CDN
+}));
+
+// ── CORS — strict origin matching ────────────────────────────────────────
+const allowedOrigins = new Set(
+  [
+    env.FRONTEND_URL,
+    ...(env.NODE_ENV === "development" ? ["http://localhost:5173", "http://localhost:4173"] : []),
+  ].filter(Boolean)
+);
 
 app.use(
   cors({
     origin: (origin, cb) => {
-      // allow requests with no origin (mobile apps, curl, etc.)
-      if (!origin || allowedOrigins.some(o => origin.startsWith(o!))) return cb(null, true);
-      cb(null, false);
+      // allow server-to-server (no origin) in dev, reject in prod
+      if (!origin) return cb(null, env.NODE_ENV === "development");
+      if (allowedOrigins.has(origin)) return cb(null, true);
+      cb(new Error(`CORS blocked: ${origin}`));
     },
     credentials: true,
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// ── Rate Limiting (global: 100 req/min per IP) ──────────────────────────
+app.use(globalLimiter);
 
 // ── Stripe Webhook (MUST be before express.json — needs raw body) ──────────
 app.post(

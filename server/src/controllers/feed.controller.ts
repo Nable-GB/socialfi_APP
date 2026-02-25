@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../lib/prisma.js";
+import { sanitizeText } from "../middleware/sanitize.js";
 
 // ─── Validation ─────────────────────────────────────────────────────────────
 
@@ -181,7 +182,7 @@ export async function createPost(req: Request, res: Response): Promise<void> {
     const post = await prisma.socialPost.create({
       data: {
         authorId: userId,
-        content: data.content,
+        content: sanitizeText(data.content),
         mediaUrl: data.mediaUrl,
         mediaType: data.mediaType,
         type: "ORGANIC",
@@ -237,7 +238,7 @@ export async function interactWithPost(req: Request, res: Response): Promise<voi
           userId,
           postId,
           type: "COMMENT",
-          commentText: data.commentText,
+          commentText: data.commentText ? sanitizeText(data.commentText) : undefined,
         },
       });
 

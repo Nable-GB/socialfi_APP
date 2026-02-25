@@ -1,17 +1,43 @@
 // Base URL: อ่านจาก .env หรือใช้ localhost ตอน dev
 const BASE_URL = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:4000";
 
-// ─── Token storage ────────────────────────────────────────────────────────────
+// ─── Token storage ──────────────────────────────────────────────────────────────
 export const tokenStorage = {
   get: () => localStorage.getItem("sf_token"),
   set: (token: string) => localStorage.setItem("sf_token", token),
-  clear: () => localStorage.removeItem("sf_token"),
+  clear: () => { localStorage.removeItem("sf_token"); localStorage.removeItem("sf_refresh_token"); },
+  getRefresh: () => localStorage.getItem("sf_refresh_token"),
+  setRefresh: (token: string) => localStorage.setItem("sf_refresh_token", token),
 };
 
-// ─── Core fetch wrapper ───────────────────────────────────────────────────────
+// ─── Core fetch wrapper with auto-refresh ──────────────────────────────────────
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefreshToken(): Promise<boolean> {
+  const refreshToken = tokenStorage.getRefresh();
+  if (!refreshToken) return false;
+
+  try {
+    const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    tokenStorage.set(data.token);
+    tokenStorage.setRefresh(data.refreshToken);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function request<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  _retry = false
 ): Promise<T> {
   const token = tokenStorage.get();
 
@@ -23,6 +49,20 @@ async function request<T>(
       ...(options.headers ?? {}),
     },
   });
+
+  // Auto-refresh on 401 (expired access token)
+  if (res.status === 401 && !_retry && tokenStorage.getRefresh()) {
+    if (!isRefreshing) {
+      isRefreshing = true;
+      refreshPromise = tryRefreshToken().finally(() => { isRefreshing = false; });
+    }
+    const refreshed = await refreshPromise;
+    if (refreshed) {
+      return request<T>(path, options, true);
+    }
+    // Refresh failed — clear tokens (force re-login)
+    tokenStorage.clear();
+  }
 
   const data = await res.json();
 
@@ -41,13 +81,13 @@ export const authApi = {
     username: string;
     displayName?: string;
     referralCode?: string;
-  }) => request<{ token: string; user: ApiUser }>("/api/auth/register", {
+  }) => request<{ token: string; refreshToken: string; user: ApiUser }>("/api/auth/register", {
     method: "POST",
     body: JSON.stringify(body),
   }),
 
   login: (body: { email: string; password: string }) =>
-    request<{ token: string; user: ApiUser }>("/api/auth/login", {
+    request<{ token: string; refreshToken: string; user: ApiUser }>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify(body),
     }),
@@ -58,7 +98,7 @@ export const authApi = {
     request<{ nonce: string }>(`/api/auth/nonce/${address}`),
 
   verifySiwe: (body: { message: string; signature: string }) =>
-    request<{ token: string; user: ApiUser }>("/api/auth/siwe/verify", {
+    request<{ token: string; refreshToken: string; user: ApiUser }>("/api/auth/siwe/verify", {
       method: "POST",
       body: JSON.stringify(body),
     }),

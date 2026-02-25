@@ -10,8 +10,19 @@ import crypto from "node:crypto";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function signToken(payload: JwtPayload): string {
+function signAccessToken(payload: JwtPayload): string {
   return jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as any);
+}
+
+function signRefreshToken(payload: JwtPayload): string {
+  return jwt.sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRES_IN } as any);
+}
+
+function issueTokens(payload: JwtPayload) {
+  return {
+    accessToken: signAccessToken(payload),
+    refreshToken: signRefreshToken(payload),
+  };
 }
 
 function generateReferralCode(): string {
@@ -76,10 +87,11 @@ export async function register(req: Request, res: Response): Promise<void> {
       },
     });
 
-    const token = signToken({ userId: user.id, role: user.role });
+    const tokens = issueTokens({ userId: user.id, role: user.role });
 
     res.status(201).json({
-      token,
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -123,10 +135,11 @@ export async function login(req: Request, res: Response): Promise<void> {
       data: { lastLoginAt: new Date() },
     });
 
-    const token = signToken({ userId: user.id, role: user.role, walletAddress: user.walletAddress ?? undefined });
+    const tokens = issueTokens({ userId: user.id, role: user.role, walletAddress: user.walletAddress ?? undefined });
 
     res.json({
-      token,
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -213,10 +226,11 @@ export async function verifySiwe(req: Request, res: Response): Promise<void> {
       },
     });
 
-    const token = signToken({ userId: user.id, role: user.role, walletAddress: user.walletAddress ?? undefined });
+    const tokens = issueTokens({ userId: user.id, role: user.role, walletAddress: user.walletAddress ?? undefined });
 
     res.json({
-      token,
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       user: {
         id: user.id,
         username: user.username,
@@ -233,6 +247,53 @@ export async function verifySiwe(req: Request, res: Response): Promise<void> {
     }
     console.error("SIWE verify error:", err);
     res.status(401).json({ error: "Signature verification failed" });
+  }
+}
+
+// ─── POST /api/auth/refresh — Exchange refresh token for new token pair ─────
+
+const refreshSchema = z.object({
+  refreshToken: z.string().min(1),
+});
+
+export async function refreshTokenHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { refreshToken } = refreshSchema.parse(req.body);
+
+    // Verify the refresh token
+    let payload: JwtPayload;
+    try {
+      payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as JwtPayload;
+    } catch {
+      res.status(401).json({ error: "Invalid or expired refresh token" });
+      return;
+    }
+
+    // Verify user still exists and is active
+    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+    if (!user) {
+      res.status(401).json({ error: "User not found" });
+      return;
+    }
+
+    // Issue new token pair
+    const tokens = issueTokens({
+      userId: user.id,
+      role: user.role,
+      walletAddress: user.walletAddress ?? undefined,
+    });
+
+    res.json({
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Validation failed", details: err.errors });
+      return;
+    }
+    console.error("RefreshToken error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 }
 
