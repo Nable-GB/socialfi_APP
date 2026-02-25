@@ -297,6 +297,44 @@ export const adminApi = {
     ),
 };
 
+// ─── NFT ──────────────────────────────────────────────────────────────────────
+export const nftApi = {
+  mint: (body: { name: string; description?: string; imageUrl: string; collection?: string; rarity?: string; attributes?: { trait_type: string; value: string }[] }) =>
+    request<{ nft: ApiNft }>("/api/nfts/mint", { method: "POST", body: JSON.stringify(body) }),
+
+  listForSale: (nftId: string, price: number) =>
+    request<{ listing: ApiListing }>(`/api/nfts/${nftId}/list`, { method: "POST", body: JSON.stringify({ price }) }),
+
+  cancelListing: (listingId: string) =>
+    request<{ success: boolean }>(`/api/nfts/listings/${listingId}`, { method: "DELETE" }),
+
+  buy: (listingId: string) =>
+    request<{ success: boolean; nftId: string; price: string; message: string }>(`/api/nfts/listings/${listingId}/buy`, { method: "POST" }),
+
+  getMarket: (params?: { cursor?: string; limit?: number; rarity?: string; collection?: string; minPrice?: number; maxPrice?: number; sort?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.cursor) qs.set("cursor", params.cursor);
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.rarity) qs.set("rarity", params.rarity);
+    if (params?.collection) qs.set("collection", params.collection);
+    if (params?.minPrice !== undefined) qs.set("minPrice", String(params.minPrice));
+    if (params?.maxPrice !== undefined) qs.set("maxPrice", String(params.maxPrice));
+    if (params?.sort) qs.set("sort", params.sort);
+    return request<{ listings: ApiListing[]; nextCursor: string | null; hasMore: boolean }>(`/api/nfts/market?${qs}`);
+  },
+
+  getMyNfts: (params?: { cursor?: string; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.cursor) qs.set("cursor", params.cursor);
+    if (params?.limit) qs.set("limit", String(params.limit));
+    return request<{ nfts: ApiNft[]; nextCursor: string | null; hasMore: boolean }>(`/api/nfts/my?${qs}`);
+  },
+
+  getNft: (id: string) => request<{ nft: ApiNft }>(`/api/nfts/${id}`),
+
+  getUserNfts: (userId: string) => request<{ nfts: ApiNft[] }>(`/api/nfts/users/${userId}`),
+};
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export const notificationsApi = {
   getList: (params?: { unreadOnly?: boolean; limit?: number }) => {
@@ -314,6 +352,38 @@ export const notificationsApi = {
 };
 
 // ─── API Types ────────────────────────────────────────────────────────────────
+export interface ApiNft {
+  id: string;
+  ownerId: string;
+  minterId: string;
+  name: string;
+  description?: string;
+  imageUrl: string;
+  collection: string;
+  rarity: "COMMON" | "UNCOMMON" | "RARE" | "EPIC" | "LEGENDARY";
+  attributes?: { trait_type: string; value: string }[];
+  tokenId?: string;
+  contractAddress?: string;
+  createdAt: string;
+  owner?: { id: string; username: string; displayName?: string; avatarUrl?: string };
+  minter?: { id: string; username: string; displayName?: string };
+  listings?: ApiListing[];
+}
+
+export interface ApiListing {
+  id: string;
+  nftId: string;
+  sellerId: string;
+  buyerId?: string;
+  price: string;
+  status: "ACTIVE" | "SOLD" | "CANCELLED";
+  listedAt: string;
+  soldAt?: string;
+  nft?: ApiNft;
+  seller?: { id: string; username: string; displayName?: string; avatarUrl?: string };
+  buyer?: { id: string; username: string };
+}
+
 export interface ApiNotification {
   id: string;
   type: string;

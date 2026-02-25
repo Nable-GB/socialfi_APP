@@ -20,6 +20,8 @@ import { SettingsPage } from "./components/SettingsPage";
 import { TransactionsPage } from "./components/TransactionsPage";
 import { AdminPage } from "./components/AdminPage";
 import { NotificationCenter } from "./components/NotificationCenter";
+import { NFTMarketplacePage } from "./components/NFTMarketplacePage";
+import { MyNFTsPage } from "./components/MyNFTsPage";
 import { VerifyEmailPage } from "./components/VerifyEmailPage";
 import { ResetPasswordPage } from "./components/ResetPasswordPage";
 import type { ApiPost } from "./lib/api";
@@ -436,6 +438,8 @@ function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string
     { id: "create", icon: PlusSquare, label: "Create Ad" },
     { id: "profile", icon: User, label: "My Profile" },
     { id: "explore", icon: Globe, label: "Explore" },
+    { id: "nft-market", icon: Image, label: "NFT Market" },
+    { id: "my-nfts", icon: Image, label: "My NFTs" },
     { id: "transactions", icon: ArrowUpRight, label: "Transactions" },
     { id: "settings", icon: Settings, label: "Settings" },
     ...(useAuth().user?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: "Admin" }] : []),
@@ -771,6 +775,8 @@ export default function App() {
             {activeNav === "explore" && <ExplorePage />}
             {activeNav === "settings" && <SettingsPage />}
             {activeNav === "transactions" && <TransactionsPage />}
+            {activeNav === "nft-market" && <NFTMarketplacePage />}
+            {activeNav === "my-nfts" && <MyNFTsPage />}
             {activeNav === "admin" && <AdminPage />}
           </main>
 
@@ -813,6 +819,8 @@ export default function App() {
           {mobileTab === "transactions" && <TransactionsPage />}
           {mobileTab === "settings" && <SettingsPage />}
           {mobileTab === "admin" && <AdminPage />}
+          {mobileTab === "nft-market" && <NFTMarketplacePage />}
+          {mobileTab === "my-nfts" && <MyNFTsPage />}
           {mobileTab === "explore" && <ExplorePage />}
         </div>
       </div>

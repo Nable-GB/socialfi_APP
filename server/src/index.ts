@@ -17,6 +17,7 @@ import rewardsRoutes from "./routes/rewards.routes.js";
 import usersRoutes from "./routes/users.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import notificationsRoutes from "./routes/notifications.routes.js";
+import nftRoutes from "./routes/nft.routes.js";
 import { handleStripeWebhook } from "./webhooks/stripe.webhook.js";
 
 const app = express();
@@ -90,6 +91,7 @@ app.use("/api/rewards", rewardsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationsRoutes);
+app.use("/api/nfts", nftRoutes);
 
 // ── Health Check ────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {

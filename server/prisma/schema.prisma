@@ -94,6 +94,20 @@ enum BatchStatus {
   FAILED
 }
 
+enum NftRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+}
+
 enum NotificationType {
   FOLLOW           // Someone followed you
   LIKE             // Someone liked your post
@@ -162,6 +176,10 @@ model User {
   followers       Follow[]            @relation("Following")      // Users who follow this user
   following       Follow[]            @relation("Followers")      // Users this user follows
   notifications   Notification[]
+  nfts            Nft[]           @relation("NftOwner")
+  mintedNfts      Nft[]           @relation("NftMinter")
+  listings        NftListing[]    @relation("ListingSeller")
+  purchases       NftListing[]    @relation("ListingBuyer")
 
   @@index([walletAddress])
   @@index([referralCode])
@@ -473,4 +491,78 @@ model Notification {
   @@index([userId, isRead])
   @@index([userId, createdAt(sort: Desc)])
   @@map("notifications")
+}
+
+// ============================================================================
+// NFT — Off-chain metadata record (on-chain tokenId stored when minted)
+// ============================================================================
+
+model Nft {
+  id              String      @id @default(uuid())
+
+  // --- Ownership ---
+  owner           User        @relation("NftOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId         String
+  minter          User        @relation("NftMinter", fields: [minterId], references: [id])
+  minterId        String
+
+  // --- Metadata ---
+  name            String
+  description     String?     @db.Text
+  imageUrl        String
+  collection      String      @default("SocialFi Genesis")
+  rarity          NftRarity   @default(COMMON)
+  attributes      Json?       // [{ trait_type, value }]
+
+  // --- On-chain ---
+  tokenId         String?     @unique   // ERC-721 token ID once minted on-chain
+  contractAddress String?
+  chainId         Int?
+
+  // --- Timestamps ---
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // --- Relations ---
+  listings        NftListing[]
+
+  @@index([ownerId])
+  @@index([minterId])
+  @@index([rarity])
+  @@index([collection])
+  @@map("nfts")
+}
+
+// ============================================================================
+// NFT LISTING — Marketplace listing for an NFT
+// ============================================================================
+
+model NftListing {
+  id              String        @id @default(uuid())
+
+  // --- NFT ---
+  nft             Nft           @relation(fields: [nftId], references: [id], onDelete: Cascade)
+  nftId           String
+
+  // --- Seller ---
+  seller          User          @relation("ListingSeller", fields: [sellerId], references: [id])
+  sellerId        String
+
+  // --- Buyer (set on sale) ---
+  buyer           User?         @relation("ListingBuyer", fields: [buyerId], references: [id])
+  buyerId         String?
+
+  // --- Pricing (SFT tokens) ---
+  price           Decimal       @db.Decimal(20, 8)  // Price in SFT tokens
+  status          ListingStatus @default(ACTIVE)
+
+  // --- Timestamps ---
+  listedAt        DateTime      @default(now())
+  soldAt          DateTime?
+
+  @@index([nftId])
+  @@index([sellerId])
+  @@index([status])
+  @@index([price])
+  @@map("nft_listings")
 }
