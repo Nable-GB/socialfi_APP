@@ -11,7 +11,7 @@ export const REFERRAL_TIERS = [
   { minReferrals: 15,  rate: 0.10,  label: "Gold",     color: "#f59e0b", bonus: 150  },
   { minReferrals: 30,  rate: 0.13,  label: "Platinum", color: "#22d3ee", bonus: 400  },
   { minReferrals: 60,  rate: 0.15,  label: "Diamond",  color: "#a855f7", bonus: 1000 },
-] as const;
+];
 
 export function getTier(referralCount: number) {
   let tier = REFERRAL_TIERS[0];

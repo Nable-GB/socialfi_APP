@@ -38,9 +38,9 @@ export function useFeed() {
     }
   }, [hasMore, nextCursor, isLoadingMore]);
 
-  const createPost = useCallback(async (content: string) => {
+  const createPost = useCallback(async (content: string, mediaUrl?: string) => {
     try {
-      const { post } = await feedApi.createPost({ content });
+      const { post } = await feedApi.createPost({ content, mediaUrl });
       setPosts((prev) => [post, ...prev]);
       toast.success("Post published! 🚀");
       return post;

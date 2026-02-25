@@ -38,6 +38,14 @@ export const env = {
   // Rewards
   REFERRAL_RATE: parseFloat(optional("REFERRAL_RATE", "0.05")),
 
+  // S3 File Upload
+  S3_BUCKET: optional("S3_BUCKET", ""),
+  S3_REGION: optional("S3_REGION", "ap-southeast-1"),
+  S3_ACCESS_KEY_ID: optional("S3_ACCESS_KEY_ID", ""),
+  S3_SECRET_ACCESS_KEY: optional("S3_SECRET_ACCESS_KEY", ""),
+  S3_CDN_URL: optional("S3_CDN_URL", ""),  // CloudFront or custom CDN domain
+  MAX_FILE_SIZE: parseInt(optional("MAX_FILE_SIZE", "10485760"), 10), // 10MB default
+
   // Email (SendGrid)
   SENDGRID_API_KEY: optional("SENDGRID_API_KEY", ""),
   FROM_EMAIL: optional("FROM_EMAIL", "noreply@socialfi.app"),

@@ -26,7 +26,7 @@ import { ReferralPage } from "./components/ReferralPage";
 import { VerifyEmailPage } from "./components/VerifyEmailPage";
 import { ResetPasswordPage } from "./components/ResetPasswordPage";
 import type { ApiPost } from "./lib/api";
-import { authApi } from "./lib/api";
+import { authApi, uploadApi } from "./lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -630,14 +630,17 @@ function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VI
   const { posts, isLoading, isLoadingMore, hasMore, loadMore, createPost } = useFeed();
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const handlePost = async () => {
     if (!content.trim()) return;
     if (!isAuthenticated) { toast.error('Sign in to post'); return; }
     try {
       setIsPosting(true);
-      await createPost(content);
+      await createPost(content, mediaUrl || undefined);
       setContent('');
+      setMediaUrl(null);
     } finally {
       setIsPosting(false);
     }
@@ -651,8 +654,36 @@ function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VI
           placeholder={isAuthenticated ? "What's happening in Web3 today?" : "Sign in to post..."}
           className="bg-slate-800/60 border-slate-700/20 text-white placeholder:text-slate-500 min-h-[80px] resize-none"
           disabled={!isAuthenticated} />
-        {content && (
-          <div className="flex justify-end gap-2 mt-3">
+        {/* Media preview */}
+        {mediaUrl && (
+          <div className="relative mt-2 rounded-xl overflow-hidden border border-slate-700/20 max-h-48">
+            <img src={mediaUrl} alt="media" className="w-full h-full object-cover" />
+            <button onClick={() => setMediaUrl(null)}
+              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 flex items-center justify-center text-white hover:bg-red-500 transition-colors">
+              <X size={12} />
+            </button>
+          </div>
+        )}
+        {(content || mediaUrl) && (
+          <div className="flex items-center gap-2 mt-3">
+            {/* Media upload button */}
+            <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all ${uploadingMedia ? 'opacity-50' : 'hover:bg-slate-700/50'} border border-slate-700/30 text-slate-400`}>
+              {uploadingMedia ? <RefreshCw size={12} className="animate-spin" /> : <Image size={12} />}
+              {uploadingMedia ? 'Uploading...' : 'Media'}
+              <input type="file" accept="image/*,video/mp4,video/webm" className="hidden" disabled={uploadingMedia}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 10 * 1024 * 1024) { toast.error('Max 10MB'); return; }
+                  setUploadingMedia(true);
+                  try {
+                    const res = await uploadApi.media(file);
+                    setMediaUrl(res.url);
+                  } catch (err: any) { toast.error(err?.message ?? 'Upload failed'); }
+                  finally { setUploadingMedia(false); e.target.value = ''; }
+                }} />
+            </label>
+            <div className="flex-1" />
             <Button variant="outline" onClick={() => setContent('')} className="border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800">Cancel</Button>
             <Button onClick={handlePost} disabled={isPosting || !content.trim()}
               style={{background:'linear-gradient(135deg,#22d3ee,#6366f1)',boxShadow:'0 4px 12px rgba(34,211,238,0.25)'}}>

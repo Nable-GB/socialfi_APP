@@ -297,6 +297,48 @@ export const adminApi = {
     ),
 };
 
+// ─── Uploads ──────────────────────────────────────────────────────────────────
+export const uploadApi = {
+  avatar: async (file: File): Promise<{ success: boolean; url: string; key: string }> => {
+    const form = new FormData();
+    form.append("avatar", file);
+    const token = localStorage.getItem("sf_token");
+    const res = await fetch("/api/uploads/avatar", {
+      method: "POST",
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: form,
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Upload failed"); }
+    return res.json();
+  },
+
+  media: async (file: File): Promise<{ success: boolean; url: string; key: string; contentType: string }> => {
+    const form = new FormData();
+    form.append("media", file);
+    const token = localStorage.getItem("sf_token");
+    const res = await fetch("/api/uploads/media", {
+      method: "POST",
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: form,
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Upload failed"); }
+    return res.json();
+  },
+
+  nft: async (file: File): Promise<{ success: boolean; url: string; key: string }> => {
+    const form = new FormData();
+    form.append("media", file);
+    const token = localStorage.getItem("sf_token");
+    const res = await fetch("/api/uploads/nft", {
+      method: "POST",
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: form,
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Upload failed"); }
+    return res.json();
+  },
+};
+
 // ─── Referral ─────────────────────────────────────────────────────────────────
 export const referralApi = {
   getStats: () => request<any>("/api/referrals/stats"),

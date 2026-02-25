@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useWallet } from "../hooks/useWallet";
-import { usersApi } from "../lib/api";
-import { Settings, Bell, Shield, Eye, Palette, Globe, Save, CheckCircle, Lock, Wallet, User, RefreshCw } from "lucide-react";
+import { usersApi, uploadApi } from "../lib/api";
+import { Settings, Bell, Shield, Eye, Palette, Globe, Save, CheckCircle, Lock, Wallet, User, RefreshCw, Camera } from "lucide-react";
 import { toast } from "sonner";
 
 function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
@@ -24,6 +24,7 @@ export function SettingsPage() {
   const [bio, setBio] = useState(user?.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? "");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Password change state
   const [currentPw, setCurrentPw] = useState("");
@@ -143,10 +144,40 @@ export function SettingsPage() {
               placeholder="Tell us about yourself..." />
           </div>
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Avatar URL</label>
-            <input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
-              placeholder="https://..." />
+            <label className="text-xs text-slate-400 mb-1.5 block">Avatar</label>
+            <div className="flex items-center gap-4">
+              {/* Preview */}
+              <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-800 border border-slate-700/30 flex-shrink-0">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-600"><User size={24} /></div>
+                )}
+              </div>
+              {/* File picker */}
+              <div className="flex-1 space-y-2">
+                <label className="flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-slate-600/50 cursor-pointer hover:border-cyan-500/40 transition-all">
+                  {uploadingAvatar ? <RefreshCw size={13} className="animate-spin text-cyan-400" /> : <Camera size={13} className="text-cyan-400" />}
+                  <span className="text-xs text-slate-300">{uploadingAvatar ? "Uploading..." : "Upload image"}</span>
+                  <input type="file" accept="image/*" className="hidden" disabled={uploadingAvatar}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 5 * 1024 * 1024) { toast.error("Max 5MB"); return; }
+                      setUploadingAvatar(true);
+                      try {
+                        const res = await uploadApi.avatar(file);
+                        setAvatarUrl(res.url);
+                        toast.success("Avatar uploaded!");
+                      } catch (err: any) { toast.error(err?.message ?? "Upload failed"); }
+                      finally { setUploadingAvatar(false); e.target.value = ""; }
+                    }} />
+                </label>
+                <input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg bg-slate-800/40 border border-slate-700/20 text-xs text-slate-400 focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600 font-mono"
+                  placeholder="or paste URL..." />
+              </div>
+            </div>
           </div>
           <button onClick={handleSaveProfile} disabled={savingProfile}
             className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:opacity-90"
