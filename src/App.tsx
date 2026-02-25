@@ -10,6 +10,7 @@ import { useAuth } from "./contexts/AuthContext";
 import { useFeed } from "./hooks/useFeed";
 import { useRewards } from "./hooks/useRewards";
 import { AuthModal } from "./components/AuthModal";
+import { LoginPage } from "./components/LoginPage";
 import type { ApiPost } from "./lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -683,6 +684,11 @@ export default function App() {
   };
 
   const displayBalance = parseFloat(balance).toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+  // Show full-page login when not authenticated
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   return (
     <div className="bg-mesh min-h-screen">
