@@ -250,6 +250,53 @@ export const adsApi = {
     request<{ campaigns: any[] }>("/api/ads/campaigns"),
 };
 
+// ─── Admin ─────────────────────────────────────────────────────────────────
+export const adminApi = {
+  getStats: () =>
+    request<any>("/api/admin/stats"),
+
+  getUsers: (params?: { page?: number; limit?: number; search?: string; role?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.search) qs.set("search", params.search);
+    if (params?.role) qs.set("role", params.role);
+    return request<{ users: any[]; total: number; page: number; pages: number; limit: number }>(`/api/admin/users?${qs}`);
+  },
+
+  updateUserRole: (userId: string, role: string) =>
+    request<{ user: any; message: string }>(`/api/admin/users/${userId}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
+    }),
+
+  getCampaigns: (params?: { page?: number; limit?: number; status?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.status) qs.set("status", params.status);
+    return request<{ campaigns: any[]; total: number; page: number; pages: number; limit: number }>(`/api/admin/campaigns?${qs}`);
+  },
+
+  updateCampaignStatus: (campaignId: string, status: string) =>
+    request<{ campaign: any; message: string }>(`/api/admin/campaigns/${campaignId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+
+  distributeRewards: () =>
+    request<{ success: boolean; processed: number; distributed: number; failed: number; results: any[] }>(
+      "/api/admin/rewards/distribute",
+      { method: "POST" }
+    ),
+
+  airdropTokens: (userIds: string[], amount: number, description?: string) =>
+    request<{ success: boolean; airdropped: number; amountEach: number; totalDistributed: number }>(
+      "/api/admin/rewards/airdrop",
+      { method: "POST", body: JSON.stringify({ userIds, amount, description }) }
+    ),
+};
+
 // ─── API Types ────────────────────────────────────────────────────────────────
 export interface ApiUser {
   id: string;

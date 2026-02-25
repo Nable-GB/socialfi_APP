@@ -18,6 +18,7 @@ import { ExplorePage } from "./components/ExplorePage";
 import { ProfilePage } from "./components/ProfilePage";
 import { SettingsPage } from "./components/SettingsPage";
 import { TransactionsPage } from "./components/TransactionsPage";
+import { AdminPage } from "./components/AdminPage";
 import { VerifyEmailPage } from "./components/VerifyEmailPage";
 import { ResetPasswordPage } from "./components/ResetPasswordPage";
 import type { ApiPost } from "./lib/api";
@@ -448,6 +449,7 @@ function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string
     { id: "explore", icon: Globe, label: "Explore" },
     { id: "transactions", icon: ArrowUpRight, label: "Transactions" },
     { id: "settings", icon: Settings, label: "Settings" },
+    ...(useAuth().user?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: "Admin" }] : []),
   ];
 
   return (
@@ -780,6 +782,7 @@ export default function App() {
             {activeNav === "explore" && <ExplorePage />}
             {activeNav === "settings" && <SettingsPage />}
             {activeNav === "transactions" && <TransactionsPage />}
+            {activeNav === "admin" && <AdminPage />}
           </main>
 
           <aside className="space-y-4 sticky top-14 pt-6 max-h-[calc(100vh-3.5rem)] overflow-y-auto">
@@ -820,6 +823,7 @@ export default function App() {
           {mobileTab === "profile" && <ProfilePage />}
           {mobileTab === "transactions" && <TransactionsPage />}
           {mobileTab === "settings" && <SettingsPage />}
+          {mobileTab === "admin" && <AdminPage />}
           {mobileTab === "explore" && <ExplorePage />}
         </div>
       </div>
