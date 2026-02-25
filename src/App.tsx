@@ -11,6 +11,11 @@ import { useFeed } from "./hooks/useFeed";
 import { useRewards } from "./hooks/useRewards";
 import { AuthModal } from "./components/AuthModal";
 import { LoginPage } from "./components/LoginPage";
+import { MarketplacePage } from "./components/MarketplacePage";
+import { CreateAdPage } from "./components/CreateAdPage";
+import { ExplorePage } from "./components/ExplorePage";
+import { ProfilePage } from "./components/ProfilePage";
+import { SettingsPage } from "./components/SettingsPage";
 import type { ApiPost } from "./lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -624,52 +629,6 @@ function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VI
 
 
 
-// ─── Mobile Market Tab ────────────────────────────────────────────────────────
-
-function MobileMarket() {
-  return (
-    <div className="space-y-4 pb-24">
-      <div className="glass rounded-2xl p-4 border border-slate-700/10">
-        <div className="flex items-center gap-2 mb-1">
-          <TrendingUp size={16} className="text-cyan-400" />
-          <h2 className="font-bold text-base text-slate-100">Trending Collectibles</h2>
-        </div>
-        <p className="text-xs mb-4 text-slate-600 font-mono">Sorted by 24h volume</p>
-
-        <div className="grid grid-cols-2 gap-3">
-          {TRENDING_NFTS.map(nft => (
-            <div key={nft.name} className="rounded-xl overflow-hidden nft-card cursor-pointer"
-              style={{border:`1px solid ${nft.accent}33`, boxShadow:`0 0 12px ${nft.accent}15`}}>
-              <div className="relative">
-                <img src={nft.image} alt={nft.name} className="w-full aspect-square object-cover" />
-                <div className="nft-scan" />
-              </div>
-              <div className="p-3 bg-black/50">
-                <div className={`inline-block text-xs font-bold px-1.5 py-0.5 rounded mb-1.5 text-[9px] font-mono text-white rarity-${nft.rarity.toLowerCase()}`}>
-                  {nft.rarity}
-                </div>
-                <p className="text-xs font-semibold text-white truncate">{nft.name}</p>
-                <div className="flex items-center justify-between mt-1.5">
-                  <span className="text-xs font-bold font-mono" style={{ color: nft.accent }}>{nft.price_eth} ETH</span>
-                  <span className="text-xs font-semibold text-emerald-400">{(nft as any).change}</span>
-                </div>
-                <button 
-                  onClick={() => toast.success("Mint initiated! ⛏️")}
-                  className="w-full mt-2 py-1.5 rounded-lg text-xs font-bold transition-all text-white"
-                  style={{background:`linear-gradient(135deg, ${nft.accent}, ${nft.accent}aa)`, boxShadow:`0 2px 10px ${nft.accent}33`}}>
-                  Mint / Collect
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <TopSponsorsWidget />
-    </div>
-  );
-}
-
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -702,7 +661,12 @@ export default function App() {
           <DesktopNav activeNav={activeNav} setActiveNav={setActiveNav} onOpenAuth={() => setAuthOpen(true)} />
 
           <main className="min-w-0">
-            <RealFeed onClaimReward={handleClaimReward} />
+            {activeNav === "feed" && <RealFeed onClaimReward={handleClaimReward} />}
+            {activeNav === "market" && <MarketplacePage />}
+            {activeNav === "create" && <CreateAdPage />}
+            {activeNav === "profile" && <ProfilePage />}
+            {activeNav === "explore" && <ExplorePage />}
+            {activeNav === "settings" && <SettingsPage />}
           </main>
 
           <aside className="space-y-4 sticky top-14 pt-6 max-h-[calc(100vh-3.5rem)] overflow-y-auto">
@@ -738,60 +702,9 @@ export default function App() {
         {/* Mobile layout */}
         <div className="lg:hidden pb-24 pt-4">
           {mobileTab === "feed" && <RealFeed onClaimReward={handleClaimReward} />}
-          {mobileTab === "market" && <MobileMarket />}
-          {mobileTab === "create" && (
-            <div className="glass rounded-2xl p-6 text-center mt-4 border border-slate-700/10">
-              <div className="text-4xl mb-3">📢</div>
-              <h2 className="font-bold text-lg text-slate-100 mb-2">Create Ad Campaign</h2>
-              <p className="text-sm text-slate-400 mb-6 leading-relaxed">Launch a sponsored post, reach 50K+ Web3 users, and distribute real token rewards to engaged audiences.</p>
-              <button
-                onClick={() => toast.info("Sign in as Merchant to create campaigns! 🚀")}
-                className="w-full py-3 rounded-xl font-bold text-sm"
-                style={{background:'linear-gradient(135deg,#6366f1,#a855f7)',color:'#fff',boxShadow:'0 4px 20px rgba(99,102,241,0.35)'}}>
-                <span className="flex items-center justify-center gap-2"><Zap size={16} /> Start Campaign</span>
-              </button>
-            </div>
-          )}
-          {mobileTab === "profile" && (
-            <div className="space-y-4 mt-4">
-              {isAuthenticated ? (
-                <div className="glass rounded-2xl overflow-hidden border border-slate-700/10">
-                  <div className="h-28 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-500/30" />
-                  <div className="px-5 pb-5 -mt-8">
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-400 to-indigo-500 flex items-center justify-center text-xl font-bold text-white border-4 border-slate-900">
-                      {(user?.displayName ?? user?.username ?? 'U')[0].toUpperCase()}
-                    </div>
-                    <div className="mt-2">
-                      <div className="flex items-center gap-2">
-                        <h2 className="font-bold text-lg text-slate-100">{user?.displayName ?? user?.username}</h2>
-                      </div>
-                      <p className="text-sm text-slate-600 font-mono">@{user?.username}</p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3 mt-4">
-                      {[
-                        {l:'Balance', v:`${displayBalance} 🪙`},
-                        {l:'Earned', v:parseFloat(totalEarned).toFixed(2)},
-                        {l:'Role', v: user?.role ?? 'USER'}
-                      ].map(s => (
-                        <div key={s.l} className="text-center p-2 rounded-xl bg-slate-800/50">
-                          <p className="font-bold text-sm text-slate-100">{s.v}</p>
-                          <p className="text-xs mt-0.5 text-slate-500">{s.l}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="glass rounded-2xl p-8 text-center border border-slate-700/10">
-                  <p className="text-slate-400 mb-4">Sign in to view your profile</p>
-                  <Button onClick={() => setAuthOpen(true)}
-                    style={{background:'linear-gradient(135deg,#22d3ee,#6366f1)'}}>
-                    Sign In
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+          {mobileTab === "market" && <MarketplacePage />}
+          {mobileTab === "create" && <CreateAdPage />}
+          {mobileTab === "profile" && <ProfilePage />}
         </div>
       </div>
 
