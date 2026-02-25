@@ -21,13 +21,18 @@ declare global {
  */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const header = req.headers.authorization;
+  // SSE connections use ?token= query param since EventSource can't set headers
+  const queryToken = req.query.token as string | undefined;
 
-  if (!header?.startsWith("Bearer ")) {
+  let token: string;
+  if (header?.startsWith("Bearer ")) {
+    token = header.slice(7);
+  } else if (queryToken) {
+    token = queryToken;
+  } else {
     res.status(401).json({ error: "Missing or invalid Authorization header" });
     return;
   }
-
-  const token = header.slice(7);
 
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload;

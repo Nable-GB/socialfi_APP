@@ -94,6 +94,16 @@ enum BatchStatus {
   FAILED
 }
 
+enum NotificationType {
+  FOLLOW           // Someone followed you
+  LIKE             // Someone liked your post
+  COMMENT          // Someone commented on your post
+  REWARD_EARNED    // You earned a reward
+  WITHDRAWAL_DONE  // Your withdrawal was processed
+  AIRDROP          // Admin airdropped tokens to you
+  SYSTEM           // General system message
+}
+
 // ============================================================================
 // USER — Web2/Web3 Auth + Referral Tracking
 // ============================================================================
@@ -151,6 +161,7 @@ model User {
   referralRewards RewardTransaction[] @relation("ReferralSource") // Rewards generated from this user's activity for their referrer
   followers       Follow[]            @relation("Following")      // Users who follow this user
   following       Follow[]            @relation("Followers")      // Users this user follows
+  notifications   Notification[]
 
   @@index([walletAddress])
   @@index([referralCode])
@@ -432,4 +443,34 @@ model DistributionBatch {
 
   @@index([status])
   @@map("distribution_batches")
+}
+
+// ============================================================================
+// NOTIFICATION — In-app + SSE real-time notifications
+// ============================================================================
+
+model Notification {
+  id              String           @id @default(uuid())
+
+  // --- Recipient ---
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+
+  // --- Content ---
+  type            NotificationType
+  title           String
+  message         String           @db.Text
+  isRead          Boolean          @default(false)
+
+  // --- Optional context links ---
+  relatedPostId   String?
+  relatedUserId   String?          // e.g. who followed you
+  relatedTxId     String?          // reward/withdrawal tx
+
+  // --- Timestamps ---
+  createdAt       DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("notifications")
 }

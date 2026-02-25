@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Home, TrendingUp, PlusSquare, User, Wallet, Bell, Search,
+  Home, TrendingUp, PlusSquare, User, Wallet, Search,
   Heart, MessageCircle, Share2,
   Zap, Star, ShoppingBag, ChevronUp, Flame, Award, Shield,
   ExternalLink, RefreshCw, Sparkles, Crown, Image,
@@ -19,6 +19,7 @@ import { ProfilePage } from "./components/ProfilePage";
 import { SettingsPage } from "./components/SettingsPage";
 import { TransactionsPage } from "./components/TransactionsPage";
 import { AdminPage } from "./components/AdminPage";
+import { NotificationCenter } from "./components/NotificationCenter";
 import { VerifyEmailPage } from "./components/VerifyEmailPage";
 import { ResetPasswordPage } from "./components/ResetPasswordPage";
 import type { ApiPost } from "./lib/api";
@@ -257,8 +258,6 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { user, isAuthenticated, logout } = useAuth();
   const { balance } = useRewards();
   const wallet = useWallet();
-  const [notifs, setNotifs] = useState(3);
-
   const displayBalance = isAuthenticated
     ? parseFloat(balance).toLocaleString(undefined, { maximumFractionDigits: 2 })
     : "0";
@@ -353,18 +352,8 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
             </div>
           )}
 
-          {/* Notif bell */}
-          <button 
-            className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:bg-slate-800 border border-slate-700/20"
-            onClick={() => { setNotifs(0); toast.info("Notifications cleared"); }}>
-            <Bell size={16} className={notifs > 0 ? 'text-cyan-400' : 'text-slate-500'} />
-            {notifs > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-center flex items-center justify-center text-white font-bold text-[9px] bg-red-500"
-                style={{boxShadow:'0 0 6px #ef444488'}}>
-                {notifs}
-              </span>
-            )}
-          </button>
+          {/* Notification Center */}
+          {isAuthenticated && <NotificationCenter />}
 
           {/* Auth button */}
           {isAuthenticated ? (

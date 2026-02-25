@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
-import bcrypt from "bcryptjs";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import prisma from "../lib/prisma.js";
+import { notifyFollow } from "../services/notification.service.js";
 import { sanitizeText } from "../middleware/sanitize.js";
 
 // ─── Validation ─────────────────────────────────────────────────────────────
@@ -266,9 +267,12 @@ export async function toggleFollow(req: Request, res: Response): Promise<void> {
       res.json({ following: false, message: `Unfollowed @${target.username}` });
     } else {
       // Follow
+      const follower = await prisma.user.findUnique({ where: { id: followerId }, select: { username: true } });
       await prisma.follow.create({
         data: { followerId, followingId: targetId },
       });
+      // Fire notification (non-blocking)
+      if (follower) notifyFollow(targetId, follower.username, followerId).catch(() => {});
       res.json({ following: true, message: `Now following @${target.username}` });
     }
   } catch (err) {

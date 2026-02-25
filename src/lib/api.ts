@@ -297,7 +297,35 @@ export const adminApi = {
     ),
 };
 
+// ─── Notifications ────────────────────────────────────────────────────────────
+export const notificationsApi = {
+  getList: (params?: { unreadOnly?: boolean; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.unreadOnly) qs.set("unreadOnly", "true");
+    if (params?.limit) qs.set("limit", String(params.limit));
+    return request<{ notifications: ApiNotification[]; unreadCount: number; nextCursor: string | null; hasMore: boolean }>(`/api/notifications?${qs}`);
+  },
+  markRead: (id: string) =>
+    request<{ success: boolean; unreadCount: number }>(`/api/notifications/${id}/read`, { method: "POST" }),
+  markAllRead: () =>
+    request<{ success: boolean; unreadCount: number }>("/api/notifications/read-all", { method: "POST" }),
+  deleteOne: (id: string) =>
+    request<{ success: boolean }>(`/api/notifications/${id}`, { method: "DELETE" }),
+};
+
 // ─── API Types ────────────────────────────────────────────────────────────────
+export interface ApiNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  relatedPostId?: string;
+  relatedUserId?: string;
+  relatedTxId?: string;
+  createdAt: string;
+}
+
 export interface ApiUser {
   id: string;
   email?: string;

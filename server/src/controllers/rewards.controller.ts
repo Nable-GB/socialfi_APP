@@ -5,6 +5,7 @@ import prisma from "../lib/prisma.js";
 import { creditAdViewReward, creditAdEngagementReward } from "../services/reward.service.js";
 import { sendTokens, isOnChainEnabled } from "../services/onchain.service.js";
 import { env } from "../config/env.js";
+import { notifyWithdrawalDone } from "../services/notification.service.js";
 
 // ─── Validation ─────────────────────────────────────────────────────────────
 
@@ -363,6 +364,7 @@ export async function requestWithdrawal(req: Request, res: Response): Promise<vo
           },
         });
 
+        notifyWithdrawalDone(userId, data.amount.toString(), result.txHash).catch(() => {});
         res.json({
           success: true,
           status: "distributed",
@@ -397,6 +399,7 @@ export async function requestWithdrawal(req: Request, res: Response): Promise<vo
         data: { status: "CONFIRMED" },
       });
 
+      notifyWithdrawalDone(userId, data.amount.toString(), null).catch(() => {});
       res.json({
         success: true,
         status: "queued",

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../lib/prisma.js";
 import { sanitizeText } from "../middleware/sanitize.js";
+import { notifyLike, notifyComment } from "../services/notification.service.js";
 
 // ─── Validation ─────────────────────────────────────────────────────────────
 
@@ -247,6 +248,12 @@ export async function interactWithPost(req: Request, res: Response): Promise<voi
         data: { commentsCount: { increment: 1 } },
       });
 
+      // Notify post author (non-blocking, skip self-notify)
+      if (post.authorId !== userId) {
+        const commenter = await prisma.user.findUnique({ where: { id: userId }, select: { username: true } });
+        if (commenter) notifyComment(post.authorId, commenter.username, userId, postId).catch(() => {});
+      }
+
       res.status(201).json({ interaction });
       return;
     }
@@ -286,6 +293,12 @@ export async function interactWithPost(req: Request, res: Response): Promise<voi
       where: { id: postId },
       data: { [counterField]: { increment: 1 } },
     });
+
+    // Notify post author on like (non-blocking, skip self-notify)
+    if (data.type === "LIKE" && post.authorId !== userId) {
+      const liker = await prisma.user.findUnique({ where: { id: userId }, select: { username: true } });
+      if (liker) notifyLike(post.authorId, liker.username, userId, postId).catch(() => {});
+    }
 
     res.status(201).json({ interaction });
   } catch (err) {
