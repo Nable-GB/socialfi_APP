@@ -164,19 +164,23 @@ export async function createCampaign(req: Request, res: Response): Promise<void>
       },
     });
 
-    // Optionally create a sponsored post
-    if (data.content) {
-      await prisma.socialPost.create({
-        data: {
-          authorId: userId,
-          content: data.content,
-          type: "SPONSORED",
-          adCampaignId: campaign.id,
-          rewardPerView: adPackage.totalRewardPool.div(adPackage.impressions > 0 ? adPackage.impressions : 1),
-          rewardPerEngagement: adPackage.totalRewardPool.div(adPackage.impressions > 0 ? adPackage.impressions / 5 : 1),
-        },
-      });
-    }
+    // Always create a sponsored post for the campaign
+    const pool = adPackage.totalRewardPool.toNumber();
+    const impr = adPackage.impressions > 0 ? adPackage.impressions : 1;
+    const perView = pool / impr;
+    const perEngagement = pool / (impr / 5);
+    const postContent = data.content || `🔥 SPONSORED | ${data.campaignTitle}\n\n${data.campaignDescription || "Check out this campaign!"}\n\n${data.targetUrl ? `👉 ${data.targetUrl}` : ""}`;
+
+    await prisma.socialPost.create({
+      data: {
+        authorId: userId,
+        content: postContent,
+        type: "SPONSORED",
+        adCampaignId: campaign.id,
+        rewardPerView: perView,
+        rewardPerEngagement: perEngagement,
+      },
+    });
 
     res.json({
       success: true,

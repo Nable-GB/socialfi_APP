@@ -104,13 +104,45 @@ export async function getFeed(req: Request, res: Response): Promise<void> {
       }
     }
 
-    // Merge and interleave: insert 1 sponsored post every ~5 organic posts
+    // Merge and interleave: insert sponsored posts into feed
     const feed: any[] = [];
     let adIndex = 0;
 
-    for (let i = 0; i < organicPosts.length; i++) {
-      // Inject a sponsored post every 5 organic posts
-      if (i > 0 && i % 5 === 0 && adIndex < sponsoredPosts.length) {
+    // If no organic posts, just show all sponsored posts
+    if (organicPosts.length === 0) {
+      for (const ad of sponsoredPosts) {
+        feed.push({
+          ...ad,
+          isSponsored: true,
+          rewardClaimed: claimedAdPostIds.has(ad.id),
+          userInteractions: userInteractions.get(ad.id) ?? [],
+        });
+      }
+    } else {
+      for (let i = 0; i < organicPosts.length; i++) {
+        // Insert a sponsored post after position 1, then every 4 posts
+        if (i > 0 && (i === 1 || i % 4 === 0) && adIndex < sponsoredPosts.length) {
+          const ad = sponsoredPosts[adIndex];
+          feed.push({
+            ...ad,
+            isSponsored: true,
+            rewardClaimed: claimedAdPostIds.has(ad.id),
+            userInteractions: userInteractions.get(ad.id) ?? [],
+          });
+          adIndex++;
+        }
+
+        const post = organicPosts[i];
+        feed.push({
+          ...post,
+          isSponsored: false,
+          rewardClaimed: false,
+          userInteractions: userInteractions.get(post.id) ?? [],
+        });
+      }
+
+      // Append remaining sponsored posts at end
+      while (adIndex < sponsoredPosts.length) {
         const ad = sponsoredPosts[adIndex];
         feed.push({
           ...ad,
@@ -120,26 +152,6 @@ export async function getFeed(req: Request, res: Response): Promise<void> {
         });
         adIndex++;
       }
-
-      const post = organicPosts[i];
-      feed.push({
-        ...post,
-        isSponsored: false,
-        rewardClaimed: false,
-        userInteractions: userInteractions.get(post.id) ?? [],
-      });
-    }
-
-    // Append remaining sponsored posts at end if any
-    while (adIndex < sponsoredPosts.length) {
-      const ad = sponsoredPosts[adIndex];
-      feed.push({
-        ...ad,
-        isSponsored: true,
-        rewardClaimed: claimedAdPostIds.has(ad.id),
-        userInteractions: userInteractions.get(ad.id) ?? [],
-      });
-      adIndex++;
     }
 
     const nextCursor = organicPosts.length === limit ? organicPosts[organicPosts.length - 1]?.id : null;
