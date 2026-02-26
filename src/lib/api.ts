@@ -1,5 +1,7 @@
-// Base URL: อ่านจาก .env หรือใช้ localhost ตอน dev
-const BASE_URL = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:4000";
+// Base URL: อ่านจาก .env หรือ detect production/dev automatically
+const PROD_API = "https://socialfiapp-production.up.railway.app";
+const rawEnv = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+const BASE_URL = rawEnv || (typeof window !== "undefined" && !window.location.hostname.includes("localhost") ? PROD_API : "http://localhost:4000");
 
 // ─── Token storage ──────────────────────────────────────────────────────────────
 export const tokenStorage = {
