@@ -46,17 +46,26 @@ export async function getFeed(req: Request, res: Response): Promise<void> {
       },
     });
 
+    // Build targeting filter for sponsored posts based on user demographics
+    let targetingFilter: any = { status: "ACTIVE" };
+    let userProfile: { interests: string[]; location: string | null; birthYear: number | null; gender: string | null } | null = null;
+
+    if (userId) {
+      userProfile = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { interests: true, location: true, birthYear: true, gender: true },
+      });
+    }
+
     // Fetch active sponsored posts from running campaigns
-    const sponsoredPosts = await prisma.socialPost.findMany({
+    const allSponsored = await prisma.socialPost.findMany({
       where: {
         isActive: true,
         type: "SPONSORED",
-        adCampaign: {
-          status: "ACTIVE",
-        },
+        adCampaign: targetingFilter,
       },
       orderBy: { createdAt: "desc" },
-      take: Math.max(2, Math.floor(limit / 5)), // ~1 ad per 5 posts
+      take: 20, // fetch more, then rank by targeting relevance
       include: {
         author: {
           select: {
@@ -72,10 +81,57 @@ export async function getFeed(req: Request, res: Response): Promise<void> {
             id: true,
             title: true,
             targetUrl: true,
+            targetInterests: true,
+            targetLocation: true,
+            targetAgeMin: true,
+            targetAgeMax: true,
+            targetGender: true,
+            impressionsDelivered: true,
+            impressionsTotal: true,
           },
         },
       },
     });
+
+    // Score and rank ads by targeting relevance to the current user
+    const scoredAds = allSponsored.map(ad => {
+      let score = 1; // base score
+      const camp = ad.adCampaign;
+      if (!camp || !userProfile) return { ad, score };
+
+      // Interest match: +3 per matching interest
+      if (camp.targetInterests.length > 0 && userProfile.interests.length > 0) {
+        const matches = camp.targetInterests.filter(i => userProfile!.interests.includes(i));
+        score += matches.length * 3;
+      }
+      // Location match: +5
+      if (camp.targetLocation && userProfile.location && camp.targetLocation.toLowerCase() === userProfile.location.toLowerCase()) {
+        score += 5;
+      }
+      // Gender match: +2
+      if (camp.targetGender && userProfile.gender && camp.targetGender === userProfile.gender) {
+        score += 2;
+      }
+      // Age match: +3
+      if (userProfile.birthYear && (camp.targetAgeMin || camp.targetAgeMax)) {
+        const userAge = new Date().getFullYear() - userProfile.birthYear;
+        const inRange = (!camp.targetAgeMin || userAge >= camp.targetAgeMin) &&
+                        (!camp.targetAgeMax || userAge <= camp.targetAgeMax);
+        if (inRange) score += 3;
+      }
+      // Penalize over-delivered campaigns
+      if (camp.impressionsTotal > 0 && camp.impressionsDelivered >= camp.impressionsTotal) {
+        score = 0; // fully delivered, don't show
+      }
+
+      return { ad, score };
+    });
+
+    const sponsoredPosts = scoredAds
+      .filter(s => s.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, Math.max(2, Math.floor(limit / 5)))
+      .map(s => s.ad);
 
     // If user is logged in, check which sponsored posts they already claimed rewards for
     let claimedAdPostIds: Set<string> = new Set();

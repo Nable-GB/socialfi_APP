@@ -21,6 +21,8 @@ import nftRoutes from "./routes/nft.routes.js";
 import referralRoutes from "./routes/referral.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
+import subscriptionRoutes from "./routes/subscription.routes.js";
+import serviceRoutes from "./routes/service.routes.js";
 import { handleStripeWebhook } from "./webhooks/stripe.webhook.js";
 
 const app = express();
@@ -98,6 +100,8 @@ app.use("/api/nfts", nftRoutes);
 app.use("/api/referrals", referralRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/services", serviceRoutes);
 
 // ── Health Check ────────────────────────────────────────────────────────────
 const serverStartTime = Date.now();
@@ -147,6 +151,22 @@ async function autoSeed() {
         ],
       });
       console.log("✅ Ad Packages seeded successfully");
+    }
+
+    // Seed Paid Services
+    const svcCount = await prisma.paidService.count();
+    if (svcCount === 0) {
+      console.log("📦 No Paid Services found — auto-seeding...");
+      await prisma.paidService.createMany({
+        data: [
+          { name: "Boost Post", description: "Boost your post to reach 5x more users for 7 days.", type: "BOOST_POST", priceUsd: 4.99, durationDays: 7, sortOrder: 1 },
+          { name: "Premium Badge", description: "Stand out with a premium badge on your profile.", type: "PREMIUM_BADGE", priceUsd: 9.99, durationDays: 30, sortOrder: 2 },
+          { name: "Analytics Pro", description: "Unlock advanced analytics with audience insights.", type: "ANALYTICS_PRO", priceUsd: 14.99, durationDays: 30, sortOrder: 3 },
+          { name: "Verified Badge", description: "Get a permanent verified badge on your profile.", type: "VERIFIED_BADGE", priceUsd: 29.99, durationDays: null, sortOrder: 4 },
+          { name: "Extra Storage", description: "Unlock 10GB extra media storage for uploads.", type: "EXTRA_STORAGE", priceUsd: 4.99, durationDays: 30, sortOrder: 5 },
+        ],
+      });
+      console.log("✅ Paid Services seeded successfully");
     }
   } catch (err) {
     console.error("Auto-seed warning:", err);

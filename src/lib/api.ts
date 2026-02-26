@@ -297,6 +297,30 @@ export const adminApi = {
     ),
 };
 
+// ─── Subscriptions ────────────────────────────────────────────────────────────
+export const subscriptionApi = {
+  getTiers: () => request<{ tiers: any[] }>("/api/subscriptions/tiers"),
+  getMySubscription: () => request<{ tier: string; subscription: any }>("/api/subscriptions/me"),
+  checkout: (tier: string) => request<{ checkoutUrl: string; sessionId: string }>("/api/subscriptions/checkout", { method: "POST", body: JSON.stringify({ tier }) }),
+  cancel: () => request<{ success: boolean; message: string }>("/api/subscriptions/cancel", { method: "POST" }),
+};
+
+// ─── Paid Services ────────────────────────────────────────────────────────────
+export const serviceApi = {
+  list: () => request<{ services: any[] }>("/api/services"),
+  checkout: (serviceId: string, metadata?: any) => request<{ checkoutUrl: string; purchaseId: string }>(`/api/services/${serviceId}/checkout`, { method: "POST", body: JSON.stringify({ metadata }) }),
+  myPurchases: () => request<{ purchases: any[] }>("/api/services/purchases"),
+  checkActive: (type: string) => request<{ active: boolean; purchase?: any }>(`/api/services/check?type=${type}`),
+};
+
+// ─── Ad Targeting ─────────────────────────────────────────────────────────────
+export const targetingApi = {
+  updateDemographics: (data: { interests?: string[]; location?: string; birthYear?: number; gender?: string }) =>
+    request<any>("/api/ads/demographics", { method: "PUT", body: JSON.stringify(data) }),
+  getCampaignAnalytics: (campaignId: string) => request<any>(`/api/ads/campaigns/${campaignId}/analytics`),
+  trackClick: (campaignId: string) => request<any>(`/api/ads/campaigns/${campaignId}/click`, { method: "POST" }),
+};
+
 // ─── Analytics ────────────────────────────────────────────────────────────────
 export const analyticsApi = {
   getMyAnalytics: () => request<any>("/api/analytics/me"),

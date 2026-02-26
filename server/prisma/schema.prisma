@@ -108,6 +108,34 @@ enum ListingStatus {
   CANCELLED
 }
 
+enum SubscriptionTier {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
+}
+
+enum ServiceType {
+  BOOST_POST
+  PREMIUM_BADGE
+  ANALYTICS_PRO
+  VERIFIED_BADGE
+  EXTRA_STORAGE
+}
+
+enum ServicePurchaseStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
 enum NotificationType {
   FOLLOW           // Someone followed you
   LIKE             // Someone liked your post
@@ -148,6 +176,15 @@ model User {
   referredById    String?
   referrals       User[]    @relation("Referrals") // Users this person referred
   
+  // --- Demographics / Targeting ---
+  interests       String[]  @default([])
+  location        String?
+  birthYear       Int?
+  gender          String?
+
+  // --- Subscription ---
+  subscriptionTier SubscriptionTier @default(FREE)
+
   // --- Off-chain Token Balance ---
   offChainBalance Decimal   @default(0) @db.Decimal(20, 8) // Accumulated but undistributed tokens
   totalEarned     Decimal   @default(0) @db.Decimal(20, 8) // Lifetime earnings
@@ -176,6 +213,8 @@ model User {
   followers       Follow[]            @relation("Following")      // Users who follow this user
   following       Follow[]            @relation("Followers")      // Users this user follows
   notifications   Notification[]
+  subscriptions   Subscription[]
+  servicePurchases ServicePurchase[]
   nfts            Nft[]           @relation("NftOwner")
   mintedNfts      Nft[]           @relation("NftMinter")
   listings        NftListing[]    @relation("ListingSeller")
@@ -355,9 +394,17 @@ model AdCampaign {
   cryptoTxHash      String?      @unique      // On-chain deposit transaction hash
   cryptoFromAddress String?                    // Depositor wallet address
   
+  // --- Audience Targeting ---
+  targetInterests   String[]  @default([])
+  targetLocation    String?
+  targetAgeMin      Int?
+  targetAgeMax      Int?
+  targetGender      String?
+
   // --- Delivery Tracking ---
   impressionsTotal     Int       @default(0)  // From AdPackage
   impressionsDelivered Int       @default(0)  // Actual views served
+  clickCount           Int       @default(0)  // Link clicks for CTR
   
   // --- Reward Pool ---
   rewardPoolTotal      Decimal   @db.Decimal(20, 8) @default(0) // Total tokens for rewards
@@ -380,6 +427,101 @@ model AdCampaign {
   @@index([status])
   @@index([paymentStatus])
   @@map("ad_campaigns")
+}
+
+// ============================================================================
+// SUBSCRIPTION — Stripe Recurring Billing
+// ============================================================================
+
+model Subscription {
+  id                    String             @id @default(uuid())
+
+  // --- User ---
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                String
+
+  // --- Tier ---
+  tier                  SubscriptionTier
+
+  // --- Stripe ---
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?            @unique
+  stripePriceId         String?
+
+  // --- Billing Period ---
+  status                SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  cancelAtPeriodEnd     Boolean            @default(false)
+
+  // --- Timestamps ---
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([stripeSubscriptionId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+// ============================================================================
+// PAID SERVICE — One-time purchasable features
+// ============================================================================
+
+model PaidService {
+  id              String      @id @default(uuid())
+
+  name            String                  // e.g. "Boost Post", "Premium Badge"
+  description     String?     @db.Text
+  type            ServiceType @unique
+  priceUsd        Decimal     @db.Decimal(10, 2)
+  stripePriceId   String?                 // Stripe Price ID for one-time payment
+  isActive        Boolean     @default(true)
+  durationDays    Int?                    // null = permanent, otherwise temporary
+  sortOrder       Int         @default(0)
+
+  // --- Timestamps ---
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // --- Relations ---
+  purchases       ServicePurchase[]
+
+  @@map("paid_services")
+}
+
+// ============================================================================
+// SERVICE PURCHASE — User's one-time service purchases
+// ============================================================================
+
+model ServicePurchase {
+  id                  String                @id @default(uuid())
+
+  // --- User ---
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String
+
+  // --- Service ---
+  service             PaidService           @relation(fields: [serviceId], references: [id])
+  serviceId           String
+
+  // --- Payment ---
+  stripePaymentId     String?               @unique
+  stripeSessionId     String?               @unique
+  status              ServicePurchaseStatus @default(PENDING)
+  amountPaid          Decimal               @db.Decimal(10, 2) @default(0)
+
+  // --- Context ---
+  metadata            Json?                 // e.g. { postId } for BOOST_POST
+  expiresAt           DateTime?             // null = permanent
+
+  // --- Timestamps ---
+  createdAt           DateTime              @default(now())
+
+  @@index([userId])
+  @@index([serviceId])
+  @@index([status])
+  @@map("service_purchases")
 }
 
 // ============================================================================

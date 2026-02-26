@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SocialFi</string>
+    <string name="title_activity_main">SocialFi</string>
+    <string name="package_name">com.socialfi.app</string>
+    <string name="custom_url_scheme">com.socialfi.app</string>
+</resources>
