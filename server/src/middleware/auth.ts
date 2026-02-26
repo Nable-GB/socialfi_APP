@@ -59,3 +59,50 @@ export function requireRole(...roles: string[]) {
     next();
   };
 }
+
+/**
+ * Middleware: Require a minimum subscription tier.
+ * Tier hierarchy: FREE < PRO < PREMIUM
+ */
+const TIER_RANK: Record<string, number> = { FREE: 0, PRO: 1, PREMIUM: 2 };
+
+export function requireTier(...allowedTiers: string[]) {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    try {
+      const { default: prisma } = await import("../lib/prisma.js");
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.userId },
+        select: { subscriptionTier: true },
+      });
+
+      const userTier = user?.subscriptionTier ?? "FREE";
+
+      if (allowedTiers.includes(userTier)) {
+        next();
+        return;
+      }
+
+      // Also allow if user's tier rank is >= the minimum required
+      const minRequired = Math.min(...allowedTiers.map(t => TIER_RANK[t] ?? 99));
+      if ((TIER_RANK[userTier] ?? 0) >= minRequired) {
+        next();
+        return;
+      }
+
+      res.status(403).json({
+        error: "Upgrade required",
+        message: `This feature requires a ${allowedTiers.join(" or ")} subscription`,
+        currentTier: userTier,
+        requiredTiers: allowedTiers,
+      });
+    } catch (err) {
+      console.error("requireTier error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+}
