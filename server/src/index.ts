@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import { env } from "./config/env.js";
 import { captureRawBody } from "./middleware/rawBody.js";
 import { requireAuth } from "./middleware/auth.js";
@@ -153,6 +154,21 @@ async function autoSeed() {
         ],
       });
       console.log("✅ Ad Packages seeded successfully");
+    }
+
+    // Seed Demo Users
+    const demoUser = await prisma.user.findUnique({ where: { email: "alice@example.com" } });
+    if (!demoUser) {
+      console.log("👤 No demo users found — auto-seeding...");
+      const hash = await bcrypt.hash("Password123!", 12);
+      await prisma.user.createMany({
+        data: [
+          { email: "alice@example.com", username: "alice", displayName: "Alice (Demo)", passwordHash: hash, role: "USER", authProvider: "EMAIL", referralCode: "DEMO-ALICE-" + Date.now().toString(36) },
+          { email: "merchant@nftstore.io", username: "nftmerchant", displayName: "NFT Merchant (Demo)", passwordHash: hash, role: "MERCHANT", authProvider: "EMAIL", referralCode: "DEMO-MERCH-" + Date.now().toString(36) },
+        ],
+        skipDuplicates: true,
+      });
+      console.log("✅ Demo users seeded: alice@example.com / merchant@nftstore.io (Password123!)");
     }
 
     // Seed Paid Services
