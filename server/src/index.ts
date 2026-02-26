@@ -36,7 +36,7 @@ app.use(helmet({
 // ── CORS — strict origin matching ────────────────────────────────────────
 const allowedOrigins = new Set(
   [
-    env.FRONTEND_URL,
+    ...env.FRONTEND_URL.split(",").map(u => u.trim()),
     ...(env.NODE_ENV === "development" ? ["http://localhost:5173", "http://localhost:4173"] : []),
   ].filter(Boolean)
 );
@@ -47,6 +47,8 @@ app.use(
       // allow server-to-server (no origin) in dev, reject in prod
       if (!origin) return cb(null, env.NODE_ENV === "development");
       if (allowedOrigins.has(origin)) return cb(null, true);
+      // allow any *.vercel.app subdomain
+      if (origin.endsWith(".vercel.app")) return cb(null, true);
       cb(new Error(`CORS blocked: ${origin}`));
     },
     credentials: true,

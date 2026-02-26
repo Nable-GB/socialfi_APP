@@ -57,3 +57,5 @@ server/dist
 *.pid
 *.seed
 *.pid.lock
+
+.vercel
