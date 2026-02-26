@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useWallet } from "../hooks/useWallet";
-import { usersApi, uploadApi } from "../lib/api";
-import { Settings, Bell, Shield, Eye, Palette, Globe, Save, CheckCircle, Lock, Wallet, User, RefreshCw, Camera } from "lucide-react";
+import { usersApi, uploadApi, targetingApi } from "../lib/api";
+import { Settings, Bell, Shield, Eye, Palette, Globe, Save, CheckCircle, Lock, Wallet, User, RefreshCw, Camera, Target } from "lucide-react";
 import { toast } from "sonner";
 
 function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
@@ -31,6 +31,14 @@ export function SettingsPage() {
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [savingPw, setSavingPw] = useState(false);
+
+  // Demographics state
+  const [demoInterests, setDemoInterests] = useState<string[]>([]);
+  const [demoLocation, setDemoLocation] = useState("");
+  const [demoBirthYear, setDemoBirthYear] = useState("");
+  const [demoGender, setDemoGender] = useState("");
+  const [demoInterestInput, setDemoInterestInput] = useState("");
+  const [savingDemo, setSavingDemo] = useState(false);
 
   // UI state
   const [notifications, setNotifications] = useState({ likes: true, comments: true, follows: true, rewards: true, ads: false });
@@ -86,6 +94,23 @@ export function SettingsPage() {
       toast.error(err?.message ?? "Failed to link wallet");
     } finally {
       setLinkingWallet(false);
+    }
+  };
+
+  const handleSaveDemographics = async () => {
+    setSavingDemo(true);
+    try {
+      await targetingApi.updateDemographics({
+        interests: demoInterests.length > 0 ? demoInterests : undefined,
+        location: demoLocation || undefined,
+        birthYear: demoBirthYear ? parseInt(demoBirthYear) : undefined,
+        gender: demoGender || undefined,
+      });
+      toast.success("Demographics updated! Ads will now be better targeted for you.");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to save demographics");
+    } finally {
+      setSavingDemo(false);
     }
   };
 
@@ -232,6 +257,78 @@ export function SettingsPage() {
           </button>
         </div>
       )}
+
+      {/* Demographics / Ad Targeting */}
+      <div className="glass rounded-2xl p-5 border border-slate-700/10">
+        <h3 className="text-sm font-bold text-slate-300 mb-1 flex items-center gap-2">
+          <Target size={15} className="text-cyan-400" /> Ad Preferences
+        </h3>
+        <p className="text-xs text-slate-500 mb-4">Help us show you relevant ads & earn better rewards</p>
+        <div className="space-y-3">
+          {/* Interests */}
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">Interests</label>
+            <div className="flex gap-2">
+              <input
+                value={demoInterestInput}
+                onChange={e => setDemoInterestInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && demoInterestInput.trim()) {
+                    e.preventDefault();
+                    const val = demoInterestInput.trim().toLowerCase();
+                    if (!demoInterests.includes(val)) setDemoInterests([...demoInterests, val]);
+                    setDemoInterestInput("");
+                  }
+                }}
+                placeholder="Type & press Enter (e.g. defi, gaming, nft)"
+                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
+              />
+            </div>
+            {demoInterests.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {demoInterests.map(i => (
+                  <span key={i} className="px-2.5 py-1 rounded-lg text-xs bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 flex items-center gap-1">
+                    {i}
+                    <button onClick={() => setDemoInterests(demoInterests.filter(x => x !== i))} className="hover:text-white">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Location</label>
+              <input value={demoLocation} onChange={e => setDemoLocation(e.target.value)}
+                placeholder="e.g. Thailand"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50" />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Birth Year</label>
+              <input type="number" value={demoBirthYear} onChange={e => setDemoBirthYear(e.target.value)}
+                placeholder="e.g. 1995"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50" />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Gender</label>
+              <select value={demoGender} onChange={e => setDemoGender(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50">
+                <option value="">Prefer not to say</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <button onClick={handleSaveDemographics} disabled={savingDemo}
+            className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, #22d3ee, #06b6d4)" }}>
+            {savingDemo ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+            {savingDemo ? "Saving..." : "Save Preferences"}
+          </button>
+        </div>
+      </div>
 
       {/* Notifications */}
       <div className="glass rounded-2xl p-5 border border-slate-700/10">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Zap, Target, Globe, FileText, ArrowRight, CheckCircle, Sparkles, RefreshCw, Crown } from "lucide-react";
+import { Zap, Target, Globe, FileText, ArrowRight, CheckCircle, Sparkles, RefreshCw, Crown, Users } from "lucide-react";
 import { toast } from "sonner";
 import { adsApi } from "../lib/api";
 import type { ApiAdPackage } from "../lib/api";
@@ -16,6 +16,14 @@ export function CreateAdPage() {
   const [description, setDescription] = useState("");
   const [targetUrl, setTargetUrl] = useState("");
   const [postContent, setPostContent] = useState("");
+
+  // Targeting
+  const [targetInterests, setTargetInterests] = useState<string[]>([]);
+  const [targetLocation, setTargetLocation] = useState("");
+  const [targetGender, setTargetGender] = useState("");
+  const [targetAgeMin, setTargetAgeMin] = useState("");
+  const [targetAgeMax, setTargetAgeMax] = useState("");
+  const [interestInput, setInterestInput] = useState("");
 
   useEffect(() => {
     loadPackages();
@@ -52,6 +60,11 @@ export function CreateAdPage() {
         campaignDescription: description || undefined,
         targetUrl: targetUrl || undefined,
         content: postContent || undefined,
+        targetInterests: targetInterests.length > 0 ? targetInterests : undefined,
+        targetLocation: targetLocation || undefined,
+        targetGender: targetGender || undefined,
+        targetAgeMin: targetAgeMin ? parseInt(targetAgeMin) : undefined,
+        targetAgeMax: targetAgeMax ? parseInt(targetAgeMax) : undefined,
       });
       toast.success(res.message);
       setCreated({ title: res.campaign.title, id: res.campaign.id });
@@ -69,6 +82,12 @@ export function CreateAdPage() {
     setDescription("");
     setTargetUrl("");
     setPostContent("");
+    setTargetInterests([]);
+    setTargetLocation("");
+    setTargetGender("");
+    setTargetAgeMin("");
+    setTargetAgeMax("");
+    setInterestInput("");
     setCreated(null);
   };
 
@@ -242,6 +261,91 @@ export function CreateAdPage() {
             </div>
           </div>
 
+          {/* Audience Targeting */}
+          <div className="glass rounded-2xl p-5 border border-slate-700/10 space-y-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Users size={14} className="text-cyan-400" /> Audience Targeting
+              <span className="text-[10px] text-slate-500 font-normal ml-1">(optional — leave blank for all users)</span>
+            </h3>
+
+            {/* Interests */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Interests</label>
+              <div className="flex gap-2">
+                <input
+                  value={interestInput}
+                  onChange={e => setInterestInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && interestInput.trim()) {
+                      e.preventDefault();
+                      if (!targetInterests.includes(interestInput.trim().toLowerCase())) {
+                        setTargetInterests([...targetInterests, interestInput.trim().toLowerCase()]);
+                      }
+                      setInterestInput("");
+                    }
+                  }}
+                  placeholder="Type interest & press Enter (e.g. defi, gaming, nft)"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
+                />
+              </div>
+              {targetInterests.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {targetInterests.map(i => (
+                    <span key={i} className="px-2.5 py-1 rounded-lg text-xs bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 flex items-center gap-1">
+                      {i}
+                      <button onClick={() => setTargetInterests(targetInterests.filter(x => x !== i))} className="hover:text-white">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Location + Gender + Age */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Location</label>
+                <input
+                  value={targetLocation}
+                  onChange={e => setTargetLocation(e.target.value)}
+                  placeholder="e.g. Thailand"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Gender</label>
+                <select
+                  value={targetGender}
+                  onChange={e => setTargetGender(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50">
+                  <option value="">All</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Age Range</label>
+                <div className="flex gap-1.5 items-center">
+                  <input
+                    value={targetAgeMin}
+                    onChange={e => setTargetAgeMin(e.target.value)}
+                    placeholder="18"
+                    type="number"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
+                  />
+                  <span className="text-slate-600 text-xs">–</span>
+                  <input
+                    value={targetAgeMax}
+                    onChange={e => setTargetAgeMax(e.target.value)}
+                    placeholder="65"
+                    type="number"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="flex justify-between">
             <button onClick={() => setStep(1)} className="px-5 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white border border-slate-700/30 hover:bg-slate-800/50 transition-all">
               Back
@@ -327,6 +431,20 @@ export function CreateAdPage() {
               <span className="text-sm text-slate-400">Reward Pool</span>
               <span className="text-sm font-mono text-amber-400">{parseFloat(selectedPackage.totalRewardPool).toLocaleString()} tokens</span>
             </div>
+            {/* Targeting summary */}
+            {(targetInterests.length > 0 || targetLocation || targetGender || targetAgeMin || targetAgeMax) && (
+              <div className="pb-3 border-b border-slate-700/20">
+                <span className="text-sm text-slate-400 block mb-2">Audience Targeting</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {targetInterests.map(i => (
+                    <span key={i} className="px-2 py-0.5 rounded-full text-[10px] bg-cyan-500/15 text-cyan-400">{i}</span>
+                  ))}
+                  {targetLocation && <span className="px-2 py-0.5 rounded-full text-[10px] bg-indigo-500/15 text-indigo-400">{targetLocation}</span>}
+                  {targetGender && <span className="px-2 py-0.5 rounded-full text-[10px] bg-pink-500/15 text-pink-400">{targetGender}</span>}
+                  {(targetAgeMin || targetAgeMax) && <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-400">Age {targetAgeMin || '?'}–{targetAgeMax || '?'}</span>}
+                </div>
+              </div>
+            )}
             <div className="flex items-center justify-between pt-2">
               <span className="text-base font-bold text-white">Total</span>
               <span className="text-xl font-bold font-mono text-indigo-400">

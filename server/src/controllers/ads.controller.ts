@@ -22,6 +22,11 @@ const createCampaignSchema = z.object({
   campaignDescription: z.string().max(2000).optional(),
   targetUrl: z.string().url().optional(),
   content: z.string().min(1).max(5000).optional(),
+  targetInterests: z.array(z.string().max(50)).max(20).optional(),
+  targetLocation: z.string().max(100).optional(),
+  targetGender: z.enum(["male", "female", "other"]).optional(),
+  targetAgeMin: z.number().int().min(13).max(100).optional(),
+  targetAgeMax: z.number().int().min(13).max(100).optional(),
 });
 
 // ─── GET /api/ads/packages — List available ad packages ────────────────────
@@ -156,6 +161,11 @@ export async function createCampaign(req: Request, res: Response): Promise<void>
         amountPaid: adPackage.priceFiat,
         impressionsTotal: adPackage.impressions,
         rewardPoolTotal: adPackage.totalRewardPool,
+        targetInterests: data.targetInterests ?? [],
+        targetLocation: data.targetLocation,
+        targetGender: data.targetGender,
+        targetAgeMin: data.targetAgeMin,
+        targetAgeMax: data.targetAgeMax,
         status: "ACTIVE",
         startsAt: new Date(),
         endsAt: new Date(Date.now() + adPackage.durationDays * 24 * 60 * 60 * 1000),

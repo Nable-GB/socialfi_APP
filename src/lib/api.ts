@@ -229,6 +229,11 @@ export const adsApi = {
     campaignDescription?: string;
     targetUrl?: string;
     content?: string;
+    targetInterests?: string[];
+    targetLocation?: string;
+    targetGender?: string;
+    targetAgeMin?: number;
+    targetAgeMax?: number;
   }) =>
     request<{ success: boolean; campaign: any; message: string }>(
       "/api/ads/campaigns",
