@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Music, Play, Pause, Heart, MessageCircle, Trash2, Youtube, Loader2, ExternalLink, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Music, Play, Pause, Heart, MessageCircle, Trash2, Youtube, Loader2, ExternalLink, Clock, CheckCircle, AlertCircle, Gem, Globe } from "lucide-react";
 import { musicApi, type ApiTrack } from "../lib/api";
 import { usePlayer } from "../contexts/PlayerContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -55,6 +55,8 @@ export function MyMusicPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"ALL" | "DRAFT" | "PUBLISHED">("ALL");
   const [distributing, setDistributing] = useState<string | null>(null);
+  const [minting, setMinting] = useState<string | null>(null);
+  const [distModalTrack, setDistModalTrack] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -102,18 +104,38 @@ export function MyMusicPage() {
     } catch { toast.error("Failed to publish"); }
   };
 
-  const handleDistribute = async (id: string) => {
+  const handleGlobalDistribute = async (id: string, platform: string) => {
     setDistributing(id);
+    setDistModalTrack(null);
     try {
-      const res = await musicApi.submitToYouTube(id);
+      const res = await musicApi.submitDistribution(id, platform);
       toast.success(res.message);
-      // Refresh tracks
       const updated = await musicApi.getMyTracks();
       setTracks(updated.tracks);
     } catch (err: any) {
       toast.error(err.message || "Distribution failed");
     } finally {
       setDistributing(null);
+    }
+  };
+
+  const handleMintNFT = async (track: ApiTrack) => {
+    setMinting(track.id);
+    try {
+      await musicApi.mintMusicNFT({
+        trackId: track.id,
+        name: `${track.title} NFT`,
+        description: `Fractional ownership of "${track.title}"`,
+        coverUrl: track.coverUrl,
+        totalSupply: 100,
+        pricePerFraction: 5,
+        royaltyPercent: 10,
+      });
+      toast.success("Music NFT minted! Available in NFT marketplace.");
+    } catch (err: any) {
+      toast.error(err.message || "Mint failed");
+    } finally {
+      setMinting(null);
     }
   };
 
@@ -201,12 +223,19 @@ export function MyMusicPage() {
                     Publish
                   </button>
                 )}
-                {track.status === "PUBLISHED" && (!track.distributions || track.distributions.length === 0) && (
-                  <button onClick={() => handleDistribute(track.id)} disabled={distributing === track.id}
-                    className="px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition-colors flex items-center gap-1 disabled:opacity-40">
-                    {distributing === track.id ? <Loader2 size={10} className="animate-spin" /> : <Youtube size={12} />}
-                    YouTube
-                  </button>
+                {track.status === "PUBLISHED" && (
+                  <>
+                    <button onClick={() => handleMintNFT(track)} disabled={minting === track.id}
+                      className="px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-purple-500/15 text-purple-400 border border-purple-500/30 hover:bg-purple-500/25 transition-colors flex items-center gap-1 disabled:opacity-40">
+                      {minting === track.id ? <Loader2 size={10} className="animate-spin" /> : <Gem size={10} />}
+                      Mint NFT
+                    </button>
+                    <button onClick={() => setDistModalTrack(track.id)} disabled={distributing === track.id}
+                      className="px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors flex items-center gap-1 disabled:opacity-40">
+                      {distributing === track.id ? <Loader2 size={10} className="animate-spin" /> : <Globe size={10} />}
+                      Distribute
+                    </button>
+                  </>
                 )}
                 <button onClick={() => handleDelete(track.id)}
                   className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors">
@@ -215,6 +244,29 @@ export function MyMusicPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Distribution platform modal */}
+      {distModalTrack && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60" onClick={() => setDistModalTrack(null)}>
+          <div className="rounded-2xl p-5 w-[320px] space-y-3" style={{ background: "rgba(15,23,42,0.98)", border: "1px solid rgba(100,116,139,0.2)" }} onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2"><Globe size={16} className="text-blue-400" /> Distribute to Platform</h3>
+            {["YOUTUBE_MUSIC", "SPOTIFY", "APPLE_MUSIC", "AMAZON_MUSIC", "TIDAL", "DEEZER"].map(pl => (
+              <button key={pl} onClick={() => handleGlobalDistribute(distModalTrack, pl)}
+                className="w-full py-2.5 px-3 rounded-xl text-xs font-medium text-left transition-all hover:bg-slate-700/40 flex items-center gap-2"
+                style={{ background: "rgba(30,41,59,0.4)", border: "1px solid rgba(100,116,139,0.1)" }}>
+                {pl === "YOUTUBE_MUSIC" && <Youtube size={14} className="text-red-400" />}
+                {pl === "SPOTIFY" && <Music size={14} className="text-green-400" />}
+                {pl === "APPLE_MUSIC" && <Music size={14} className="text-pink-400" />}
+                {pl === "AMAZON_MUSIC" && <Music size={14} className="text-blue-400" />}
+                {pl === "TIDAL" && <Music size={14} className="text-cyan-400" />}
+                {pl === "DEEZER" && <Music size={14} className="text-purple-400" />}
+                <span className="text-slate-300">{pl.replace(/_/g, " ")}</span>
+              </button>
+            ))}
+            <button onClick={() => setDistModalTrack(null)} className="w-full py-2 text-xs text-slate-500 hover:text-white transition-colors">Cancel</button>
+          </div>
         </div>
       )}
     </div>

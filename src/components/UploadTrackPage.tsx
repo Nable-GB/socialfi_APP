@@ -25,6 +25,7 @@ export function UploadTrackPage() {
   const [isAiGenerated, setIsAiGenerated] = useState(true);
   const [aiModel, setAiModel] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
+  const [moodTags, setMoodTags] = useState("");
   const [publishNow, setPublishNow] = useState(true);
 
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -103,6 +104,7 @@ export function UploadTrackPage() {
         description: description.trim() || undefined,
         genre: genre as any,
         tags: tags.split(",").map(t => t.trim().toLowerCase()).filter(Boolean),
+        moodTags: moodTags.split(",").map(t => t.trim().toLowerCase()).filter(Boolean),
         bpm: bpm ? parseInt(bpm) : undefined,
         key: musicalKey || undefined,
         duration: audioDuration ?? undefined,
@@ -115,7 +117,7 @@ export function UploadTrackPage() {
       });
       toast.success(publishNow ? "Track published!" : "Track saved as draft!");
       // Reset form
-      setTitle(""); setDescription(""); setGenre("OTHER"); setTags(""); setBpm("");
+      setTitle(""); setDescription(""); setGenre("OTHER"); setTags(""); setMoodTags(""); setBpm("");
       setMusicalKey(""); setAiModel(""); setAiPrompt(""); setAudioFile(null); setAudioUrl("");
       setCoverFile(null); setCoverPreview(""); setCoverUrl(""); setAudioDuration(null);
     } catch (err: any) {
@@ -231,6 +233,14 @@ export function UploadTrackPage() {
           <label className="block text-sm font-medium text-slate-300 mb-1.5">Tags</label>
           <input type="text" value={tags} onChange={e => setTags(e.target.value)} placeholder="chill, lo-fi, ambient (comma-separated)"
             className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50" />
+        </div>
+
+        {/* Mood Tags */}
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-1.5">Mood Tags</label>
+          <input type="text" value={moodTags} onChange={e => setMoodTags(e.target.value)} placeholder="chill, energetic, melancholic, uplifting (comma-separated)"
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50" />
+          <p className="text-[10px] text-slate-500 mt-1">Helps fans discover your track by mood</p>
         </div>
 
         {/* AI Generated toggle */}
