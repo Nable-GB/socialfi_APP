@@ -4,7 +4,7 @@ import {
   Heart, MessageCircle, Share2,
   Zap, Star, ShoppingBag, ChevronUp, Flame, Award, Shield,
   ExternalLink, RefreshCw, Sparkles, Crown, Image,
-  CheckCircle, Globe, Settings, LogOut, Mail, X, ArrowUpRight
+  CheckCircle, Globe, Settings, LogOut, Mail, X, ArrowUpRight, Menu
 } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import { useFeed } from "./hooks/useFeed";
@@ -484,24 +484,82 @@ function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string
 // ─── Mobile Bottom Nav ────────────────────────────────────────────────────────
 
 function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTab: (id: string) => void }) {
-  const items = [
+  const [moreOpen, setMoreOpen] = useState(false);
+  const { user: authUser } = useAuth();
+
+  const mainItems = [
     { id: "feed", icon: Home, label: "Feed" },
     { id: "market", icon: TrendingUp, label: "Market" },
     { id: "create", icon: PlusSquare, label: "Create" },
     { id: "profile", icon: User, label: "Profile" },
   ];
 
+  const moreItems = [
+    { id: "explore", icon: Globe, label: "Explore" },
+    { id: "nft-market", icon: Image, label: "NFT Market" },
+    { id: "my-nfts", icon: Image, label: "My NFTs" },
+    { id: "referrals", icon: Users, label: "Referrals" },
+    { id: "analytics", icon: TrendingUp, label: "Analytics" },
+    { id: "subscription", icon: Crown, label: "Subscription" },
+    { id: "services", icon: ShoppingBag, label: "Services" },
+    { id: "transactions", icon: ArrowUpRight, label: "Transactions" },
+    { id: "settings", icon: Settings, label: "Settings" },
+    ...(authUser?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: "Admin" }] : []),
+  ];
+
+  const isMoreActive = moreItems.some(i => i.id === mobileTab);
+
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 glass border-t border-slate-700/20 flex lg:hidden">
-      {items.map(item => (
-        <button key={item.id} onClick={() => setMobileTab(item.id)}
-          className={`bnav-item flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all ${mobileTab === item.id ? 'active' : ''}`}
-          style={{color: mobileTab === item.id ? '#22d3ee' : '#64748b'}}>
-          <item.icon size={20} className="bnav-icon" />
-          <span className="text-[10px] font-mono" style={{fontWeight: mobileTab === item.id ? 600 : 400}}>{item.label}</span>
+    <>
+      {/* More drawer overlay */}
+      {moreOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/50 lg:hidden" onClick={() => setMoreOpen(false)}>
+          <div
+            className="absolute bottom-0 inset-x-0 rounded-t-2xl p-4 pb-24"
+            style={{ background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)" }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-10 h-1 rounded-full bg-slate-600 mx-auto mb-4" />
+            <h3 className="text-sm font-bold text-slate-300 mb-3 px-1">More</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {moreItems.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => { setMobileTab(item.id); setMoreOpen(false); }}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all ${
+                    mobileTab === item.id ? "bg-cyan-500/15 border border-cyan-500/30" : "bg-slate-800/60 border border-slate-700/20 hover:bg-slate-700/40"
+                  }`}
+                >
+                  <item.icon size={20} style={{ color: mobileTab === item.id ? "#22d3ee" : "#94a3b8" }} />
+                  <span className="text-[10px] font-medium" style={{ color: mobileTab === item.id ? "#22d3ee" : "#94a3b8" }}>
+                    {item.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom bar */}
+      <nav className="fixed bottom-0 inset-x-0 z-50 glass border-t border-slate-700/20 flex lg:hidden">
+        {mainItems.map(item => (
+          <button key={item.id} onClick={() => { setMobileTab(item.id); setMoreOpen(false); }}
+            className={`bnav-item flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all ${mobileTab === item.id && !isMoreActive ? 'active' : ''}`}
+            style={{color: mobileTab === item.id && !isMoreActive ? '#22d3ee' : '#64748b'}}>
+            <item.icon size={20} className="bnav-icon" />
+            <span className="text-[10px] font-mono" style={{fontWeight: mobileTab === item.id && !isMoreActive ? 600 : 400}}>{item.label}</span>
+          </button>
+        ))}
+        {/* More button */}
+        <button onClick={() => setMoreOpen(!moreOpen)}
+          className={`bnav-item flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all ${isMoreActive || moreOpen ? 'active' : ''}`}
+          style={{color: isMoreActive || moreOpen ? '#22d3ee' : '#64748b'}}>
+          <Menu size={20} className="bnav-icon" />
+          <span className="text-[10px] font-mono" style={{fontWeight: isMoreActive || moreOpen ? 600 : 400}}>More</span>
         </button>
-      ))}
-    </nav>
+      </nav>
+    </>
   );
 }
 
