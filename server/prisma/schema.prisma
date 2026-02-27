@@ -227,6 +227,16 @@ model User {
   trackLikes      TrackLike[]     @relation("UserTrackLikes")
   trackComments   TrackComment[]  @relation("UserTrackComments")
 
+  // --- Music SocialFi ---
+  musicBoosts     MusicBoost[]    @relation("UserBoosts")
+  trackReposts    TrackRepost[]   @relation("UserReposts")
+  artistMusicNfts MusicNFT[]      @relation("ArtistMusicNFTs")
+  musicNftHoldings MusicNFTHolder[] @relation("UserMusicNFTs")
+  royaltyPayouts  RoyaltyPayout[] @relation("UserRoyalties")
+  distSubmissions DistributionSubmission[] @relation("UserDistSubmissions")
+  engagementScore EngagementScore? @relation("UserEngagement")
+  releaseVotes    ReleaseVote[]   @relation("UserVotes")
+
   @@index([walletAddress])
   @@index([referralCode])
   @@index([referredById])
@@ -723,7 +733,24 @@ model NftListing {
 enum TrackStatus {
   DRAFT
   PUBLISHED
+  REVIEW
+  RELEASE_CANDIDATE
   ARCHIVED
+}
+
+enum DistributionPlatform {
+  YOUTUBE_MUSIC
+  SPOTIFY
+  APPLE_MUSIC
+  AMAZON_MUSIC
+  TIDAL
+  DEEZER
+}
+
+enum BoostTier {
+  BASIC
+  PREMIUM
+  SUPER
 }
 
 enum MusicGenre {
@@ -764,6 +791,12 @@ model Track {
   aiModel         String?       // AI tool used (e.g. "Suno", "Udio", "MusicGen")
   aiPrompt        String?       // Prompt used to generate
 
+  // --- Mood & Discovery ---
+  moodTags        String[]      @default([])    // e.g. "chill", "energetic", "melancholic"
+  previewUrl      String?       // Short preview clip URL
+  previewStart    Int?          // Preview start offset in seconds
+  previewEnd      Int?          // Preview end offset in seconds
+
   // --- Files ---
   audioUrl        String        // S3 URL for audio file
   coverUrl        String?       // S3 URL for cover art
@@ -774,6 +807,10 @@ model Track {
   likeCount       Int           @default(0)
   commentCount    Int           @default(0)
   shareCount      Int           @default(0)
+  boostCount      Int           @default(0)
+  repostCount     Int           @default(0)
+  engagementScore Float         @default(0)     // Composite score for feed ranking
+  totalRevenue    Decimal       @default(0) @db.Decimal(20, 8) // Total earned from streaming + NFT
 
   // --- Status ---
   status          TrackStatus   @default(DRAFT)
@@ -787,6 +824,11 @@ model Track {
   likes           TrackLike[]
   comments        TrackComment[]
   distributions   YouTubeDistribution[]
+  boosts          MusicBoost[]
+  reposts         TrackRepost[]
+  musicNfts       MusicNFT[]
+  distSubmissions DistributionSubmission[]
+  releaseVotes    ReleaseVote[]
 
   // --- Timestamps ---
   createdAt       DateTime      @default(now())
@@ -797,6 +839,8 @@ model Track {
   @@index([genre])
   @@index([status])
   @@index([playCount])
+  @@index([boostCount])
+  @@index([engagementScore])
   @@index([createdAt])
   @@map("tracks")
 }
@@ -877,4 +921,205 @@ model YouTubeDistribution {
   @@index([trackId])
   @@index([status])
   @@map("youtube_distributions")
+}
+
+// ============================================================================
+// BOOST-TO-EARN — Promotion System
+// ============================================================================
+
+model MusicBoost {
+  id              String        @id @default(uuid())
+  track           Track         @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  trackId         String
+  booster         User          @relation("UserBoosts", fields: [boosterId], references: [id])
+  boosterId       String
+  tier            BoostTier     @default(BASIC)
+  tokensCost      Decimal       @default(0) @db.Decimal(20, 8)  // Tokens spent on boost
+  rewardEarned    Decimal       @default(0) @db.Decimal(20, 8)  // Tokens earned from engagement
+  impressions     Int           @default(0)
+  clicks          Int           @default(0)
+  engagementRate  Float         @default(0)   // clicks/impressions
+  isActive        Boolean       @default(true)
+  expiresAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([trackId])
+  @@index([boosterId])
+  @@index([isActive])
+  @@map("music_boosts")
+}
+
+model TrackRepost {
+  id              String        @id @default(uuid())
+  track           Track         @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  trackId         String
+  user            User          @relation("UserReposts", fields: [userId], references: [id])
+  userId          String
+  message         String?       // Optional message with repost
+  rewardEarned    Decimal       @default(0) @db.Decimal(20, 8)
+  engagementCount Int           @default(0)   // How many people engaged via this repost
+  createdAt       DateTime      @default(now())
+
+  @@unique([trackId, userId])
+  @@index([trackId])
+  @@index([userId])
+  @@map("track_reposts")
+}
+
+// ============================================================================
+// MUSIC NFT — Minting & Fractional Ownership & Royalties
+// ============================================================================
+
+model MusicNFT {
+  id              String        @id @default(uuid())
+  track           Track         @relation(fields: [trackId], references: [id])
+  trackId         String
+  artist          User          @relation("ArtistMusicNFTs", fields: [artistId], references: [id])
+  artistId        String
+
+  // --- NFT Details ---
+  name            String
+  description     String?
+  coverUrl        String?
+  totalSupply     Int           @default(100)   // Total fractions available
+  availableSupply Int           @default(100)
+  pricePerFraction Decimal      @default(0) @db.Decimal(20, 8)
+  royaltyPercent  Float         @default(10)    // % of streaming revenue to NFT holders
+
+  // --- Revenue tracking ---
+  totalStreamingRevenue  Decimal @default(0) @db.Decimal(20, 8)
+  totalRoyaltyPaid       Decimal @default(0) @db.Decimal(20, 8)
+
+  // --- On-chain ---
+  contractAddress String?       // Smart contract address if deployed on-chain
+  tokenId         String?       // On-chain token ID
+  chainId         Int?          // Blockchain network ID
+
+  // --- Status ---
+  isMinted        Boolean       @default(false)
+  isListed        Boolean       @default(true)
+
+  // --- Relations ---
+  holders         MusicNFTHolder[]
+  royaltyPayouts  RoyaltyPayout[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([trackId])
+  @@index([artistId])
+  @@index([isListed])
+  @@map("music_nfts")
+}
+
+model MusicNFTHolder {
+  id              String        @id @default(uuid())
+  musicNft        MusicNFT      @relation(fields: [musicNftId], references: [id])
+  musicNftId      String
+  user            User          @relation("UserMusicNFTs", fields: [userId], references: [id])
+  userId          String
+  fractions       Int           @default(1)     // Number of fractions owned
+  purchasePrice   Decimal       @default(0) @db.Decimal(20, 8)
+  totalRoyaltyReceived Decimal  @default(0) @db.Decimal(20, 8)
+  isStaked        Boolean       @default(false)
+  stakedAt        DateTime?
+  purchasedAt     DateTime      @default(now())
+
+  @@unique([musicNftId, userId])
+  @@index([userId])
+  @@map("music_nft_holders")
+}
+
+model RoyaltyPayout {
+  id              String        @id @default(uuid())
+  musicNft        MusicNFT      @relation(fields: [musicNftId], references: [id])
+  musicNftId      String
+  recipient       User          @relation("UserRoyalties", fields: [recipientId], references: [id])
+  recipientId     String
+  amount          Decimal       @db.Decimal(20, 8)
+  fractionsHeld   Int           // Fractions at time of payout
+  periodStart     DateTime      // Revenue period start
+  periodEnd       DateTime      // Revenue period end
+  createdAt       DateTime      @default(now())
+
+  @@index([musicNftId])
+  @@index([recipientId])
+  @@index([createdAt])
+  @@map("royalty_payouts")
+}
+
+// ============================================================================
+// GLOBAL DISTRIBUTION — Multi-platform
+// ============================================================================
+
+model DistributionSubmission {
+  id              String              @id @default(uuid())
+  track           Track               @relation(fields: [trackId], references: [id])
+  trackId         String
+  platform        DistributionPlatform
+  status          DistributionStatus  @default(PENDING)
+  externalId      String?             // ID on external platform
+  externalUrl     String?             // URL on external platform
+  submittedBy     User                @relation("UserDistSubmissions", fields: [submittedById], references: [id])
+  submittedById   String
+  reviewedBy      String?             // Admin who reviewed
+  reviewNote      String?
+  submittedAt     DateTime            @default(now())
+  approvedAt      DateTime?
+  liveAt          DateTime?
+  rejectedAt      DateTime?
+  errorMessage    String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@unique([trackId, platform])
+  @@index([trackId])
+  @@index([status])
+  @@index([platform])
+  @@map("distribution_submissions")
+}
+
+// ============================================================================
+// ENGAGEMENT & ANTI-ABUSE
+// ============================================================================
+
+model EngagementScore {
+  id              String        @id @default(uuid())
+  user            User          @relation("UserEngagement", fields: [userId], references: [id])
+  userId          String
+  score           Float         @default(0)     // 0-100 trust score
+  totalActions    Int           @default(0)
+  validActions    Int           @default(0)
+  spamActions     Int           @default(0)
+  lastActionAt    DateTime?
+  dailyActionCount Int          @default(0)
+  dailyResetAt    DateTime      @default(now())
+  isFlagged       Boolean       @default(false)
+  flagReason      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([userId])
+  @@index([score])
+  @@map("engagement_scores")
+}
+
+// ============================================================================
+// FAN ECONOMY — Voting & Participation
+// ============================================================================
+
+model ReleaseVote {
+  id              String        @id @default(uuid())
+  track           Track         @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  trackId         String
+  voter           User          @relation("UserVotes", fields: [voterId], references: [id])
+  voterId         String
+  voteType        String        @default("RELEASE") // RELEASE, SKIP
+  weight          Float         @default(1)     // Higher weight for NFT holders / stakers
+  createdAt       DateTime      @default(now())
+
+  @@unique([trackId, voterId])
+  @@index([trackId])
+  @@map("release_votes")
 }

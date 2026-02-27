@@ -623,7 +623,92 @@ export interface ApiAlbum {
 
 // ─── Music API ────────────────────────────────────────────────────────────────
 
+// ─── Music NFT Types ──────────────────────────────────────────────────────────
+
+export interface ApiMusicNFT {
+  id: string;
+  trackId: string;
+  artistId: string;
+  name: string;
+  description?: string;
+  coverUrl?: string;
+  totalSupply: number;
+  availableSupply: number;
+  pricePerFraction: string;
+  royaltyPercent: number;
+  totalStreamingRevenue: string;
+  totalRoyaltyPaid: string;
+  isMinted: boolean;
+  isListed: boolean;
+  createdAt: string;
+  track?: { id: string; title: string; coverUrl?: string; audioUrl: string; playCount: number; genre: string; duration?: number };
+  artist?: { id: string; username: string; displayName?: string; avatarUrl?: string };
+  _count?: { holders: number };
+  holders?: ApiNFTHolder[];
+}
+
+export interface ApiNFTHolder {
+  id: string;
+  musicNftId: string;
+  userId: string;
+  fractions: number;
+  purchasePrice: string;
+  totalRoyaltyReceived: string;
+  isStaked: boolean;
+  stakedAt?: string;
+  purchasedAt: string;
+  user?: { id: string; username: string; displayName?: string; avatarUrl?: string };
+  musicNft?: ApiMusicNFT;
+}
+
+export interface ApiBoost {
+  id: string;
+  trackId: string;
+  tier: string;
+  tokensCost: string;
+  rewardEarned: string;
+  impressions: number;
+  clicks: number;
+  isActive: boolean;
+  expiresAt?: string;
+  createdAt: string;
+  booster?: { id: string; username: string; displayName?: string; avatarUrl?: string };
+}
+
+export interface ApiVoteTally {
+  totalVoters: number;
+  releaseWeight: number;
+  skipWeight: number;
+  releasePercent: number;
+  userVote: string | null;
+}
+
+export interface ApiRevenueSummary {
+  totalTracks: number;
+  totalPlays: number;
+  streamingRevenue: string;
+  nftSalesRevenue: string;
+  boostRevenue: string;
+  repostRewards: string;
+  totalRoyaltyPaid: string;
+  totalRevenue: string;
+}
+
+export interface ApiFanSummary {
+  totalNFTsHeld: number;
+  totalFractionsOwned: number;
+  totalRoyaltiesReceived: string;
+  repostRewards: string;
+  boostSpent: string;
+  boostRewardsEarned: string;
+  engagementScore: number;
+  stakedNFTs: number;
+}
+
+// ─── Music API ────────────────────────────────────────────────────────────────
+
 export const musicApi = {
+  // Track CRUD
   getTracks: (params?: { page?: number; limit?: number; genre?: string; search?: string; sort?: string; artistId?: string }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set("page", String(params.page));
@@ -634,54 +719,68 @@ export const musicApi = {
     if (params?.artistId) qs.set("artistId", params.artistId);
     return request<{ tracks: ApiTrack[]; pagination: { page: number; limit: number; total: number; pages: number } }>(`/api/music/tracks?${qs}`);
   },
-
-  getTrack: (id: string) =>
-    request<ApiTrack>(`/api/music/tracks/${id}`),
-
+  getTrack: (id: string) => request<ApiTrack>(`/api/music/tracks/${id}`),
   createTrack: (body: Partial<ApiTrack> & { title: string; audioUrl: string }) =>
-    request<{ success: boolean; track: ApiTrack }>("/api/music/tracks", {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
-
+    request<{ success: boolean; track: ApiTrack }>("/api/music/tracks", { method: "POST", body: JSON.stringify(body) }),
   updateTrack: (id: string, body: Partial<ApiTrack>) =>
-    request<{ success: boolean; track: ApiTrack }>(`/api/music/tracks/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    }),
-
+    request<{ success: boolean; track: ApiTrack }>(`/api/music/tracks/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   deleteTrack: (id: string) =>
     request<{ success: boolean }>(`/api/music/tracks/${id}`, { method: "DELETE" }),
 
+  // Interactions
   recordPlay: (id: string, body?: { durationPlayed?: number; completedFull?: boolean }) =>
-    request<{ success: boolean }>(`/api/music/tracks/${id}/play`, {
-      method: "POST",
-      body: JSON.stringify(body || {}),
-    }),
-
+    request<{ success: boolean }>(`/api/music/tracks/${id}/play`, { method: "POST", body: JSON.stringify(body || {}) }),
   toggleLike: (id: string) =>
     request<{ liked: boolean }>(`/api/music/tracks/${id}/like`, { method: "POST" }),
-
   addComment: (id: string, body: { content: string; timestampSec?: number }) =>
-    request<{ success: boolean; comment: ApiTrackComment }>(`/api/music/tracks/${id}/comment`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
+    request<{ success: boolean; comment: ApiTrackComment }>(`/api/music/tracks/${id}/comment`, { method: "POST", body: JSON.stringify(body) }),
 
-  getMyTracks: () =>
-    request<{ tracks: ApiTrack[] }>("/api/music/my-tracks"),
+  // Boost & Share-to-Earn
+  boostTrack: (id: string, tier?: string) =>
+    request<{ success: boolean; boost: ApiBoost; message: string }>(`/api/music/tracks/${id}/boost`, { method: "POST", body: JSON.stringify({ tier }) }),
+  repostTrack: (id: string, message?: string) =>
+    request<{ success: boolean; rewardEarned: number; message: string }>(`/api/music/tracks/${id}/repost`, { method: "POST", body: JSON.stringify({ message }) }),
+  getBoostStats: (id: string) =>
+    request<{ boosts: ApiBoost[]; totalSpent: number; activeCount: number }>(`/api/music/tracks/${id}/boosts`),
 
+  // Distribution
   submitToYouTube: (id: string) =>
-    request<{ success: boolean; distribution: ApiDistribution; message: string }>(`/api/music/tracks/${id}/distribute`, {
-      method: "POST",
-    }),
+    request<{ success: boolean; distribution: ApiDistribution; message: string }>(`/api/music/tracks/${id}/distribute`, { method: "POST" }),
+  submitDistribution: (id: string, platform: string) =>
+    request<{ success: boolean; submission: any; message: string }>(`/api/music/tracks/${id}/distribute-global`, { method: "POST", body: JSON.stringify({ platform }) }),
+  getDistributions: (id: string) =>
+    request<{ submissions: any[] }>(`/api/music/tracks/${id}/distributions`),
 
-  getAlbums: () =>
-    request<{ albums: ApiAlbum[] }>("/api/music/albums"),
+  // Voting
+  voteForRelease: (id: string, voteType: string) =>
+    request<{ success: boolean; message: string }>(`/api/music/tracks/${id}/vote`, { method: "POST", body: JSON.stringify({ voteType }) }),
+  getVotes: (id: string) =>
+    request<ApiVoteTally>(`/api/music/tracks/${id}/votes`),
 
+  // Music NFTs
+  getMusicNFTs: (params?: { page?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.limit) qs.set("limit", String(params.limit));
+    return request<{ nfts: ApiMusicNFT[]; pagination: { page: number; limit: number; total: number; pages: number } }>(`/api/music/nfts?${qs}`);
+  },
+  getMusicNFT: (id: string) => request<ApiMusicNFT>(`/api/music/nfts/${id}`),
+  mintMusicNFT: (body: { trackId: string; name: string; description?: string; coverUrl?: string; totalSupply?: number; pricePerFraction?: number; royaltyPercent?: number }) =>
+    request<{ success: boolean; nft: ApiMusicNFT }>("/api/music/nfts", { method: "POST", body: JSON.stringify(body) }),
+  buyMusicNFT: (id: string, fractions?: number) =>
+    request<{ success: boolean; fractionsBought: number; totalCost: number; message: string }>(`/api/music/nfts/${id}/buy`, { method: "POST", body: JSON.stringify({ fractions }) }),
+  toggleStake: (id: string) =>
+    request<{ success: boolean; isStaked: boolean }>(`/api/music/nfts/${id}/stake`, { method: "POST" }),
+  getMyMusicNFTs: () =>
+    request<{ holdings: ApiNFTHolder[] }>("/api/music/my-nfts"),
+
+  // My tracks & albums
+  getMyTracks: () => request<{ tracks: ApiTrack[] }>("/api/music/my-tracks"),
+  getAlbums: () => request<{ albums: ApiAlbum[] }>("/api/music/albums"),
   createAlbum: (body: { title: string; description?: string; coverUrl?: string; genre?: string }) =>
-    request<{ success: boolean; album: ApiAlbum }>("/api/music/albums", {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
+    request<{ success: boolean; album: ApiAlbum }>("/api/music/albums", { method: "POST", body: JSON.stringify(body) }),
+
+  // Revenue
+  getArtistRevenue: () => request<{ summary: ApiRevenueSummary; tracks: any[]; nfts: any[]; distributions: any[] }>("/api/music/revenue/artist"),
+  getFanRevenue: () => request<{ summary: ApiFanSummary; holdings: ApiNFTHolder[]; recentPayouts: any[] }>("/api/music/revenue/fan"),
 };

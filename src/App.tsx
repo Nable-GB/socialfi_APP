@@ -5,7 +5,7 @@ import {
   Zap, Star, ShoppingBag, ChevronUp, Flame, Award, Shield,
   ExternalLink, RefreshCw, Sparkles, Crown, Image,
   CheckCircle, Globe, Settings, LogOut, Mail, X, ArrowUpRight, Menu,
-  Music, Headphones, Upload
+  Music, Headphones, Upload, Gem, BarChart3
 } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import { useFeed } from "./hooks/useFeed";
@@ -33,6 +33,8 @@ import { MusicFeedPage } from "./components/MusicFeedPage";
 import { UploadTrackPage } from "./components/UploadTrackPage";
 import { MyMusicPage } from "./components/MyMusicPage";
 import { AudioPlayerBar } from "./components/AudioPlayerBar";
+import { MusicNFTPage } from "./components/MusicNFTPage";
+import { RevenueDashboardPage } from "./components/RevenueDashboardPage";
 import type { ApiPost } from "./lib/api";
 import { authApi, uploadApi } from "./lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -446,6 +448,8 @@ function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string
     { id: "music", icon: Headphones, label: "Discover Music" },
     { id: "upload-track", icon: Upload, label: "Upload Track" },
     { id: "my-music", icon: Music, label: "My Music" },
+    { id: "music-nfts", icon: Gem, label: "Music NFTs" },
+    { id: "revenue", icon: BarChart3, label: "Revenue" },
     { id: "market", icon: ShoppingBag, label: "Marketplace" },
     { id: "create", icon: PlusSquare, label: "Create Ad" },
     { id: "profile", icon: User, label: "My Profile" },
@@ -504,6 +508,8 @@ function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTa
 
   const moreItems = [
     { id: "my-music", icon: Music, label: "My Music" },
+    { id: "music-nfts", icon: Gem, label: "Music NFTs" },
+    { id: "revenue", icon: BarChart3, label: "Revenue" },
     { id: "market", icon: ShoppingBag, label: "Marketplace" },
     { id: "create", icon: PlusSquare, label: "Create Ad" },
     { id: "explore", icon: Globe, label: "Explore" },
@@ -880,6 +886,8 @@ export default function App() {
             {activeNav === "music" && <MusicFeedPage />}
             {activeNav === "upload-track" && <UploadTrackPage />}
             {activeNav === "my-music" && <MyMusicPage />}
+            {activeNav === "music-nfts" && <MusicNFTPage />}
+            {activeNav === "revenue" && <RevenueDashboardPage />}
             {activeNav === "market" && <MarketplacePage />}
             {activeNav === "create" && <CreateAdPage />}
             {activeNav === "profile" && <ProfilePage />}
@@ -931,6 +939,8 @@ export default function App() {
           {mobileTab === "music" && <MusicFeedPage />}
           {mobileTab === "upload-track" && <UploadTrackPage />}
           {mobileTab === "my-music" && <MyMusicPage />}
+          {mobileTab === "music-nfts" && <MusicNFTPage />}
+          {mobileTab === "revenue" && <RevenueDashboardPage />}
           {mobileTab === "market" && <MarketplacePage />}
           {mobileTab === "create" && <CreateAdPage />}
           {mobileTab === "profile" && <ProfilePage />}

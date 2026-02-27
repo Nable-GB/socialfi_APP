@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, TrendingUp, Clock, Heart, Play, Pause, Music, Sparkles, MessageCircle } from "lucide-react";
+import { Search, TrendingUp, Clock, Heart, Play, Pause, Music, Sparkles, Zap, Share2 } from "lucide-react";
 import { musicApi, type ApiTrack } from "../lib/api";
 import { usePlayer } from "../contexts/PlayerContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -88,12 +88,19 @@ function TrackCard({ track, onPlay, isCurrentTrack, isPlaying }: {
           {track.artist?.displayName || track.artist?.username}
           {track.aiModel && <span className="text-purple-400"> · {track.aiModel}</span>}
         </p>
-        <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-500">
+        <div className="flex items-center gap-2 mt-2 text-[10px] text-slate-500">
           <span className="flex items-center gap-1"><Play size={10} /> {track.playCount.toLocaleString()}</span>
           <button onClick={handleLike} className={`flex items-center gap-1 transition-colors ${liked ? "text-red-400" : "hover:text-red-400"}`}>
             <Heart size={10} fill={liked ? "currentColor" : "none"} /> {likeCount}
           </button>
-          <span className="flex items-center gap-1"><MessageCircle size={10} /> {track.commentCount}</span>
+          <button onClick={(e) => { e.stopPropagation(); if (!isAuthenticated) { toast.error("Login to boost"); return; } musicApi.boostTrack(track.id).then(r => toast.success(r.message)).catch((err: any) => toast.error(err.message || "Boost failed")); }}
+            className="flex items-center gap-1 hover:text-yellow-400 transition-colors">
+            <Zap size={10} />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); if (!isAuthenticated) { toast.error("Login to repost"); return; } musicApi.repostTrack(track.id).then(r => toast.success(r.message)).catch((err: any) => toast.error(err.message || "Repost failed")); }}
+            className="flex items-center gap-1 hover:text-green-400 transition-colors">
+            <Share2 size={10} />
+          </button>
         </div>
       </div>
     </div>
