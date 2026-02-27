@@ -4,7 +4,8 @@ import {
   Heart, MessageCircle, Share2,
   Zap, Star, ShoppingBag, ChevronUp, Flame, Award, Shield,
   ExternalLink, RefreshCw, Sparkles, Crown, Image,
-  CheckCircle, Globe, Settings, LogOut, Mail, X, ArrowUpRight, Menu
+  CheckCircle, Globe, Settings, LogOut, Mail, X, ArrowUpRight, Menu,
+  Music, Headphones, Upload
 } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import { useFeed } from "./hooks/useFeed";
@@ -28,6 +29,10 @@ import { SubscriptionPage } from "./components/SubscriptionPage";
 import { PaidServicesPage } from "./components/PaidServicesPage";
 import { VerifyEmailPage } from "./components/VerifyEmailPage";
 import { ResetPasswordPage } from "./components/ResetPasswordPage";
+import { MusicFeedPage } from "./components/MusicFeedPage";
+import { UploadTrackPage } from "./components/UploadTrackPage";
+import { MyMusicPage } from "./components/MyMusicPage";
+import { AudioPlayerBar } from "./components/AudioPlayerBar";
 import type { ApiPost } from "./lib/api";
 import { authApi, uploadApi } from "./lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -438,6 +443,9 @@ function DesktopNavUserChip({ onOpenAuth }: { onOpenAuth: () => void }) {
 function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string; setActiveNav: (id: string) => void; onOpenAuth: () => void }) {
   const navItems = [
     { id: "feed", icon: Home, label: "Home Feed" },
+    { id: "music", icon: Headphones, label: "Discover Music" },
+    { id: "upload-track", icon: Upload, label: "Upload Track" },
+    { id: "my-music", icon: Music, label: "My Music" },
     { id: "market", icon: ShoppingBag, label: "Marketplace" },
     { id: "create", icon: PlusSquare, label: "Create Ad" },
     { id: "profile", icon: User, label: "My Profile" },
@@ -489,12 +497,15 @@ function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTa
 
   const mainItems = [
     { id: "feed", icon: Home, label: "Feed" },
-    { id: "market", icon: TrendingUp, label: "Market" },
-    { id: "create", icon: PlusSquare, label: "Create" },
+    { id: "music", icon: Headphones, label: "Music" },
+    { id: "upload-track", icon: Upload, label: "Upload" },
     { id: "profile", icon: User, label: "Profile" },
   ];
 
   const moreItems = [
+    { id: "my-music", icon: Music, label: "My Music" },
+    { id: "market", icon: ShoppingBag, label: "Marketplace" },
+    { id: "create", icon: PlusSquare, label: "Create Ad" },
     { id: "explore", icon: Globe, label: "Explore" },
     { id: "nft-market", icon: Image, label: "NFT Market" },
     { id: "my-nfts", icon: Image, label: "My NFTs" },
@@ -866,6 +877,9 @@ export default function App() {
 
           <main className="min-w-0">
             {activeNav === "feed" && <RealFeed onClaimReward={handleClaimReward} />}
+            {activeNav === "music" && <MusicFeedPage />}
+            {activeNav === "upload-track" && <UploadTrackPage />}
+            {activeNav === "my-music" && <MyMusicPage />}
             {activeNav === "market" && <MarketplacePage />}
             {activeNav === "create" && <CreateAdPage />}
             {activeNav === "profile" && <ProfilePage />}
@@ -914,6 +928,9 @@ export default function App() {
         {/* Mobile layout */}
         <div className="lg:hidden pb-24 pt-4">
           {mobileTab === "feed" && <RealFeed onClaimReward={handleClaimReward} />}
+          {mobileTab === "music" && <MusicFeedPage />}
+          {mobileTab === "upload-track" && <UploadTrackPage />}
+          {mobileTab === "my-music" && <MyMusicPage />}
           {mobileTab === "market" && <MarketplacePage />}
           {mobileTab === "create" && <CreateAdPage />}
           {mobileTab === "profile" && <ProfilePage />}
@@ -930,6 +947,7 @@ export default function App() {
         </div>
       </div>
 
+      <AudioPlayerBar />
       <BottomNav mobileTab={mobileTab} setMobileTab={setMobileTab} />
     </div>
   );

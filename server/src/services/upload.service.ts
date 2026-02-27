@@ -41,8 +41,17 @@ export function isAllowedImageType(mime: string): boolean {
   return ALLOWED_IMAGE_TYPES.has(mime);
 }
 
+const ALLOWED_AUDIO_TYPES = new Set([
+  "audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/ogg",
+  "audio/flac", "audio/aac", "audio/mp4", "audio/webm",
+]);
+
 export function isAllowedMediaType(mime: string): boolean {
   return ALLOWED_IMAGE_TYPES.has(mime) || ALLOWED_VIDEO_TYPES.has(mime);
+}
+
+export function isAllowedAudioType(mime: string): boolean {
+  return ALLOWED_AUDIO_TYPES.has(mime);
 }
 
 // ─── Upload to S3 ─────────────────────────────────────────────────────────────

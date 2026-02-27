@@ -335,45 +335,34 @@ export const analyticsApi = {
 };
 
 // ─── Uploads ──────────────────────────────────────────────────────────────────
+async function uploadFile(endpoint: string, fieldName: string, file: File): Promise<any> {
+  const form = new FormData();
+  form.append(fieldName, file);
+  const token = localStorage.getItem("sf_token");
+  const res = await fetch(`${BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: form,
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Upload failed"); }
+  return res.json();
+}
+
 export const uploadApi = {
-  avatar: async (file: File): Promise<{ success: boolean; url: string; key: string }> => {
-    const form = new FormData();
-    form.append("avatar", file);
-    const token = localStorage.getItem("sf_token");
-    const res = await fetch("/api/uploads/avatar", {
-      method: "POST",
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: form,
-    });
-    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Upload failed"); }
-    return res.json();
-  },
+  avatar: (file: File): Promise<{ success: boolean; url: string; key: string }> =>
+    uploadFile("/api/uploads/avatar", "avatar", file),
 
-  media: async (file: File): Promise<{ success: boolean; url: string; key: string; contentType: string }> => {
-    const form = new FormData();
-    form.append("media", file);
-    const token = localStorage.getItem("sf_token");
-    const res = await fetch("/api/uploads/media", {
-      method: "POST",
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: form,
-    });
-    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Upload failed"); }
-    return res.json();
-  },
+  media: (file: File): Promise<{ success: boolean; url: string; key: string; contentType: string }> =>
+    uploadFile("/api/uploads/media", "media", file),
 
-  nft: async (file: File): Promise<{ success: boolean; url: string; key: string }> => {
-    const form = new FormData();
-    form.append("media", file);
-    const token = localStorage.getItem("sf_token");
-    const res = await fetch("/api/uploads/nft", {
-      method: "POST",
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: form,
-    });
-    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Upload failed"); }
-    return res.json();
-  },
+  uploadMedia: (file: File): Promise<{ success: boolean; url: string; key: string; contentType: string }> =>
+    uploadFile("/api/uploads/media", "media", file),
+
+  nft: (file: File): Promise<{ success: boolean; url: string; key: string }> =>
+    uploadFile("/api/uploads/nft", "media", file),
+
+  uploadAudio: (file: File): Promise<{ success: boolean; url: string; key: string; contentType: string }> =>
+    uploadFile("/api/uploads/audio", "audio", file),
 };
 
 // ─── Referral ─────────────────────────────────────────────────────────────────
@@ -566,3 +555,133 @@ export interface ApiAdPackage {
   durationDays: number;
   totalRewardPool: string;
 }
+
+// ─── Music Types ──────────────────────────────────────────────────────────────
+
+export interface ApiTrack {
+  id: string;
+  title: string;
+  description?: string;
+  genre: string;
+  tags: string[];
+  bpm?: number;
+  key?: string;
+  duration?: number;
+  isAiGenerated: boolean;
+  aiModel?: string;
+  aiPrompt?: string;
+  audioUrl: string;
+  coverUrl?: string;
+  playCount: number;
+  likeCount: number;
+  commentCount: number;
+  shareCount: number;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  isLiked?: boolean;
+  plays?: number;
+  likesCount?: number;
+  commentsCount?: number;
+  createdAt: string;
+  publishedAt?: string;
+  artist: {
+    id: string;
+    username: string;
+    displayName?: string;
+    avatarUrl?: string;
+    isVerified?: boolean;
+  };
+  album?: { id: string; title: string; coverUrl?: string };
+  distributions?: ApiDistribution[];
+  comments?: ApiTrackComment[];
+}
+
+export interface ApiTrackComment {
+  id: string;
+  content: string;
+  timestampSec?: number;
+  createdAt: string;
+  user: { id: string; username: string; displayName?: string; avatarUrl?: string };
+}
+
+export interface ApiDistribution {
+  id: string;
+  status: "PENDING" | "SUBMITTED" | "LIVE" | "REJECTED" | "REMOVED";
+  youtubeUrl?: string;
+  submittedAt?: string;
+  liveAt?: string;
+}
+
+export interface ApiAlbum {
+  id: string;
+  title: string;
+  description?: string;
+  coverUrl?: string;
+  genre: string;
+  createdAt: string;
+  _count?: { tracks: number };
+}
+
+// ─── Music API ────────────────────────────────────────────────────────────────
+
+export const musicApi = {
+  getTracks: (params?: { page?: number; limit?: number; genre?: string; search?: string; sort?: string; artistId?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.genre) qs.set("genre", params.genre);
+    if (params?.search) qs.set("search", params.search);
+    if (params?.sort) qs.set("sort", params.sort);
+    if (params?.artistId) qs.set("artistId", params.artistId);
+    return request<{ tracks: ApiTrack[]; pagination: { page: number; limit: number; total: number; pages: number } }>(`/api/music/tracks?${qs}`);
+  },
+
+  getTrack: (id: string) =>
+    request<ApiTrack>(`/api/music/tracks/${id}`),
+
+  createTrack: (body: Partial<ApiTrack> & { title: string; audioUrl: string }) =>
+    request<{ success: boolean; track: ApiTrack }>("/api/music/tracks", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  updateTrack: (id: string, body: Partial<ApiTrack>) =>
+    request<{ success: boolean; track: ApiTrack }>(`/api/music/tracks/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  deleteTrack: (id: string) =>
+    request<{ success: boolean }>(`/api/music/tracks/${id}`, { method: "DELETE" }),
+
+  recordPlay: (id: string, body?: { durationPlayed?: number; completedFull?: boolean }) =>
+    request<{ success: boolean }>(`/api/music/tracks/${id}/play`, {
+      method: "POST",
+      body: JSON.stringify(body || {}),
+    }),
+
+  toggleLike: (id: string) =>
+    request<{ liked: boolean }>(`/api/music/tracks/${id}/like`, { method: "POST" }),
+
+  addComment: (id: string, body: { content: string; timestampSec?: number }) =>
+    request<{ success: boolean; comment: ApiTrackComment }>(`/api/music/tracks/${id}/comment`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  getMyTracks: () =>
+    request<{ tracks: ApiTrack[] }>("/api/music/my-tracks"),
+
+  submitToYouTube: (id: string) =>
+    request<{ success: boolean; distribution: ApiDistribution; message: string }>(`/api/music/tracks/${id}/distribute`, {
+      method: "POST",
+    }),
+
+  getAlbums: () =>
+    request<{ albums: ApiAlbum[] }>("/api/music/albums"),
+
+  createAlbum: (body: { title: string; description?: string; coverUrl?: string; genre?: string }) =>
+    request<{ success: boolean; album: ApiAlbum }>("/api/music/albums", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+};

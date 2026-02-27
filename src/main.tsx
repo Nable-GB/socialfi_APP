@@ -4,11 +4,14 @@ import { Toaster } from 'sonner'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
+import { PlayerProvider } from './contexts/PlayerContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
-      <App />
+      <PlayerProvider>
+        <App />
+      </PlayerProvider>
     </AuthProvider>
     <Toaster 
       position="top-right"

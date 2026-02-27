@@ -220,6 +220,13 @@ model User {
   listings        NftListing[]    @relation("ListingSeller")
   purchases       NftListing[]    @relation("ListingBuyer")
 
+  // --- Music ---
+  tracks          Track[]         @relation("UserTracks")
+  albums          Album[]         @relation("UserAlbums")
+  trackPlays      TrackPlay[]     @relation("UserPlays")
+  trackLikes      TrackLike[]     @relation("UserTrackLikes")
+  trackComments   TrackComment[]  @relation("UserTrackComments")
+
   @@index([walletAddress])
   @@index([referralCode])
   @@index([referredById])
@@ -707,4 +714,167 @@ model NftListing {
   @@index([status])
   @@index([price])
   @@map("nft_listings")
+}
+
+// ============================================================================
+// MUSIC — AI Artist Platform
+// ============================================================================
+
+enum TrackStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MusicGenre {
+  POP
+  HIPHOP
+  RNB
+  EDM
+  ROCK
+  JAZZ
+  CLASSICAL
+  LOFI
+  AMBIENT
+  EXPERIMENTAL
+  WORLD
+  OTHER
+}
+
+enum DistributionStatus {
+  PENDING
+  SUBMITTED
+  LIVE
+  REJECTED
+  REMOVED
+}
+
+model Track {
+  id              String        @id @default(uuid())
+
+  // --- Metadata ---
+  title           String
+  description     String?
+  genre           MusicGenre    @default(OTHER)
+  tags            String[]      @default([])
+  bpm             Int?
+  key             String?       // Musical key (e.g. "C#m", "Ab")
+  duration        Int?          // Duration in seconds
+  isAiGenerated   Boolean       @default(true)
+  aiModel         String?       // AI tool used (e.g. "Suno", "Udio", "MusicGen")
+  aiPrompt        String?       // Prompt used to generate
+
+  // --- Files ---
+  audioUrl        String        // S3 URL for audio file
+  coverUrl        String?       // S3 URL for cover art
+  waveformData    String?       // JSON waveform data for visualizer
+
+  // --- Stats (denormalized for perf) ---
+  playCount       Int           @default(0)
+  likeCount       Int           @default(0)
+  commentCount    Int           @default(0)
+  shareCount      Int           @default(0)
+
+  // --- Status ---
+  status          TrackStatus   @default(DRAFT)
+
+  // --- Relations ---
+  artist          User          @relation("UserTracks", fields: [artistId], references: [id])
+  artistId        String
+  album           Album?        @relation(fields: [albumId], references: [id])
+  albumId         String?
+  plays           TrackPlay[]
+  likes           TrackLike[]
+  comments        TrackComment[]
+  distributions   YouTubeDistribution[]
+
+  // --- Timestamps ---
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  publishedAt     DateTime?
+
+  @@index([artistId])
+  @@index([genre])
+  @@index([status])
+  @@index([playCount])
+  @@index([createdAt])
+  @@map("tracks")
+}
+
+model Album {
+  id              String        @id @default(uuid())
+  title           String
+  description     String?
+  coverUrl        String?
+  genre           MusicGenre    @default(OTHER)
+
+  artist          User          @relation("UserAlbums", fields: [artistId], references: [id])
+  artistId        String
+  tracks          Track[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([artistId])
+  @@map("albums")
+}
+
+model TrackPlay {
+  id              String        @id @default(uuid())
+  track           Track         @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  trackId         String
+  listener        User?         @relation("UserPlays", fields: [listenerId], references: [id])
+  listenerId      String?
+  durationPlayed  Int?          // Seconds listened
+  completedFull   Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+
+  @@index([trackId])
+  @@index([listenerId])
+  @@index([createdAt])
+  @@map("track_plays")
+}
+
+model TrackLike {
+  id              String        @id @default(uuid())
+  track           Track         @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  trackId         String
+  user            User          @relation("UserTrackLikes", fields: [userId], references: [id])
+  userId          String
+  createdAt       DateTime      @default(now())
+
+  @@unique([trackId, userId])
+  @@map("track_likes")
+}
+
+model TrackComment {
+  id              String        @id @default(uuid())
+  track           Track         @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  trackId         String
+  user            User          @relation("UserTrackComments", fields: [userId], references: [id])
+  userId          String
+  content         String
+  timestampSec    Int?          // Comment at specific point in the track
+  createdAt       DateTime      @default(now())
+
+  @@index([trackId])
+  @@map("track_comments")
+}
+
+model YouTubeDistribution {
+  id              String              @id @default(uuid())
+  track           Track               @relation(fields: [trackId], references: [id])
+  trackId         String
+  status          DistributionStatus  @default(PENDING)
+  youtubeVideoId  String?             // YouTube video ID once published
+  youtubeUrl      String?             // Full YouTube URL
+  submittedAt     DateTime?
+  liveAt          DateTime?
+  errorMessage    String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([trackId])
+  @@index([status])
+  @@map("youtube_distributions")
 }

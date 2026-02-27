@@ -2,9 +2,11 @@ import { Router } from "express";
 import {
   uploadAvatar,
   uploadMedia,
+  uploadAudio,
   handleAvatarUpload,
   handleMediaUpload,
   handleNftUpload,
+  handleAudioUpload,
 } from "../controllers/upload.controller.js";
 import { requireAuth } from "../middleware/auth.js";
 
@@ -44,5 +46,16 @@ router.post("/nft", (req, res, next) => {
     next();
   });
 }, handleNftUpload);
+
+// Audio upload (50MB, audio only — for music tracks)
+router.post("/audio", (req, res, next) => {
+  uploadAudio(req, res, (err) => {
+    if (err) {
+      res.status(400).json({ error: err.message || "Upload failed" });
+      return;
+    }
+    next();
+  });
+}, handleAudioUpload);
 
 export default router;

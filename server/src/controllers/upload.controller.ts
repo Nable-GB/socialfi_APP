@@ -7,6 +7,7 @@ import {
   isS3Configured,
   isAllowedImageType,
   isAllowedMediaType,
+  isAllowedAudioType,
 } from "../services/upload.service.js";
 
 // ─── Multer config (memory storage → buffer → S3) ────────────────────────────
@@ -134,6 +135,48 @@ export async function handleNftUpload(req: Request, res: Response): Promise<void
       return;
     }
     console.error("NftUpload error:", err);
+    res.status(500).json({ error: "Upload failed" });
+  }
+}
+
+// ─── Audio upload (50MB, audio only) ─────────────────────────────────────────
+
+export const uploadAudio = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB for audio
+  fileFilter: (_req, file, cb) => {
+    if (isAllowedAudioType(file.mimetype)) cb(null, true);
+    else cb(new Error("Only audio files (MP3, WAV, OGG, FLAC, AAC) are allowed"));
+  },
+}).single("audio");
+
+export async function handleAudioUpload(req: Request, res: Response): Promise<void> {
+  try {
+    if (!isS3Configured()) {
+      res.status(503).json({ error: "File upload not configured. Set S3 environment variables." });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ error: "No file provided. Use form field 'audio'." });
+      return;
+    }
+
+    const result = await uploadToS3(req.file.buffer, req.file.originalname, req.file.mimetype, "tracks");
+
+    res.json({
+      success: true,
+      url: result.url,
+      key: result.key,
+      size: result.size,
+      contentType: result.contentType,
+    });
+  } catch (err: any) {
+    if (err.message?.includes("Only")) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    console.error("AudioUpload error:", err);
     res.status(500).json({ error: "Upload failed" });
   }
 }
