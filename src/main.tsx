@@ -5,14 +5,17 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 import { PlayerProvider } from './contexts/PlayerContext.tsx'
+import { LangProvider } from './contexts/LangContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <PlayerProvider>
-        <App />
-      </PlayerProvider>
-    </AuthProvider>
+    <LangProvider>
+      <AuthProvider>
+        <PlayerProvider>
+          <App />
+        </PlayerProvider>
+      </AuthProvider>
+    </LangProvider>
     <Toaster 
       position="top-right"
       toastOptions={{
