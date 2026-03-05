@@ -48,7 +48,7 @@ export function VerifyEmailPage({ token, onDone }: VerifyEmailPageProps) {
             <button onClick={onDone}
               className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
               style={{ background: "linear-gradient(135deg, #22d3ee, #6366f1)" }}>
-              Go to SocialFi →
+              Go to SMFI →
             </button>
           </>
         )}
@@ -65,14 +65,14 @@ export function VerifyEmailPage({ token, onDone }: VerifyEmailPageProps) {
             <button onClick={onDone}
               className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
               style={{ background: "linear-gradient(135deg, #64748b, #475569)" }}>
-              Back to SocialFi
+              Back to SMFI
             </button>
           </>
         )}
 
         <div className="flex items-center gap-2 justify-center mt-6">
           <Mail size={14} className="text-slate-600" />
-          <span className="text-xs text-slate-600">SocialFi Email Verification</span>
+          <span className="text-xs text-slate-600">SMFI Email Verification</span>
         </div>
       </div>
     </div>

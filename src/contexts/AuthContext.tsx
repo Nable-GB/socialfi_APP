@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const siweMessage = new SiweMessage({
       domain,
       address,
-      statement: "Sign in to SocialFi with your Ethereum wallet",
+      statement: "Sign in to SMFI (Social Music Fi) with your Ethereum wallet",
       uri: origin,
       version: "1",
       chainId: 11155111, // Sepolia

@@ -3,7 +3,7 @@ import {
   Home, TrendingUp, PlusSquare, User, Users, Wallet, Search,
   Heart, MessageCircle, Share2,
   Zap, Star, ShoppingBag, ChevronUp, Flame, Award, Shield,
-  ExternalLink, RefreshCw, Sparkles, Crown, Image,
+  ExternalLink, RefreshCw, Crown, Image,
   CheckCircle, Globe, Settings, LogOut, Mail, X, ArrowUpRight, Menu,
   Music, Headphones, Upload, Gem, BarChart3
 } from "lucide-react";
@@ -69,10 +69,54 @@ interface NFT {
 
 
 const TRENDING_NFTS: NFT[] = [
-  { name: "Neon Fragments #77", collection: "Neon Fragments", price_eth: "0.85", price_usd: "3,060", change: "+42%", rarity: "Rare", edition: "77 of 1000", traits: ["Crystal", "Glow"], image: "/images/nft-neon-fragment.jpg", accent: "#22d3ee" },
-  { name: "Void Samurai #209", collection: "Void Samurai", price_eth: "1.20", price_usd: "4,320", change: "+28%", rarity: "Epic", edition: "209 of 500", traits: ["Shadow", "Katana"], image: "/images/nft-void-samurai.jpg", accent: "#a855f7" },
-  { name: "Solar Punk #1337", collection: "Solar Punks", price_eth: "0.42", price_usd: "1,512", change: "+18%", rarity: "Rare", edition: "1337 of 5000", traits: ["Solar", "Eco"], image: "/images/nft-solar-punk.jpg", accent: "#10b981" },
-  { name: "QuantumKat #004", collection: "QuantumKats", price_eth: "7.70", price_usd: "27,720", change: "+91%", rarity: "Legendary", edition: "4 of 100", traits: ["Quantum", "Cosmic"], image: "/images/nft-quantum-kat.jpg", accent: "#f59e0b" },
+  {
+    name: "Neon Fragments EP",
+    collection: "Lunar Circuit",
+    price_eth: "0.85",
+    price_usd: "3,060",
+    change: "+42%",
+    rarity: "Rare",
+    edition: "200 of 2000",
+    traits: ["Lo-fi", "Analog"],
+    image: "https://images.unsplash.com/photo-1598387993441-a364f854cfbd?w=80&h=80&fit=crop",
+    accent: "#22d3ee",
+  },
+  {
+    name: "Void Samurai Album",
+    collection: "Kaifire",
+    price_eth: "1.20",
+    price_usd: "4,320",
+    change: "+28%",
+    rarity: "Epic",
+    edition: "500 of 5000",
+    traits: ["Synthwave", "Stereo"],
+    image: "https://images.unsplash.com/photo-1470229538611-16ba8c7ffbd7?w=80&h=80&fit=crop",
+    accent: "#a855f7",
+  },
+  {
+    name: "Echoes of Green",
+    collection: "Nova Synth",
+    price_eth: "0.42",
+    price_usd: "1,512",
+    change: "+18%",
+    rarity: "Rare",
+    edition: "320 of 3000",
+    traits: ["Indie Pop", "Vinyl"],
+    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=80&h=80&fit=crop",
+    accent: "#10b981",
+  },
+  {
+    name: "Cosmic Purr",
+    collection: "Atlas Sound",
+    price_eth: "7.70",
+    price_usd: "27,720",
+    change: "+91%",
+    rarity: "Legendary",
+    edition: "50 of 250",
+    traits: ["World", "Collector"],
+    image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=80&h=80&fit=crop",
+    accent: "#f59e0b",
+  },
 ];
 
 const TOP_SPONSORS = [
@@ -92,7 +136,7 @@ function TrendingNFTsWidget() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <TrendingUp size={15} className="text-cyan-400" />
-          <span className="font-bold text-sm text-slate-100">Trending Collectibles</span>
+          <span className="font-bold text-sm text-slate-100">Trending Music Albums</span>
         </div>
         <button 
           onClick={() => toast.info("Full marketplace coming soon! 🛒")}
@@ -141,7 +185,8 @@ function TrendingNFTsWidget() {
           color:'#67e8f9',
         }}>
         <span className="flex items-center justify-center gap-1.5">
-          <Sparkles size={13} /> Explore Marketplace
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          Discover New Albums
         </span>
       </button>
 
@@ -302,9 +347,12 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-gradient-to-br from-cyan-400 to-indigo-500"
             style={{boxShadow:'0 0 12px rgba(34,211,238,0.4)'}}>
-            <Zap size={14} className="text-white" />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
           </div>
-          <span className="font-extrabold text-base tracking-tight shimmer-text hidden sm:block">SocialFi</span>
+          <div className="hidden sm:flex flex-col leading-none">
+            <span className="font-extrabold text-sm tracking-tight shimmer-text">SMFI</span>
+            <span className="text-[9px] text-slate-500 font-medium tracking-wide">Social Music Fi</span>
+          </div>
         </div>
 
         {/* Search */}
@@ -675,7 +723,7 @@ function RealFeedPost({ post, onClaimReward }: { post: ApiPost; onClaimReward: (
             <MessageCircle size={16} />
             <span className="text-xs font-mono">{commentCount}</span>
           </button>
-          <button onClick={() => { navigator.clipboard.writeText(`https://socialfi.app/post/${post.id}`); toast.success('Link copied! 📋'); }}
+          <button onClick={() => { navigator.clipboard.writeText(`https://smfi.app/post/${post.id}`); toast.success('Link copied! 📋'); }}
             className="flex items-center gap-1.5 text-slate-400 hover:text-indigo-400 transition-colors">
             <Share2 size={16} />
             <span className="text-xs font-mono">{post.sharesCount}</span>

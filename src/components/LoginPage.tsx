@@ -43,7 +43,7 @@ export function LoginPage() {
 
       // 2. Sign in via SIWE
       await walletLogin(address, wallet.signMessage);
-      toast.success("Welcome to SocialFi! 🎉🦊");
+      toast.success("Welcome to SMFI! 🎉🦊");
     } catch (err: any) {
       if (err?.code === 4001) {
         toast.error("Connection rejected by user");
@@ -80,7 +80,7 @@ export function LoginPage() {
     try {
       setIsLoading(true);
       await register({ email, password, username, displayName: displayName || username, referralCode: referralCode || undefined });
-      toast.success("Account created! Welcome to SocialFi 🎉");
+      toast.success("Account created! Welcome to SMFI 🎉");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -124,7 +124,7 @@ export function LoginPage() {
 
         {/* Heading */}
         <h1 className="text-2xl font-bold text-center text-slate-900 tracking-tight">
-          Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-indigo-500">SOCIALFI</span>
+          Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-indigo-500">SMFI</span>
         </h1>
         <p className="text-center text-slate-500 text-sm mt-1.5 mb-8">
           {mode === "login" ? "Sign in to continue" : "Create your account"}

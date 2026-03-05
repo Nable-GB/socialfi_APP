@@ -57,7 +57,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
     try {
       setIsLoading(true);
       await register({ email, password, username, displayName: displayName || username, referralCode: referralCode || undefined });
-      toast.success("Account created! Welcome to SocialFi 🎉");
+      toast.success("Account created! Welcome to SMFI 🎉");
       onOpenChange(false);
       reset();
     } catch (err) {
@@ -108,7 +108,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           <DialogDescription className="text-slate-400">
             {mode === "login"
               ? "Sign in to earn tokens and join the community"
-              : "Join SocialFi and start earning tokens today"}
+              : "Join SMFI (Social Music Fi) and start earning tokens today"}
           </DialogDescription>
         </DialogHeader>
 

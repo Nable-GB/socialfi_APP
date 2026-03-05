@@ -98,7 +98,7 @@ function ReferralLinkBox({ code, link }: { code: string; link: string }) {
   const share = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Join SocialFi!", text: "Earn SFT tokens by viewing ads!", url: link });
+        await navigator.share({ title: "Join SMFI (Social Music Fi)!", text: "Earn SFT tokens by supporting real artists!", url: link });
       } catch { /* user cancelled */ }
     } else {
       copy(link, "link");

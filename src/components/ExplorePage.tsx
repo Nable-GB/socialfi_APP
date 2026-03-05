@@ -10,7 +10,7 @@ const TRENDING_TOPICS = [
   { tag: "#Layer2", posts: "6.2K", trend: "+95%" },
   { tag: "#DAOGovernance", posts: "4.1K", trend: "+67%" },
   { tag: "#Web3Gaming", posts: "3.8K", trend: "+52%" },
-  { tag: "#SocialFi", posts: "2.9K", trend: "+210%" },
+  { tag: "#SMFI", posts: "2.9K", trend: "+210%" },
 ];
 
 type SearchUser = ApiUser & { isFollowing: boolean };
@@ -215,8 +215,8 @@ export function ExplorePage() {
         <div className="flex items-center gap-3">
           <Globe size={20} className="text-cyan-400" />
           <div>
-            <p className="text-sm font-bold text-white">Join the SocialFi Community</p>
-            <p className="text-xs text-slate-400 mt-0.5">Connect with Web3 enthusiasts, earn tokens, and shape the future of social media.</p>
+            <p className="text-sm font-bold text-white">Join the SMFI Community</p>
+            <p className="text-xs text-slate-400 mt-0.5">Connect with artists and collectors, earn tokens, and shape the future of music.</p>
           </div>
         </div>
       </div>
