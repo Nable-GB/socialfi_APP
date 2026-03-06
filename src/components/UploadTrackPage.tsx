@@ -103,7 +103,7 @@ export function UploadTrackPage() {
     if (!title.trim()) { toast.error("Title is required"); return; }
     if (!audioUrl) { toast.error("Upload an audio file first"); return; }
 
-    if (!allCopyrightSigned) { toast.error(t.copyrightRequired); return; }
+    if (!allCopyrightSigned) { toast.error(t.copyright.required); return; }
 
     setSubmitting(true);
     try {
@@ -137,16 +137,16 @@ export function UploadTrackPage() {
   return (
     <div className="max-w-2xl mx-auto px-2">
       <h1 className="text-2xl font-bold text-white flex items-center gap-2 mb-6">
-        <Upload size={24} className="text-cyan-400" /> {t.uploadTitle}
+        <Upload size={24} className="text-cyan-400" /> {t.upload.title}
       </h1>
 
       {/* AI Consultation Banner */}
       <div className="mb-6 p-4 rounded-2xl flex flex-col gap-3" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.12), rgba(6,182,212,0.08))", border: "1px solid rgba(139,92,246,0.25)" }}>
         <div className="flex items-center gap-2">
           <Sparkles size={18} className="text-purple-400" />
-          <h2 className="text-sm font-bold text-purple-300">{t.aiConsultTitle}</h2>
+          <h2 className="text-sm font-bold text-purple-300">{t.aiConsult.title}</h2>
         </div>
-        <p className="text-xs text-slate-400 leading-relaxed">{t.aiConsultBody}</p>
+        <p className="text-xs text-slate-400 leading-relaxed">{t.aiConsult.body}</p>
         <div className="flex flex-wrap gap-2">
           <a
             href={SUNO_AFFILIATE}
@@ -155,7 +155,7 @@ export function UploadTrackPage() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-purple-300 hover:text-white transition-colors"
             style={{ background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.35)" }}
           >
-            <Sparkles size={12} /> {t.aiConsultSunoLabel}
+            <Sparkles size={12} /> {t.aiConsult.sunoLabel}
             <ExternalLink size={10} className="opacity-60" />
           </a>
           <a
@@ -163,16 +163,16 @@ export function UploadTrackPage() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-cyan-300 hover:text-white transition-colors"
             style={{ background: "rgba(6,182,212,0.12)", border: "1px solid rgba(6,182,212,0.25)" }}
           >
-            <Mail size={12} /> {t.aiConsultContact}
+            <Mail size={12} /> {t.aiConsult.contact}
           </a>
         </div>
-        <p className="text-[10px] text-purple-400/70 italic">{t.aiConsultSunoNote}</p>
+        <p className="text-[10px] text-purple-400/70 italic">{t.aiConsult.sunoNote}</p>
       </div>
 
       <div className="space-y-5">
         {/* Audio Upload */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">{t.uploadAudioLabel}</label>
+          <label className="block text-sm font-medium text-slate-300 mb-2">{t.upload.audioLabel}</label>
           {audioFile ? (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/60 border border-slate-700/30">
               <Music size={20} className="text-cyan-400 flex-shrink-0" />
@@ -195,7 +195,7 @@ export function UploadTrackPage() {
             >
               <Upload size={32} />
               <span className="text-sm font-medium">Click to upload audio</span>
-              <span className="text-xs">{t.uploadAudioHint}</span>
+              <span className="text-xs">{t.upload.audioHint}</span>
             </button>
           )}
           <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={handleAudioSelect} />
@@ -204,12 +204,12 @@ export function UploadTrackPage() {
         {/* Platform disclaimer */}
         <div className="p-3 rounded-xl flex gap-2" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
           <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
-          <p className="text-[10px] text-amber-300/80 leading-relaxed">{t.copyrightDisclaimer}</p>
+          <p className="text-[10px] text-amber-300/80 leading-relaxed">{t.copyright.disclaimer}</p>
         </div>
 
         {/* Cover Art */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">{t.uploadCoverLabel}</label>
+          <label className="block text-sm font-medium text-slate-300 mb-2">{t.upload.coverLabel}</label>
           <div className="flex items-start gap-4">
             {coverPreview ? (
               <div className="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
@@ -237,34 +237,34 @@ export function UploadTrackPage() {
 
         {/* Title */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.uploadTitleLabel}</label>
-          <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={t.uploadTitlePlaceholder}
+          <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.upload.titleLabel}</label>
+          <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={t.upload.titlePlaceholder}
             className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50" />
         </div>
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.uploadDescLabel}</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder={t.uploadDescPlaceholder}
+          <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.upload.descLabel}</label>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder={t.upload.descPlaceholder}
             className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 resize-none" />
         </div>
 
         {/* Genre + BPM + Key */}
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">{t.uploadGenreLabel}</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1">{t.upload.genreLabel}</label>
             <select value={genre} onChange={e => setGenre(e.target.value)}
               className="w-full px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50">
               {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">{t.uploadBpmLabel}</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1">{t.upload.bpmLabel}</label>
             <input type="number" value={bpm} onChange={e => setBpm(e.target.value)} placeholder="120"
               className="w-full px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">{t.uploadKeyLabel}</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1">{t.upload.keyLabel}</label>
             <input type="text" value={musicalKey} onChange={e => setMusicalKey(e.target.value)} placeholder="C#m"
               className="w-full px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50" />
           </div>
@@ -272,29 +272,29 @@ export function UploadTrackPage() {
 
         {/* Tags */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.uploadTagsLabel}</label>
-          <input type="text" value={tags} onChange={e => setTags(e.target.value)} placeholder={t.uploadTagsPlaceholder}
+          <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.upload.tagsLabel}</label>
+          <input type="text" value={tags} onChange={e => setTags(e.target.value)} placeholder={t.upload.tagsPlaceholder}
             className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50" />
         </div>
 
         {/* Mood Tags */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.uploadMoodLabel}</label>
-          <input type="text" value={moodTags} onChange={e => setMoodTags(e.target.value)} placeholder={t.uploadMoodPlaceholder}
+          <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.upload.moodLabel}</label>
+          <input type="text" value={moodTags} onChange={e => setMoodTags(e.target.value)} placeholder={t.upload.moodPlaceholder}
             className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50" />
-          <p className="text-[10px] text-slate-500 mt-1">{t.uploadMoodHint}</p>
+          <p className="text-[10px] text-slate-500 mt-1">{t.upload.moodHint}</p>
         </div>
 
         {/* Copyright Declaration */}
         <div className="p-4 rounded-xl space-y-3" style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(6,182,212,0.2)" }}>
           <div className="flex items-center gap-2 mb-1">
             <ShieldCheck size={16} className="text-cyan-400" />
-            <span className="text-sm font-bold text-cyan-300">{t.copyrightTitle}</span>
+            <span className="text-sm font-bold text-cyan-300">{t.copyright.title}</span>
           </div>
           {[
-            { val: copy1, set: setCopy1, text: t.copyrightCheck1 },
-            { val: copy2, set: setCopy2, text: t.copyrightCheck2 },
-            { val: copy3, set: setCopy3, text: t.copyrightCheck3 },
+            { val: copy1, set: setCopy1, text: t.copyright.check1 },
+            { val: copy2, set: setCopy2, text: t.copyright.check2 },
+            { val: copy3, set: setCopy3, text: t.copyright.check3 },
           ].map((item, i) => (
             <label key={i} className="flex gap-3 cursor-pointer group">
               <input
@@ -314,7 +314,7 @@ export function UploadTrackPage() {
         <label className="flex items-center gap-3 cursor-pointer">
           <input type="checkbox" checked={publishNow} onChange={e => setPublishNow(e.target.checked)}
             className="w-4 h-4 rounded accent-cyan-500" />
-          <span className="text-sm text-slate-300">{t.uploadPublishNow}</span>
+          <span className="text-sm text-slate-300">{t.upload.publishNow}</span>
         </label>
 
         {/* Submit */}
@@ -325,9 +325,9 @@ export function UploadTrackPage() {
           style={{ background: "linear-gradient(135deg, #06b6d4, #8b5cf6)", color: "white" }}
         >
           {submitting ? (
-            <span className="flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> {t.uploadCreating}</span>
+            <span className="flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> {t.upload.creating}</span>
           ) : (
-            publishNow ? t.uploadPublishBtn : t.uploadDraftBtn
+            publishNow ? t.upload.publishBtn : t.upload.draftBtn
           )}
         </button>
       </div>

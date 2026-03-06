@@ -8,6 +8,7 @@ import {
   Music, Headphones, Upload, Gem, BarChart3
 } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
+import { useLang } from "./contexts/LangContext";
 import { useFeed } from "./hooks/useFeed";
 import { useRewards } from "./hooks/useRewards";
 import { useWallet } from "./hooks/useWallet";
@@ -311,10 +312,41 @@ function TopSponsorsWidget() {
   );
 }
 
+// ─── Language Switcher ────────────────────────────────────────────────────────
+
+function LangSwitcher() {
+  const { lang, setLang } = useLang();
+  return (
+    <div className="flex items-center rounded-xl overflow-hidden border border-slate-700/30" style={{background:'rgba(15,23,42,0.6)'}}>
+      <button
+        onClick={() => setLang('en')}
+        className={`px-2.5 py-1.5 text-xs font-bold transition-all ${
+          lang === 'en'
+            ? 'bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 text-cyan-400'
+            : 'text-slate-500 hover:text-slate-300'
+        }`}>
+        EN
+      </button>
+      <div className="w-px h-4 bg-slate-700/50" />
+      <button
+        onClick={() => setLang('ko')}
+        className={`px-2.5 py-1.5 text-xs font-bold transition-all ${
+          lang === 'ko'
+            ? 'bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 text-cyan-400'
+            : 'text-slate-500 hover:text-slate-300'
+        }`}>
+        한국어
+      </button>
+    </div>
+  );
+}
+
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { user, isAuthenticated, logout } = useAuth();
+  const { t } = useLang();
+  const tHeader = t.header;
   const { balance } = useRewards();
   const wallet = useWallet();
   const displayBalance = isAuthenticated
@@ -358,7 +390,7 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
         {/* Search */}
         <div className="hidden md:flex flex-1 max-w-sm items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/70 border border-slate-700/20">
           <Search size={14} className="text-slate-500" />
-          <input placeholder="Search posts, NFTs, creators..." className="bg-transparent text-sm outline-none w-full text-slate-300" />
+          <input placeholder={tHeader.searchPlaceholder} className="bg-transparent text-sm outline-none w-full text-slate-300" />
         </div>
 
         {/* Right cluster */}
@@ -414,6 +446,9 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
             </div>
           )}
 
+          {/* Language Switcher */}
+          <LangSwitcher />
+
           {/* Notification Center */}
           {isAuthenticated && <NotificationCenter />}
 
@@ -430,7 +465,7 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
                 </span>
               </div>
               <button
-                onClick={() => { logout(); toast.info("Signed out"); }}
+                onClick={() => { logout(); toast.info(tHeader.signedOut); }}
                 className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:bg-slate-800 border border-slate-700/20 text-slate-500 hover:text-red-400">
                 <LogOut size={14} />
               </button>
@@ -446,7 +481,7 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
                 boxShadow:'0 0 15px rgba(99,102,241,0.15)',
               }}>
               <Wallet size={14} />
-              <span className="hidden sm:block">Sign In</span>
+              <span className="hidden sm:block">{tHeader.signIn}</span>
             </button>
           )}
         </div>
@@ -492,27 +527,29 @@ function DesktopNavUserChip({ onOpenAuth }: { onOpenAuth: () => void }) {
 }
 
 function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string; setActiveNav: (id: string) => void; onOpenAuth: () => void }) {
+  const { t } = useLang();
+  const nav = t.nav;
   const navItems = [
-    { id: "feed", icon: Home, label: "Home Feed" },
-    { id: "music", icon: Headphones, label: "Discover Music" },
-    { id: "upload-track", icon: Upload, label: "Upload Track" },
-    { id: "my-music", icon: Music, label: "My Music" },
-    { id: "music-nfts", icon: Gem, label: "Music NFTs" },
-    { id: "revenue", icon: BarChart3, label: "Revenue" },
-    { id: "distribution", icon: Globe, label: "Distribution" },
-    { id: "market", icon: ShoppingBag, label: "Marketplace" },
-    { id: "create", icon: PlusSquare, label: "Create Ad" },
-    { id: "profile", icon: User, label: "My Profile" },
-    { id: "explore", icon: Globe, label: "Explore" },
-    { id: "nft-market", icon: Image, label: "NFT Market" },
-    { id: "my-nfts", icon: Image, label: "My NFTs" },
-    { id: "referrals", icon: Users, label: "Referrals" },
-    { id: "analytics", icon: TrendingUp, label: "Analytics" },
-    { id: "subscription", icon: Crown, label: "Subscription" },
-    { id: "services", icon: ShoppingBag, label: "Services" },
-    { id: "transactions", icon: ArrowUpRight, label: "Transactions" },
-    { id: "settings", icon: Settings, label: "Settings" },
-    ...(useAuth().user?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: "Admin" }] : []),
+    { id: "feed", icon: Home, label: nav.homeFeed },
+    { id: "music", icon: Headphones, label: nav.discoverMusic },
+    { id: "upload-track", icon: Upload, label: nav.uploadTrack },
+    { id: "my-music", icon: Music, label: nav.myMusic },
+    { id: "music-nfts", icon: Gem, label: nav.musicNFTs },
+    { id: "revenue", icon: BarChart3, label: nav.revenue },
+    { id: "distribution", icon: Globe, label: nav.distribution },
+    { id: "market", icon: ShoppingBag, label: nav.marketplace },
+    { id: "create", icon: PlusSquare, label: nav.createAd },
+    { id: "profile", icon: User, label: nav.myProfile },
+    { id: "explore", icon: Globe, label: nav.explore },
+    { id: "nft-market", icon: Image, label: nav.nftMarket },
+    { id: "my-nfts", icon: Image, label: nav.myNFTs },
+    { id: "referrals", icon: Users, label: nav.referrals },
+    { id: "analytics", icon: TrendingUp, label: nav.analytics },
+    { id: "subscription", icon: Crown, label: nav.subscription },
+    { id: "services", icon: ShoppingBag, label: nav.services },
+    { id: "transactions", icon: ArrowUpRight, label: nav.transactions },
+    { id: "settings", icon: Settings, label: nav.settings },
+    ...(useAuth().user?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: nav.admin }] : []),
   ];
 
   return (
@@ -548,31 +585,33 @@ function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string
 function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTab: (id: string) => void }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const { user: authUser } = useAuth();
+  const { t } = useLang();
+  const nav = t.nav;
 
   const mainItems = [
-    { id: "feed", icon: Home, label: "Feed" },
-    { id: "music", icon: Headphones, label: "Music" },
-    { id: "upload-track", icon: Upload, label: "Upload" },
-    { id: "profile", icon: User, label: "Profile" },
+    { id: "feed", icon: Home, label: nav.homeFeed },
+    { id: "music", icon: Headphones, label: nav.discoverMusic },
+    { id: "upload-track", icon: Upload, label: nav.uploadTrack },
+    { id: "profile", icon: User, label: nav.myProfile },
   ];
 
   const moreItems = [
-    { id: "my-music", icon: Music, label: "My Music" },
-    { id: "music-nfts", icon: Gem, label: "Music NFTs" },
-    { id: "revenue", icon: BarChart3, label: "Revenue" },
-    { id: "distribution", icon: Globe, label: "Distribution" },
-    { id: "market", icon: ShoppingBag, label: "Marketplace" },
-    { id: "create", icon: PlusSquare, label: "Create Ad" },
-    { id: "explore", icon: Globe, label: "Explore" },
-    { id: "nft-market", icon: Image, label: "NFT Market" },
-    { id: "my-nfts", icon: Image, label: "My NFTs" },
-    { id: "referrals", icon: Users, label: "Referrals" },
-    { id: "analytics", icon: TrendingUp, label: "Analytics" },
-    { id: "subscription", icon: Crown, label: "Subscription" },
-    { id: "services", icon: ShoppingBag, label: "Services" },
-    { id: "transactions", icon: ArrowUpRight, label: "Transactions" },
-    { id: "settings", icon: Settings, label: "Settings" },
-    ...(authUser?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: "Admin" }] : []),
+    { id: "my-music", icon: Music, label: nav.myMusic },
+    { id: "music-nfts", icon: Gem, label: nav.musicNFTs },
+    { id: "revenue", icon: BarChart3, label: nav.revenue },
+    { id: "distribution", icon: Globe, label: nav.distribution },
+    { id: "market", icon: ShoppingBag, label: nav.marketplace },
+    { id: "create", icon: PlusSquare, label: nav.createAd },
+    { id: "explore", icon: Globe, label: nav.explore },
+    { id: "nft-market", icon: Image, label: nav.nftMarket },
+    { id: "my-nfts", icon: Image, label: nav.myNFTs },
+    { id: "referrals", icon: Users, label: nav.referrals },
+    { id: "analytics", icon: TrendingUp, label: nav.analytics },
+    { id: "subscription", icon: Crown, label: nav.subscription },
+    { id: "services", icon: ShoppingBag, label: nav.services },
+    { id: "transactions", icon: ArrowUpRight, label: nav.transactions },
+    { id: "settings", icon: Settings, label: nav.settings },
+    ...(authUser?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: nav.admin }] : []),
   ];
 
   const isMoreActive = moreItems.some(i => i.id === mobileTab);

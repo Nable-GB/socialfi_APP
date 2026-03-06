@@ -49,7 +49,7 @@ export function DistributionSubmitPage() {
     await new Promise(r => setTimeout(r, 1200));
     setSubmitting(false);
     setSubmitted(true);
-    toast.success(t.distSuccess);
+    toast.success(t.distribution.success);
   };
 
   if (submitted) {
@@ -59,7 +59,7 @@ export function DistributionSubmitPage() {
           <CheckCircle size={32} className="text-green-400" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-white mb-2">{t.distSuccess}</h2>
+          <h2 className="text-xl font-bold text-white mb-2">{t.distribution.success}</h2>
           <p className="text-sm text-slate-400 max-w-sm mx-auto">
             Our curators will review your submission. If it meets our quality criteria, we will reach out to initiate the contract-signing process.
           </p>
@@ -86,14 +86,14 @@ export function DistributionSubmitPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white flex items-center gap-2 mb-1">
-          <Globe size={24} className="text-cyan-400" /> {t.distTitle}
+          <Globe size={24} className="text-cyan-400" /> {t.distribution.title}
         </h1>
-        <p className="text-sm text-slate-400">{t.distSubtitle}</p>
+        <p className="text-sm text-slate-400">{t.distribution.subtitle}</p>
       </div>
 
       {/* How it works */}
       <div className="mb-6 p-4 rounded-2xl" style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(100,116,139,0.15)" }}>
-        <p className="text-xs text-slate-300 leading-relaxed mb-3">{t.distBody}</p>
+        <p className="text-xs text-slate-300 leading-relaxed mb-3">{t.distribution.body}</p>
 
         {/* Process steps */}
         <div className="grid grid-cols-3 gap-3">
@@ -114,7 +114,7 @@ export function DistributionSubmitPage() {
       {/* Warning banner */}
       <div className="mb-5 p-3 rounded-xl flex gap-2" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
         <AlertTriangle size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
-        <p className="text-[10px] text-amber-300/80 leading-relaxed">{t.distNote}</p>
+        <p className="text-[10px] text-amber-300/80 leading-relaxed">{t.distribution.note}</p>
       </div>
 
       {/* Form */}
@@ -122,7 +122,7 @@ export function DistributionSubmitPage() {
         {/* Artist name + email */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">{t.distNameLabel} *</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1">{t.distribution.nameLabel} *</label>
             <input
               type="text"
               value={artistName}
@@ -132,7 +132,7 @@ export function DistributionSubmitPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">{t.distEmailLabel} *</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1">{t.distribution.emailLabel} *</label>
             <input
               type="email"
               value={email}
@@ -145,7 +145,7 @@ export function DistributionSubmitPage() {
 
         {/* Track title */}
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">{t.distTrackLabel} *</label>
+          <label className="block text-xs font-medium text-slate-400 mb-1">{t.distribution.trackLabel} *</label>
           <input
             type="text"
             value={trackTitle}
@@ -157,7 +157,7 @@ export function DistributionSubmitPage() {
 
         {/* Platform selector */}
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-2">{t.distPlatforms} *</label>
+          <label className="block text-xs font-medium text-slate-400 mb-2">{t.distribution.platforms} *</label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {PLATFORMS.map(pl => {
               const selected = selectedPlatforms.includes(pl.id);
@@ -184,12 +184,12 @@ export function DistributionSubmitPage() {
 
         {/* Message */}
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">{t.distMessageLabel}</label>
+          <label className="block text-xs font-medium text-slate-400 mb-1">{t.distribution.messageLabel}</label>
           <textarea
             value={message}
             onChange={e => setMessage(e.target.value)}
             rows={4}
-            placeholder={t.distMessagePlaceholder}
+            placeholder={t.distribution.messagePlaceholder}
             className="w-full px-3 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 resize-none"
           />
         </div>
@@ -202,14 +202,14 @@ export function DistributionSubmitPage() {
           style={{ background: "linear-gradient(135deg, #06b6d4, #8b5cf6)", color: "white" }}
         >
           {submitting
-            ? <><Loader2 size={16} className="animate-spin" /> {t.distSubmitting}</>
-            : <><Send size={14} /> {t.distSubmitBtn}</>
+            ? <><Loader2 size={16} className="animate-spin" /> {t.distribution.submitting}</>
+            : <><Send size={14} /> {t.distribution.submitBtn}</>
           }
         </button>
 
         {/* Direct contact */}
         <div className="text-center pt-2">
-          <p className="text-[11px] text-slate-500 mb-2">{t.distContactDirect}</p>
+          <p className="text-[11px] text-slate-500 mb-2">{t.distribution.contactDirect}</p>
           <a
             href={`mailto:${CONTACT_EMAIL}?subject=Distribution Inquiry`}
             className="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"

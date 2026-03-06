@@ -1,0 +1,121 @@
+{
+  "nav": {
+    "homeFeed": "홈 피드",
+    "discoverMusic": "음악 탐색",
+    "uploadTrack": "트랙 업로드",
+    "myMusic": "내 음악",
+    "musicNFTs": "뮤직 NFT",
+    "revenue": "수익",
+    "distribution": "배포 신청",
+    "marketplace": "마켓플레이스",
+    "createAd": "광고 만들기",
+    "myProfile": "내 프로필",
+    "explore": "탐색",
+    "nftMarket": "NFT 마켓",
+    "myNFTs": "내 NFT",
+    "referrals": "추천인",
+    "analytics": "분석",
+    "subscription": "구독",
+    "services": "서비스",
+    "transactions": "거래 내역",
+    "settings": "설정",
+    "admin": "관리자"
+  },
+  "header": {
+    "searchPlaceholder": "게시물, NFT, 크리에이터 검색...",
+    "signIn": "로그인",
+    "signInRegister": "로그인 / 회원가입",
+    "connecting": "연결 중...",
+    "connectWallet": "지갑 연결",
+    "signedOut": "로그아웃되었습니다"
+  },
+  "feed": {
+    "whatsHappening": "오늘 Web3에서 무슨 일이 일어나고 있나요?",
+    "sponsored": "광고",
+    "rewardClaimed": "리워드 수령 완료",
+    "claimReward": "리워드 수령",
+    "linkCopied": "링크가 복사되었습니다! 📋",
+    "trendingAlbums": "인기 뮤직 앨범",
+    "viewAll": "전체 보기",
+    "discoverAlbums": "새 앨범 탐색",
+    "topSponsors": "인기 스폰서",
+    "thisWeek": "이번 주",
+    "becomeSponsor": "스폰서 되기",
+    "reach50k": "50K+ Web3 사용자에게 도달",
+    "exploreMarketplace": "마켓플레이스 탐색"
+  },
+  "auth": {
+    "welcomeTo": "환영합니다",
+    "signInContinue": "계속하려면 로그인하세요",
+    "createAccount": "계정 만들기",
+    "joinSmfi": "SMFI (Social Music Fi)에 가입하고 오늘부터 토큰을 받으세요",
+    "accountCreated": "계정이 생성되었습니다! SMFI에 오신 것을 환영합니다 🎉",
+    "welcomeBack": "다시 오신 것을 환영합니다! 👋",
+    "welcomeSmfi": "SMFI에 오신 것을 환영합니다! 🎉🦊"
+  },
+  "upload": {
+    "title": "트랙 업로드",
+    "audioLabel": "오디오 파일 *",
+    "audioHint": "MP3, WAV, OGG, FLAC — 최대 50MB",
+    "coverLabel": "커버 아트",
+    "titleLabel": "제목 *",
+    "titlePlaceholder": "내 트랙",
+    "descLabel": "설명",
+    "descPlaceholder": "이 트랙에 담긴 이야기를 들려주세요...",
+    "genreLabel": "장르",
+    "bpmLabel": "BPM",
+    "keyLabel": "키",
+    "tagsLabel": "태그",
+    "tagsPlaceholder": "chill, lo-fi, ambient (쉼표로 구분)",
+    "moodLabel": "무드 태그",
+    "moodPlaceholder": "잔잔한, 신나는, 우울한 (쉼표로 구분)",
+    "moodHint": "팬들이 무드별로 트랙을 발견할 수 있도록 도와줍니다",
+    "publishNow": "즉시 게시",
+    "publishBtn": "트랙 게시",
+    "draftBtn": "임시저장",
+    "creating": "생성 중..."
+  },
+  "copyright": {
+    "title": "저작권 선언 *",
+    "check1": "본인은 이 트랙의 원작자이자 단독 저작권 보유자이거나, 이 콘텐츠를 업로드 및 배포하는 데 필요한 모든 라이선스와 허가를 획득했음을 확인합니다.",
+    "check2": "이 트랙을 업로드함으로써 플랫폼의 서비스 약관 및 콘텐츠 정책에 디지털 서명하고 동의함을 이해합니다. 음악에 대한 모든 권리는 본인에게 있습니다.",
+    "check3": "플랫폼은 업로드된 콘텐츠와 관련된 저작권 침해 클레임에 대해 일체의 책임을 지지 않음을 인정합니다. 본인은 그러한 클레임에 대한 모든 법적 책임을 집니다.",
+    "disclaimer": "플랫폼 면책 조항: 이 플랫폼은 순전히 호스팅 및 배포 서비스로만 제공됩니다. 업로드된 콘텐츠에 대한 소유권을 주장하지 않습니다. 모든 저작권 청구 및 법적 책임은 전적으로 업로드하는 아티스트에게 있습니다. 유효한 DMCA 또는 저작권 침해 통보 시 콘텐츠를 삭제할 권리를 보유합니다.",
+    "required": "업로드하기 전에 모든 저작권 선언을 확인해야 합니다."
+  },
+  "aiConsult": {
+    "title": "AI 음악 컨설팅",
+    "subtitle": "AI로 음악을 만들고 싶으신가요?",
+    "body": "저희는 선도적인 AI 음악 플랫폼과 파트너십을 맺어 전문 수준의 트랙을 제작할 수 있도록 지원합니다. 초보자든 경험 많은 프로듀서든 AI 도구가 여러분의 비전을 실현시켜 드립니다.",
+    "cta": "AI 음악 제작 방법을 배우고 싶으신가요? 문의하세요!",
+    "sunoLabel": "Suno AI 체험하기 →",
+    "sunoNote": "텍스트 프롬프트로 몇 초 만에 완성된 노래 제작",
+    "contact": "AI 음악 가이드 문의하기"
+  },
+  "distribution": {
+    "title": "공식 배포 신청",
+    "subtitle": "Spotify, Apple Music, 멜론, 지니, 플로 등에 음악을 등록하세요",
+    "body": "저희 팀은 품질을 기준으로 제출물을 직접 심사합니다. 음악이 기준을 충족하면 공식 앨범 배포 전에 계약 체결 절차를 시작합니다.",
+    "formTitle": "심사를 위한 트랙 제출",
+    "nameLabel": "아티스트 이름",
+    "emailLabel": "연락처 이메일",
+    "trackLabel": "트랙 / 앨범 제목",
+    "platforms": "희망 플랫폼",
+    "messageLabel": "큐레이터에게 메시지",
+    "messagePlaceholder": "음악, 스토리, 배포를 원하는 이유를 알려주세요...",
+    "submitBtn": "심사 신청",
+    "submitting": "제출 중...",
+    "success": "제출이 완료되었습니다! 팀에서 검토 후 3~5 영업일 이내에 연락드리겠습니다.",
+    "note": "⚠️ 아티스트는 자동으로 게시할 수 없습니다. 모든 제출물은 수동으로 검토됩니다. 품질 승인된 트랙만 공식 배포 및 계약 체결로 진행됩니다.",
+    "contactDirect": "또는 직접 문의하세요:"
+  },
+  "verify": {
+    "goToSmfi": "SMFI로 이동 →",
+    "backToSmfi": "SMFI로 돌아가기",
+    "emailVerification": "SMFI 이메일 인증"
+  },
+  "referral": {
+    "shareTitle": "SMFI (Social Music Fi)에 가입하세요!",
+    "shareText": "진짜 아티스트를 지원하며 SFT 토큰을 받으세요!"
+  }
+}
