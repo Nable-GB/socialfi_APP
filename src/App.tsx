@@ -37,6 +37,7 @@ import { AudioPlayerBar } from "./components/AudioPlayerBar";
 import { MusicNFTPage } from "./components/MusicNFTPage";
 import { RevenueDashboardPage } from "./components/RevenueDashboardPage";
 import { DistributionSubmitPage } from "./components/DistributionSubmitPage";
+import { WalletPage } from "./components/WalletPage";
 import type { ApiPost } from "./lib/api";
 import { authApi, uploadApi } from "./lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -547,6 +548,7 @@ function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string
     { id: "analytics", icon: TrendingUp, label: nav.analytics },
     { id: "subscription", icon: Crown, label: nav.subscription },
     { id: "services", icon: ShoppingBag, label: nav.services },
+    { id: "wallet", icon: Wallet, label: nav.wallet ?? "Wallet" },
     { id: "transactions", icon: ArrowUpRight, label: nav.transactions },
     { id: "settings", icon: Settings, label: nav.settings },
     ...(useAuth().user?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: nav.admin }] : []),
@@ -609,6 +611,7 @@ function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTa
     { id: "analytics", icon: TrendingUp, label: nav.analytics },
     { id: "subscription", icon: Crown, label: nav.subscription },
     { id: "services", icon: ShoppingBag, label: nav.services },
+    { id: "wallet", icon: Wallet, label: nav.wallet ?? "Wallet" },
     { id: "transactions", icon: ArrowUpRight, label: nav.transactions },
     { id: "settings", icon: Settings, label: nav.settings },
     ...(authUser?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: nav.admin }] : []),
@@ -991,6 +994,7 @@ export default function App() {
             {activeNav === "analytics" && <AnalyticsPage />}
             {activeNav === "subscription" && <SubscriptionPage />}
             {activeNav === "services" && <PaidServicesPage />}
+            {activeNav === "wallet" && <WalletPage />}
             {activeNav === "admin" && <AdminPage />}
           </main>
 
@@ -1046,6 +1050,7 @@ export default function App() {
           {mobileTab === "subscription" && <SubscriptionPage />}
           {mobileTab === "services" && <PaidServicesPage />}
           {mobileTab === "explore" && <ExplorePage />}
+          {mobileTab === "wallet" && <WalletPage />}
         </div>
       </div>
 
