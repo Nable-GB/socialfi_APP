@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getFeed, createPost, interactWithPost, deletePost } from "../controllers/feed.controller.js";
+import { getFeed, createPost, interactWithPost, deletePost, getComments } from "../controllers/feed.controller.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
@@ -10,6 +10,7 @@ router.get("/", getFeed);
 // Authenticated actions
 router.post("/posts", requireAuth, createPost);
 router.post("/posts/:id/interact", requireAuth, interactWithPost);
+router.get("/posts/:id/comments", getComments);
 router.delete("/posts/:id", requireAuth, deletePost);
 
 export default router;

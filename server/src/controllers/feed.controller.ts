@@ -367,6 +367,61 @@ export async function interactWithPost(req: Request, res: Response): Promise<voi
   }
 }
 
+// ─── GET /api/feed/posts/:id/comments — Fetch comments for a post ────────────
+
+export async function getComments(req: Request, res: Response): Promise<void> {
+  try {
+    const postId = req.params.id as string;
+    const limit = Math.min(parseInt(req.query.limit as string) || 30, 100);
+    const cursor = req.query.cursor as string | undefined;
+
+    const post = await prisma.socialPost.findUnique({ where: { id: postId } });
+    if (!post || !post.isActive) {
+      res.status(404).json({ error: "Post not found" });
+      return;
+    }
+
+    const comments = await prisma.postInteraction.findMany({
+      where: {
+        postId,
+        type: "COMMENT",
+        ...(cursor ? { id: { lt: cursor } } : {}),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+            isVerified: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit + 1,
+    });
+
+    const hasMore = comments.length > limit;
+    const items = hasMore ? comments.slice(0, limit) : comments;
+    const nextCursor = hasMore ? items[items.length - 1].id : null;
+
+    res.json({
+      comments: items.map((c) => ({
+        id: c.id,
+        text: c.commentText ?? "",
+        createdAt: c.createdAt,
+        author: c.user,
+      })),
+      nextCursor,
+      hasMore,
+    });
+  } catch (err) {
+    console.error("GetComments error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 // ─── DELETE /api/feed/posts/:id — Soft-delete a post ────────────────────────
 
 export async function deletePost(req: Request, res: Response): Promise<void> {

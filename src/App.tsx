@@ -5,7 +5,7 @@ import {
   Zap, Star, ShoppingBag, ChevronUp, Flame, Award, Shield,
   ExternalLink, RefreshCw, Crown, Image,
   CheckCircle, Globe, Settings, LogOut, Mail, X, ArrowUpRight, Menu,
-  Music, Headphones, Upload, Gem, BarChart3
+  Music, Headphones, Upload, Gem, BarChart3, Trash2
 } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import { useLang } from "./contexts/LangContext";
@@ -38,7 +38,7 @@ import { MusicNFTPage } from "./components/MusicNFTPage";
 import { RevenueDashboardPage } from "./components/RevenueDashboardPage";
 import { DistributionSubmitPage } from "./components/DistributionSubmitPage";
 import { WalletPage } from "./components/WalletPage";
-import type { ApiPost } from "./lib/api";
+import type { ApiPost, ApiComment } from "./lib/api";
 import { authApi, uploadApi } from "./lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -675,19 +675,24 @@ function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTa
 
 // ─── Real API Feed Components ────────────────────────────────────────────────
 
-function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward }: {
+function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward, onDelete, onGetComments }: {
   post: ApiPost;
   onClaimReward: (postId: string, type: 'VIEW' | 'ENGAGEMENT', amount: string) => void;
   onLike: (postId: string) => Promise<void>;
   onComment: (postId: string, text: string) => Promise<void>;
   onClaimAdReward: (postId: string, type: 'VIEW' | 'ENGAGEMENT') => Promise<{ type: string; amount: string; postId: string }>;
+  onDelete: (postId: string) => Promise<void>;
+  onGetComments: (postId: string) => Promise<ApiComment[]>;
 }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [liked, setLiked] = useState((post.userInteractions ?? []).includes('LIKE'));
   const [likeCount, setLikeCount] = useState(post.likesCount ?? 0);
   const [commentOpen, setCommentOpen] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [commentCount, setCommentCount] = useState(post.commentsCount ?? 0);
+  const [comments, setComments] = useState<ApiComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const isOwner = isAuthenticated && user?.id === post.author.id;
 
   const handleLike = async () => {
     if (!isAuthenticated) { toast.error('Sign in to interact'); return; }
@@ -696,12 +701,39 @@ function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward 
     await onLike(post.id);
   };
 
+  const handleOpenComments = async () => {
+    setCommentOpen(true);
+    if (comments.length === 0) {
+      setCommentsLoading(true);
+      const loaded = await onGetComments(post.id);
+      setComments(loaded);
+      setCommentsLoading(false);
+    }
+  };
+
   const handleComment = async () => {
     if (!commentText.trim()) return;
     await onComment(post.id, commentText);
+    const newComment: ApiComment = {
+      id: `temp-${Date.now()}`,
+      text: commentText,
+      createdAt: new Date().toISOString(),
+      author: {
+        id: user?.id ?? '',
+        username: user?.username ?? '',
+        displayName: user?.displayName,
+        avatarUrl: user?.avatarUrl,
+        isVerified: user?.isVerified ?? false,
+      },
+    };
+    setComments(prev => [newComment, ...prev]);
     setCommentCount(p => p + 1);
     setCommentText('');
-    setCommentOpen(false);
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this post?')) return;
+    await onDelete(post.id);
   };
 
   const handleEarn = async () => {
@@ -765,7 +797,7 @@ function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward 
             <Heart size={16} className={liked ? 'text-pink-400 fill-pink-400' : ''} />
             <span className="text-xs font-mono">{likeCount}</span>
           </button>
-          <button onClick={() => setCommentOpen(true)}
+          <button onClick={handleOpenComments}
             className="flex items-center gap-1.5 text-slate-400 hover:text-cyan-400 transition-colors">
             <MessageCircle size={16} />
             <span className="text-xs font-mono">{commentCount}</span>
@@ -781,23 +813,57 @@ function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward 
               <ExternalLink size={12} />Learn More
             </a>
           )}
+          {isOwner && !post.isSponsored && (
+            <button onClick={handleDelete}
+              className="ml-auto flex items-center gap-1 text-slate-600 hover:text-red-400 transition-colors">
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       </article>
 
       <Dialog open={commentOpen} onOpenChange={setCommentOpen}>
-        <DialogContent className="bg-slate-900 border border-slate-700 text-white">
+        <DialogContent className="bg-slate-900 border border-slate-700 text-white max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add a Comment</DialogTitle>
-            <DialogDescription className="text-slate-400">Share your thoughts</DialogDescription>
+            <DialogTitle>Comments</DialogTitle>
+            <DialogDescription className="text-slate-400">{commentCount} comment{commentCount !== 1 ? 's' : ''}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <Textarea value={commentText} onChange={e => setCommentText(e.target.value)}
-              placeholder="Write your comment..." className="bg-slate-800 border-slate-700 text-white min-h-[100px] resize-none" />
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setCommentOpen(false)} className="border-slate-700 text-slate-300 hover:bg-slate-800">Cancel</Button>
-              <Button onClick={handleComment} disabled={!commentText.trim()} className="bg-cyan-500 hover:bg-cyan-600">Post</Button>
-            </div>
+          <div className="space-y-3 pt-2 max-h-[50vh] overflow-y-auto pr-1">
+            {commentsLoading ? (
+              <div className="flex items-center justify-center py-6 text-slate-500">
+                <RefreshCw size={16} className="animate-spin mr-2" /> Loading comments...
+              </div>
+            ) : comments.length === 0 ? (
+              <p className="text-center text-slate-500 text-sm py-6">No comments yet. Be the first!</p>
+            ) : (
+              comments.map(c => (
+                <div key={c.id} className="flex items-start gap-2.5">
+                  <img
+                    src={c.author.avatarUrl ?? `https://api.dicebear.com/9.x/avataaars/svg?seed=${c.author.username}`}
+                    alt={c.author.username}
+                    className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-slate-700/40"
+                  />
+                  <div className="flex-1 min-w-0 bg-slate-800/50 rounded-xl px-3 py-2">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-xs font-semibold text-slate-200">{c.author.displayName ?? c.author.username}</span>
+                      {c.author.isVerified && <CheckCircle size={11} className="text-cyan-400" />}
+                      <span className="text-xs text-slate-600 ml-auto font-mono">{new Date(c.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-sm text-slate-300 leading-relaxed">{c.text}</p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
+          {isAuthenticated && (
+            <div className="flex gap-2 pt-3 border-t border-slate-700/30">
+              <Textarea value={commentText} onChange={e => setCommentText(e.target.value)}
+                placeholder="Write a comment..." className="bg-slate-800 border-slate-700 text-white min-h-[60px] resize-none flex-1 text-sm" />
+              <div className="flex flex-col gap-2">
+                <Button onClick={handleComment} disabled={!commentText.trim()} className="bg-cyan-500 hover:bg-cyan-600 h-full">Post</Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>
@@ -806,7 +872,7 @@ function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward 
 
 function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VIEW' | 'ENGAGEMENT', amount: string) => void }) {
   const { isAuthenticated } = useAuth();
-  const { posts, isLoading, isLoadingMore, hasMore, loadMore, createPost, likePost, commentPost, claimAdReward } = useFeed();
+  const { posts, isLoading, isLoadingMore, hasMore, loadMore, createPost, likePost, commentPost, claimAdReward, deletePost, getComments } = useFeed();
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
@@ -890,6 +956,8 @@ function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VI
             onLike={likePost}
             onComment={commentPost}
             onClaimAdReward={claimAdReward}
+            onDelete={deletePost}
+            onGetComments={getComments}
           />
         ))
       )}

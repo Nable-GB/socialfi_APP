@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { feedApi, rewardsApi, type ApiPost } from "../lib/api";
+import { feedApi, rewardsApi, type ApiPost, type ApiComment } from "../lib/api";
 import { toast } from "sonner";
 
 export function useFeed() {
@@ -94,6 +94,27 @@ export function useFeed() {
     }
   }, []);
 
+  const deletePost = useCallback(async (postId: string) => {
+    try {
+      await feedApi.deletePost(postId);
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      toast.success("Post deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete post");
+      throw err;
+    }
+  }, []);
+
+  const getComments = useCallback(async (postId: string): Promise<ApiComment[]> => {
+    try {
+      const res = await feedApi.getComments(postId, { limit: 30 });
+      return res.comments;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load comments");
+      return [];
+    }
+  }, []);
+
   const claimAdReward = useCallback(async (postId: string, type: "VIEW" | "ENGAGEMENT") => {
     try {
       const res = await rewardsApi.claimReward({ postId, type });
@@ -137,5 +158,7 @@ export function useFeed() {
     likePost,
     commentPost,
     claimAdReward,
+    deletePost,
+    getComments,
   };
 }

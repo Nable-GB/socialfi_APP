@@ -145,6 +145,15 @@ export const feedApi = {
       { method: "POST", body: JSON.stringify(body) }
     ),
 
+  getComments: (postId: string, params?: { cursor?: string; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.cursor) qs.set("cursor", params.cursor);
+    if (params?.limit) qs.set("limit", String(params.limit));
+    return request<{ comments: ApiComment[]; nextCursor: string | null; hasMore: boolean }>(
+      `/api/feed/posts/${postId}/comments?${qs.toString()}`
+    );
+  },
+
   deletePost: (postId: string) =>
     request<{ success: boolean }>(`/api/feed/posts/${postId}`, { method: "DELETE" }),
 };
@@ -513,6 +522,19 @@ export interface ApiPost {
     id: string;
     title: string;
     targetUrl?: string;
+  };
+}
+
+export interface ApiComment {
+  id: string;
+  text: string;
+  createdAt: string;
+  author: {
+    id: string;
+    username: string;
+    displayName?: string;
+    avatarUrl?: string;
+    isVerified: boolean;
   };
 }
 
