@@ -139,7 +139,7 @@ export async function getFeed(req: Request, res: Response): Promise<void> {
       const claimed = await prisma.rewardTransaction.findMany({
         where: {
           userId,
-          type: { in: ["AD_VIEW", "AD_ENGAGEMENT"] },
+          type: "AD_VIEW",
           relatedPostId: { in: sponsoredPosts.map((p) => p.id) },
         },
         select: { relatedPostId: true },

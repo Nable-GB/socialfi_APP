@@ -675,25 +675,30 @@ function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTa
 
 // ─── Real API Feed Components ────────────────────────────────────────────────
 
-function RealFeedPost({ post, onClaimReward }: { post: ApiPost; onClaimReward: (postId: string, type: 'VIEW' | 'ENGAGEMENT') => void }) {
+function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward }: {
+  post: ApiPost;
+  onClaimReward: (postId: string, type: 'VIEW' | 'ENGAGEMENT', amount: string) => void;
+  onLike: (postId: string) => Promise<void>;
+  onComment: (postId: string, text: string) => Promise<void>;
+  onClaimAdReward: (postId: string, type: 'VIEW' | 'ENGAGEMENT') => Promise<{ type: string; amount: string; postId: string }>;
+}) {
   const { isAuthenticated } = useAuth();
-  const [liked, setLiked] = useState(post.userInteractions.includes('LIKE'));
-  const [likeCount, setLikeCount] = useState(post.likesCount);
+  const [liked, setLiked] = useState((post.userInteractions ?? []).includes('LIKE'));
+  const [likeCount, setLikeCount] = useState(post.likesCount ?? 0);
   const [commentOpen, setCommentOpen] = useState(false);
   const [commentText, setCommentText] = useState('');
-  const [commentCount, setCommentCount] = useState(post.commentsCount);
-  const { likePost, commentPost, claimAdReward } = useFeed();
+  const [commentCount, setCommentCount] = useState(post.commentsCount ?? 0);
 
   const handleLike = async () => {
     if (!isAuthenticated) { toast.error('Sign in to interact'); return; }
     setLiked(p => !p);
     setLikeCount(p => liked ? p - 1 : p + 1);
-    await likePost(post.id);
+    await onLike(post.id);
   };
 
   const handleComment = async () => {
     if (!commentText.trim()) return;
-    await commentPost(post.id, commentText);
+    await onComment(post.id, commentText);
     setCommentCount(p => p + 1);
     setCommentText('');
     setCommentOpen(false);
@@ -702,8 +707,8 @@ function RealFeedPost({ post, onClaimReward }: { post: ApiPost; onClaimReward: (
   const handleEarn = async () => {
     if (!isAuthenticated) { toast.error('Sign in to earn tokens'); return; }
     try {
-      await claimAdReward(post.id, 'VIEW');
-      onClaimReward(post.id, 'VIEW');
+      const reward = await onClaimAdReward(post.id, 'VIEW');
+      onClaimReward(post.id, 'VIEW', reward.amount);
     } catch { /* handled inside hook */ }
   };
 
@@ -799,9 +804,9 @@ function RealFeedPost({ post, onClaimReward }: { post: ApiPost; onClaimReward: (
   );
 }
 
-function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VIEW' | 'ENGAGEMENT') => void }) {
+function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VIEW' | 'ENGAGEMENT', amount: string) => void }) {
   const { isAuthenticated } = useAuth();
-  const { posts, isLoading, isLoadingMore, hasMore, loadMore, createPost } = useFeed();
+  const { posts, isLoading, isLoadingMore, hasMore, loadMore, createPost, likePost, commentPost, claimAdReward } = useFeed();
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
@@ -877,7 +882,16 @@ function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VI
           <p className="text-slate-400">No posts yet. Be the first to post!</p>
         </div>
       ) : (
-        posts.map(post => <RealFeedPost key={post.id} post={post} onClaimReward={onClaimReward} />)
+        posts.map(post => (
+          <RealFeedPost
+            key={post.id}
+            post={post}
+            onClaimReward={onClaimReward}
+            onLike={likePost}
+            onComment={commentPost}
+            onClaimAdReward={claimAdReward}
+          />
+        ))
       )}
 
       {/* Load more */}
@@ -916,8 +930,8 @@ export default function App() {
     return <ResetPasswordPage token={resetToken} onDone={() => { window.history.replaceState({}, "", "/"); window.location.reload(); }} />;
   }
 
-  const handleClaimReward = async (_postId: string, _type: 'VIEW' | 'ENGAGEMENT') => {
-    await onRewardClaimed('0');
+  const handleClaimReward = async (_postId: string, _type: 'VIEW' | 'ENGAGEMENT', amount: string) => {
+    await onRewardClaimed(amount);
   };
 
   const handleSendVerification = async () => {

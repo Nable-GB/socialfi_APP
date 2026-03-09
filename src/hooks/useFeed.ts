@@ -41,9 +41,18 @@ export function useFeed() {
   const createPost = useCallback(async (content: string, mediaUrl?: string) => {
     try {
       const { post } = await feedApi.createPost({ content, mediaUrl });
-      setPosts((prev) => [post, ...prev]);
+      const normalizedPost: ApiPost = {
+        ...post,
+        isSponsored: false,
+        rewardClaimed: false,
+        userInteractions: [],
+        likesCount: post.likesCount ?? 0,
+        commentsCount: post.commentsCount ?? 0,
+        sharesCount: post.sharesCount ?? 0,
+      };
+      setPosts((prev) => [normalizedPost, ...prev]);
       toast.success("Post published! 🚀");
-      return post;
+      return normalizedPost;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to post");
       throw err;
@@ -95,10 +104,19 @@ export function useFeed() {
       toast.success(`Earned ${parseFloat(res.reward.amount).toFixed(4)} tokens! 🪙`);
       return res.reward;
     } catch (err) {
-      if (err instanceof Error && err.message.includes("already claimed")) {
+      const msg = err instanceof Error ? err.message : "Failed to claim reward";
+      if (msg.includes("already claimed")) {
         toast.info("Reward already claimed for this post");
+      } else if (msg.includes("5 seconds") || msg.includes("view the post")) {
+        toast.error("Please view the post for at least 5 seconds before claiming");
+      } else if (msg.includes("pool is exhausted") || msg.includes("impression limit")) {
+        toast.error("This campaign's reward pool has been exhausted");
+      } else if (msg.includes("no longer active") || msg.includes("not active")) {
+        toast.error("This campaign is no longer active");
+      } else if (msg.includes("own sponsored")) {
+        toast.error("You cannot claim rewards on your own sponsored post");
       } else {
-        toast.error(err instanceof Error ? err.message : "Failed to claim reward");
+        toast.error(msg);
       }
       throw err;
     }
