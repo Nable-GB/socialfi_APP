@@ -3,6 +3,7 @@ import { z } from "zod";
 import prisma from "../lib/prisma.js";
 import { sanitizeText } from "../middleware/sanitize.js";
 import { notifyLike, notifyComment } from "../services/notification.service.js";
+import { deleteFromS3, isS3Configured } from "../services/upload.service.js";
 
 // ─── Validation ─────────────────────────────────────────────────────────────
 
@@ -445,6 +446,19 @@ export async function deletePost(req: Request, res: Response): Promise<void> {
       where: { id: postId },
       data: { isActive: false },
     });
+
+    // Delete media from S3 if present
+    if (post.mediaUrl && isS3Configured()) {
+      try {
+        // Extract S3 key from URL (last two path segments: folder/filename)
+        const url = new URL(post.mediaUrl);
+        const key = url.pathname.replace(/^\//, "");
+        await deleteFromS3(key);
+      } catch {
+        // Non-critical — log but don't fail the request
+        console.warn("Failed to delete S3 media for post", postId);
+      }
+    }
 
     res.json({ success: true, message: "Post deleted" });
   } catch (err) {

@@ -105,13 +105,16 @@ export function useFeed() {
     }
   }, []);
 
-  const getComments = useCallback(async (postId: string): Promise<ApiComment[]> => {
+  const getComments = useCallback(async (
+    postId: string,
+    cursor?: string
+  ): Promise<{ comments: ApiComment[]; nextCursor: string | null; hasMore: boolean }> => {
     try {
-      const res = await feedApi.getComments(postId, { limit: 30 });
-      return res.comments;
+      const res = await feedApi.getComments(postId, { limit: 20, cursor });
+      return res;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to load comments");
-      return [];
+      return { comments: [], nextCursor: null, hasMore: false };
     }
   }, []);
 

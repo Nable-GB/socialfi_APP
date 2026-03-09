@@ -682,7 +682,7 @@ function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward,
   onComment: (postId: string, text: string) => Promise<void>;
   onClaimAdReward: (postId: string, type: 'VIEW' | 'ENGAGEMENT') => Promise<{ type: string; amount: string; postId: string }>;
   onDelete: (postId: string) => Promise<void>;
-  onGetComments: (postId: string) => Promise<ApiComment[]>;
+  onGetComments: (postId: string, cursor?: string) => Promise<{ comments: ApiComment[]; nextCursor: string | null; hasMore: boolean }>;
 }) {
   const { isAuthenticated, user } = useAuth();
   const [liked, setLiked] = useState((post.userInteractions ?? []).includes('LIKE'));
@@ -692,6 +692,9 @@ function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward,
   const [commentCount, setCommentCount] = useState(post.commentsCount ?? 0);
   const [comments, setComments] = useState<ApiComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsLoadingMore, setCommentsLoadingMore] = useState(false);
+  const [commentsCursor, setCommentsCursor] = useState<string | null>(null);
+  const [commentsHasMore, setCommentsHasMore] = useState(false);
   const isOwner = isAuthenticated && user?.id === post.author.id;
 
   const handleLike = async () => {
@@ -705,10 +708,22 @@ function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward,
     setCommentOpen(true);
     if (comments.length === 0) {
       setCommentsLoading(true);
-      const loaded = await onGetComments(post.id);
-      setComments(loaded);
+      const res = await onGetComments(post.id);
+      setComments(res.comments);
+      setCommentsCursor(res.nextCursor);
+      setCommentsHasMore(res.hasMore);
       setCommentsLoading(false);
     }
+  };
+
+  const handleLoadMoreComments = async () => {
+    if (!commentsCursor || commentsLoadingMore) return;
+    setCommentsLoadingMore(true);
+    const res = await onGetComments(post.id, commentsCursor);
+    setComments(prev => [...prev, ...res.comments]);
+    setCommentsCursor(res.nextCursor);
+    setCommentsHasMore(res.hasMore);
+    setCommentsLoadingMore(false);
   };
 
   const handleComment = async () => {
@@ -771,6 +786,27 @@ function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward,
             <p className="mt-2 text-sm leading-relaxed text-slate-300 whitespace-pre-wrap">{post.content}</p>
           </div>
         </div>
+
+        {/* Media preview */}
+        {post.mediaUrl && (
+          <div className="mt-3 rounded-xl overflow-hidden border border-slate-700/20 max-h-96 bg-slate-800/30">
+            {post.mediaUrl.match(/\.(mp4|webm|mov)(\?|$)/i) ? (
+              <video
+                src={post.mediaUrl}
+                controls
+                className="w-full max-h-96 object-contain"
+                preload="metadata"
+              />
+            ) : (
+              <img
+                src={post.mediaUrl}
+                alt="Post media"
+                className="w-full max-h-96 object-cover"
+                loading="lazy"
+              />
+            )}
+          </div>
+        )}
 
         {/* Earn button for sponsored posts */}
         {post.isSponsored && (
@@ -836,23 +872,36 @@ function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward,
             ) : comments.length === 0 ? (
               <p className="text-center text-slate-500 text-sm py-6">No comments yet. Be the first!</p>
             ) : (
-              comments.map(c => (
-                <div key={c.id} className="flex items-start gap-2.5">
-                  <img
-                    src={c.author.avatarUrl ?? `https://api.dicebear.com/9.x/avataaars/svg?seed=${c.author.username}`}
-                    alt={c.author.username}
-                    className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-slate-700/40"
-                  />
-                  <div className="flex-1 min-w-0 bg-slate-800/50 rounded-xl px-3 py-2">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="text-xs font-semibold text-slate-200">{c.author.displayName ?? c.author.username}</span>
-                      {c.author.isVerified && <CheckCircle size={11} className="text-cyan-400" />}
-                      <span className="text-xs text-slate-600 ml-auto font-mono">{new Date(c.createdAt).toLocaleDateString()}</span>
+              <>
+                {comments.map(c => (
+                  <div key={c.id} className="flex items-start gap-2.5">
+                    <img
+                      src={c.author.avatarUrl ?? `https://api.dicebear.com/9.x/avataaars/svg?seed=${c.author.username}`}
+                      alt={c.author.username}
+                      className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-slate-700/40"
+                    />
+                    <div className="flex-1 min-w-0 bg-slate-800/50 rounded-xl px-3 py-2">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-xs font-semibold text-slate-200">{c.author.displayName ?? c.author.username}</span>
+                        {c.author.isVerified && <CheckCircle size={11} className="text-cyan-400" />}
+                        <span className="text-xs text-slate-600 ml-auto font-mono">{new Date(c.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-sm text-slate-300 leading-relaxed">{c.text}</p>
                     </div>
-                    <p className="text-sm text-slate-300 leading-relaxed">{c.text}</p>
                   </div>
-                </div>
-              ))
+                ))}
+                {commentsHasMore && (
+                  <button
+                    onClick={handleLoadMoreComments}
+                    disabled={commentsLoadingMore}
+                    className="w-full py-2 text-xs text-slate-500 hover:text-cyan-400 flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    {commentsLoadingMore
+                      ? <><RefreshCw size={12} className="animate-spin" /> Loading...</>
+                      : <><ChevronUp size={12} className="rotate-180" /> Load more comments</>}
+                  </button>
+                )}
+              </>
             )}
           </div>
           {isAuthenticated && (
@@ -940,8 +989,25 @@ function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VI
 
       {/* Feed items */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12 text-slate-500">
-          <RefreshCw size={20} className="animate-spin mr-2" /> Loading feed...
+        <div className="space-y-4">
+          {[1,2,3].map(i => (
+            <div key={i} className="glass rounded-2xl p-5 border border-slate-700/10 animate-pulse">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-slate-700/60 flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-slate-700/60 rounded w-1/3" />
+                  <div className="h-3 bg-slate-700/40 rounded w-full" />
+                  <div className="h-3 bg-slate-700/40 rounded w-4/5" />
+                </div>
+              </div>
+              <div className="mt-4 h-40 bg-slate-700/30 rounded-xl" />
+              <div className="mt-4 flex gap-6">
+                <div className="h-4 bg-slate-700/40 rounded w-10" />
+                <div className="h-4 bg-slate-700/40 rounded w-10" />
+                <div className="h-4 bg-slate-700/40 rounded w-10" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : posts.length === 0 ? (
         <div className="glass rounded-2xl p-8 text-center border border-slate-700/10">

@@ -101,14 +101,16 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-gradient-to-br from-cyan-400 to-indigo-500">
-              <Zap size={14} className="text-white" />
+              {mode === "forgot" ? <Lock size={14} className="text-white" /> : <Zap size={14} className="text-white" />}
             </div>
-            {mode === "login" ? "Sign In" : "Create Account"}
+            {mode === "login" ? "Sign In" : mode === "register" ? "Create Account" : "Reset Password"}
           </DialogTitle>
           <DialogDescription className="text-slate-400">
             {mode === "login"
               ? "Sign in to earn tokens and join the community"
-              : "Join SMFI (Social Music Fi) and start earning tokens today"}
+              : mode === "register"
+              ? "Join SMFI (Social Music Fi) and start earning tokens today"
+              : "Enter your email and we'll send a password reset link"}
           </DialogDescription>
         </DialogHeader>
 
