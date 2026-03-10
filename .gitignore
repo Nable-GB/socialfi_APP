@@ -59,3 +59,5 @@ server/dist
 *.pid.lock
 
 .vercel
+
+.claude/
