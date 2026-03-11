@@ -12,12 +12,17 @@ function getS3(): S3Client {
     if (!env.S3_BUCKET || !env.S3_ACCESS_KEY_ID || !env.S3_SECRET_ACCESS_KEY) {
       throw new Error("S3 not configured. Set S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY.");
     }
+    // Support Cloudflare R2 (S3-compatible) via optional S3_ENDPOINT env var
+    const endpointConfig = env.S3_ENDPOINT
+      ? { endpoint: env.S3_ENDPOINT, forcePathStyle: true }
+      : {};
     s3 = new S3Client({
-      region: env.S3_REGION,
+      region: env.S3_REGION || "auto",
       credentials: {
         accessKeyId: env.S3_ACCESS_KEY_ID,
         secretAccessKey: env.S3_SECRET_ACCESS_KEY,
       },
+      ...endpointConfig,
     });
   }
   return s3;

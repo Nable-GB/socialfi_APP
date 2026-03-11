@@ -38,13 +38,14 @@ export const env = {
   // Rewards
   REFERRAL_RATE: parseFloat(optional("REFERRAL_RATE", "0.05")),
 
-  // S3 File Upload
+  // S3 File Upload (also supports Cloudflare R2 via S3_ENDPOINT)
   S3_BUCKET: optional("S3_BUCKET", ""),
-  S3_REGION: optional("S3_REGION", "ap-southeast-1"),
+  S3_REGION: optional("S3_REGION", "auto"),
   S3_ACCESS_KEY_ID: optional("S3_ACCESS_KEY_ID", ""),
   S3_SECRET_ACCESS_KEY: optional("S3_SECRET_ACCESS_KEY", ""),
-  S3_CDN_URL: optional("S3_CDN_URL", ""),  // CloudFront or custom CDN domain
-  MAX_FILE_SIZE: parseInt(optional("MAX_FILE_SIZE", "10485760"), 10), // 10MB default
+  S3_ENDPOINT: optional("S3_ENDPOINT", ""),  // e.g. https://<account_id>.r2.cloudflarestorage.com
+  S3_CDN_URL: optional("S3_CDN_URL", ""),    // Public URL prefix for served files
+  MAX_FILE_SIZE: parseInt(optional("MAX_FILE_SIZE", "52428800"), 10), // 50MB default
 
   // Email (SendGrid)
   SENDGRID_API_KEY: optional("SENDGRID_API_KEY", ""),

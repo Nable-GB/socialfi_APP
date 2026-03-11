@@ -69,7 +69,7 @@ export async function handleAvatarUpload(req: Request, res: Response): Promise<v
       return;
     }
     console.error("AvatarUpload error:", err);
-    res.status(500).json({ error: "Upload failed" });
+    res.status(500).json({ error: "Upload failed", detail: err?.message ?? String(err) });
   }
 }
 
@@ -102,7 +102,7 @@ export async function handleMediaUpload(req: Request, res: Response): Promise<vo
       return;
     }
     console.error("MediaUpload error:", err);
-    res.status(500).json({ error: "Upload failed" });
+    res.status(500).json({ error: "Upload failed", detail: err?.message ?? String(err) });
   }
 }
 
@@ -135,7 +135,7 @@ export async function handleNftUpload(req: Request, res: Response): Promise<void
       return;
     }
     console.error("NftUpload error:", err);
-    res.status(500).json({ error: "Upload failed" });
+    res.status(500).json({ error: "Upload failed", detail: err?.message ?? String(err) });
   }
 }
 
@@ -177,6 +177,6 @@ export async function handleAudioUpload(req: Request, res: Response): Promise<vo
       return;
     }
     console.error("AudioUpload error:", err);
-    res.status(500).json({ error: "Upload failed" });
+    res.status(500).json({ error: "Upload failed", detail: err?.message ?? String(err) });
   }
 }
