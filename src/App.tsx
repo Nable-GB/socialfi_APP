@@ -343,16 +343,6 @@ function LangSwitcher() {
         }`}>
         한국어
       </button>
-      <div className="w-px h-4 bg-slate-700/50" />
-      <button
-        onClick={() => setLang('th')}
-        className={`px-2.5 py-1.5 text-xs font-bold transition-all ${
-          lang === 'th'
-            ? 'bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 text-cyan-400'
-            : 'text-slate-500 hover:text-slate-300'
-        }`}>
-        ไทย
-      </button>
     </div>
   );
 }
