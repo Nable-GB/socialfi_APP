@@ -38,7 +38,6 @@ import { RevenueDashboardPage } from "./components/RevenueDashboardPage";
 import { DistributionSubmitPage } from "./components/DistributionSubmitPage";
 import { WalletPage } from "./components/WalletPage";
 import { SocialMusicFiLanding } from "./components/SocialMusicFiLanding";
-import type { ApiPost, ApiComment } from "./lib/api";
 import { authApi, uploadApi } from "./lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";

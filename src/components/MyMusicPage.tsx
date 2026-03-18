@@ -113,7 +113,7 @@ export function MyMusicPage() {
     setDistributing(id);
     setDistModalTrack(null);
     try {
-      const res = await musicApi.submitDistribution(id, platform);
+      await musicApi.submitDistribution(id, platform);
       toast.success(t.myMusic.distributeSuccess);
       const updated = await musicApi.getMyTracks();
       setTracks(updated.tracks);

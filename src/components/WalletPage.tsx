@@ -1,9 +1,9 @@
 ﻿import { useState, useEffect, useCallback } from "react";
 import { parseEther, formatEther, BrowserProvider, isAddress } from "ethers";
 import {
-  Wallet, Copy, ExternalLink, Send, RefreshCw,
-  AlertTriangle, CheckCircle, ArrowDownLeft, ArrowUpRight,
-  Loader2, Droplets, ChevronRight, Repeat, Coins
+  Wallet, Copy, ExternalLink, Send,
+  CheckCircle, ArrowDownLeft, ArrowUpRight,
+  Loader2, Repeat
 } from "lucide-react";
 import { toast } from "sonner";
 import { useWallet } from "../hooks/useWallet";
@@ -11,7 +11,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { useLang } from "../contexts/LangContext";
 import { useRewards } from "../hooks/useRewards";
 
-const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
 const SEPOLIA_FAUCETS = [
   { name: "Alchemy Faucet", url: "https://sepoliafaucet.com/" },
   { name: "Google Faucet",  url: "https://cloud.google.com/application/web3/faucet/ethereum/sepolia" },
