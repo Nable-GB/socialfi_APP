@@ -3,15 +3,18 @@ import { rewardsApi, type ApiTransaction } from "../lib/api";
 import { ArrowUpRight, ArrowDownLeft, Zap, Users, Gift, RefreshCw, ExternalLink, Filter } from "lucide-react";
 import { WithdrawModal } from "./WithdrawModal";
 import { useRewards } from "../hooks/useRewards";
+import { useLang } from "../contexts/LangContext";
 
-const TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string; sign: string }> = {
-  AD_VIEW:        { label: "Ad View",        icon: <Zap size={13} />,          color: "#22d3ee", sign: "+" },
-  AD_ENGAGEMENT:  { label: "Engagement",     icon: <Zap size={13} />,          color: "#6366f1", sign: "+" },
-  REFERRAL_BONUS: { label: "Referral",       icon: <Users size={13} />,         color: "#10b981", sign: "+" },
-  AIRDROP:        { label: "Airdrop",        icon: <Gift size={13} />,          color: "#f59e0b", sign: "+" },
-  SIGNUP_BONUS:   { label: "Signup Bonus",   icon: <Gift size={13} />,          color: "#a855f7", sign: "+" },
-  WITHDRAWAL:     { label: "Withdrawal",     icon: <ArrowUpRight size={13} />,  color: "#ef4444", sign: "-" },
-};
+function getTypeConfig(t: any): Record<string, { label: string; icon: React.ReactNode; color: string; sign: string }> {
+  return {
+    AD_VIEW:        { label: t.transactions.typeAdView,       icon: <Zap size={13} />,          color: "#22d3ee", sign: "+" },
+    AD_ENGAGEMENT:  { label: t.transactions.typeEngagement,   icon: <Zap size={13} />,          color: "#6366f1", sign: "+" },
+    REFERRAL_BONUS: { label: t.transactions.typeReferral,     icon: <Users size={13} />,         color: "#10b981", sign: "+" },
+    AIRDROP:        { label: t.transactions.typeAirdrop,      icon: <Gift size={13} />,          color: "#f59e0b", sign: "+" },
+    SIGNUP_BONUS:   { label: t.transactions.typeSignupBonus,  icon: <Gift size={13} />,          color: "#a855f7", sign: "+" },
+    WITHDRAWAL:     { label: t.transactions.typeWithdrawal,   icon: <ArrowUpRight size={13} />,  color: "#ef4444", sign: "-" },
+  };
+}
 
 const STATUS_BADGE: Record<string, string> = {
   PENDING:     "bg-amber-500/15 text-amber-400 border-amber-500/25",
@@ -20,8 +23,8 @@ const STATUS_BADGE: Record<string, string> = {
   FAILED:      "bg-red-500/15 text-red-400 border-red-500/25",
 };
 
-function TxRow({ tx }: { tx: ApiTransaction }) {
-  const cfg = TYPE_CONFIG[tx.type] ?? { label: tx.type, icon: <Zap size={13} />, color: "#64748b", sign: "+" };
+function TxRow({ tx, typeConfig }: { tx: ApiTransaction; typeConfig: ReturnType<typeof getTypeConfig> }) {
+  const cfg = typeConfig[tx.type] ?? { label: tx.type, icon: <Zap size={13} />, color: "#64748b", sign: "+" };
   const absAmount = Math.abs(parseFloat(tx.amount));
   const isWithdrawal = tx.type === "WITHDRAWAL";
 
@@ -58,7 +61,7 @@ function TxRow({ tx }: { tx: ApiTransaction }) {
         {tx.onChainTxHash && (
           <a href={`https://etherscan.io/tx/${tx.onChainTxHash}`} target="_blank" rel="noopener noreferrer"
             className="text-xs text-cyan-500 hover:text-cyan-300 flex items-center gap-0.5 justify-end mt-0.5">
-            on-chain <ExternalLink size={9} />
+            <OnChainLabel />
           </a>
         )}
       </div>
@@ -66,16 +69,26 @@ function TxRow({ tx }: { tx: ApiTransaction }) {
   );
 }
 
-const FILTER_TABS = [
-  { id: undefined, label: "All" },
-  { id: "AD_VIEW", label: "Views" },
-  { id: "AD_ENGAGEMENT", label: "Engage" },
-  { id: "REFERRAL_BONUS", label: "Referral" },
-  { id: "WITHDRAWAL", label: "Withdrawals" },
-] as const;
+function getFilterTabs(t: any) {
+  return [
+    { id: undefined as string | undefined, label: t.transactions.filterAll },
+    { id: "AD_VIEW",        label: t.transactions.filterViews },
+    { id: "AD_ENGAGEMENT", label: t.transactions.filterEngage },
+    { id: "REFERRAL_BONUS",label: t.transactions.filterReferral },
+    { id: "WITHDRAWAL",    label: t.transactions.filterWithdrawals },
+  ];
+}
+
+function OnChainLabel() {
+  const { t } = useLang();
+  return <>{t.transactions.onChain} <ExternalLink size={9} /></>;
+}
 
 export function TransactionsPage() {
+  const { t } = useLang();
   const { balance, fetchBalance } = useRewards();
+  const TYPE_CONFIG = getTypeConfig(t);
+  const FILTER_TABS = getFilterTabs(t);
   const [transactions, setTransactions] = useState<ApiTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -126,23 +139,23 @@ export function TransactionsPage() {
               <ArrowDownLeft size={20} className="text-cyan-400" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Transactions</h1>
-              <p className="text-xs text-slate-400">Your complete token ledger</p>
+              <h1 className="text-xl font-bold text-white">{t.transactions.title}</h1>
+              <p className="text-xs text-slate-400">{t.transactions.subtitle}</p>
             </div>
           </div>
           <button onClick={() => setWithdrawOpen(true)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
             style={{ background: "linear-gradient(135deg, #22d3ee, #6366f1)", boxShadow: "0 4px 12px rgba(34,211,238,0.2)" }}>
-            <ArrowUpRight size={13} /> Withdraw
+            <ArrowUpRight size={13} /> {t.transactions.withdraw}
           </button>
         </div>
 
         {/* Balance summary */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Balance", value: balanceNum.toFixed(2), color: "#22d3ee" },
-            { label: "Total Earned", value: "—", color: "#10b981" },
-            { label: "Withdrawn", value: "—", color: "#6366f1" },
+            { label: t.transactions.balance, value: balanceNum.toFixed(2), color: "#22d3ee" },
+            { label: t.transactions.totalEarned, value: "—", color: "#10b981" },
+            { label: t.transactions.withdrawn, value: "—", color: "#6366f1" },
           ].map(stat => (
             <div key={stat.label} className="rounded-xl p-3 text-center border border-slate-700/20"
               style={{ background: "rgba(15,23,42,0.4)" }}>
@@ -158,7 +171,7 @@ export function TransactionsPage() {
         <div className="flex items-center gap-1 overflow-x-auto">
           <Filter size={12} className="text-slate-500 flex-shrink-0 mr-1" />
           {FILTER_TABS.map(tab => (
-            <button key={String(tab.id)} onClick={() => setFilter(tab.id)}
+            <button key={String(tab.id)} onClick={() => setFilter(tab.id as string | undefined)}
               className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filter === tab.id
                 ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/25"
                 : "text-slate-500 hover:text-slate-300 border border-transparent"}`}>
@@ -178,16 +191,16 @@ export function TransactionsPage() {
         {!loading && transactions.length === 0 && (
           <div className="text-center py-12">
             <ArrowDownLeft size={36} className="text-slate-700 mx-auto mb-3" />
-            <p className="text-sm text-slate-400">No transactions yet</p>
-            <p className="text-xs text-slate-600 mt-1">View sponsored posts to start earning SFT tokens</p>
+            <p className="text-sm text-slate-400">{t.transactions.noTransactions}</p>
+            <p className="text-xs text-slate-600 mt-1">{t.transactions.earnHint}</p>
           </div>
         )}
-        {!loading && transactions.map(tx => <TxRow key={tx.id} tx={tx} />)}
+        {!loading && transactions.map(tx => <TxRow key={tx.id} tx={tx} typeConfig={TYPE_CONFIG} />)}
 
         {hasMore && !loadingMore && (
           <button onClick={() => loadTransactions(filter, nextCursor ?? undefined)}
             className="w-full mt-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 border border-slate-700/30 hover:border-slate-600/50 hover:text-white transition-all">
-            Load more
+            {t.transactions.loadMore}
           </button>
         )}
         {loadingMore && (

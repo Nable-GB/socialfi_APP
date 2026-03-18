@@ -6,6 +6,7 @@ import {
   AlertTriangle, Crown
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLang } from "../contexts/LangContext";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface AdminStats {
@@ -70,6 +71,7 @@ const STATUS_COLORS: Record<string, string> = {
 type Tab = "overview" | "users" | "campaigns" | "rewards";
 
 export function AdminPage() {
+  const { t } = useLang();
   const [tab, setTab] = useState<Tab>("overview");
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -118,48 +120,48 @@ export function AdminPage() {
   const handleUpdateRole = async (userId: string, role: string) => {
     try {
       await adminApi.updateUserRole(userId, role);
-      toast.success(`Role updated to ${role}`);
+      toast.success(`${t.admin.roleUpdated} ${role}`);
       fetchUsers(userPage, userSearch);
-    } catch (err: any) { toast.error(err?.message ?? "Failed"); }
+    } catch (err: any) { toast.error(err?.message ?? t.admin.failed); }
   };
 
   const handleUpdateCampaignStatus = async (campaignId: string, status: string) => {
     try {
       await adminApi.updateCampaignStatus(campaignId, status);
-      toast.success(`Campaign ${status.toLowerCase()}`);
+      toast.success(`${t.admin.campaign} ${status.toLowerCase()}`);
       fetchCampaigns(campaignPage);
       fetchStats();
-    } catch (err: any) { toast.error(err?.message ?? "Failed"); }
+    } catch (err: any) { toast.error(err?.message ?? t.admin.failed); }
   };
 
   const handleDistribute = async () => {
     setDistributing(true);
     try {
       const res = await adminApi.distributeRewards();
-      toast.success(`Distributed ${res.distributed} / ${res.processed} withdrawals`);
-      if (res.failed > 0) toast.error(`${res.failed} failed`);
+      toast.success(`${t.admin.distributed} ${res.distributed} / ${res.processed} ${t.admin.withdrawals}`);
+      if (res.failed > 0) toast.error(`${res.failed} ${t.admin.failedCount}`);
       fetchStats();
-    } catch (err: any) { toast.error(err?.message ?? "Distribution failed"); }
+    } catch (err: any) { toast.error(err?.message ?? t.admin.distributionFailed); }
     finally { setDistributing(false); }
   };
 
   const handleAirdrop = async () => {
-    if (selectedUsers.size === 0) { toast.error("Select users first"); return; }
+    if (selectedUsers.size === 0) { toast.error(t.admin.selectUsersFirst); return; }
     const amount = parseFloat(airdropAmount);
-    if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
+    if (!amount || amount <= 0) { toast.error(t.admin.enterValidAmount); return; }
     try {
       const res = await adminApi.airdropTokens(Array.from(selectedUsers), amount);
-      toast.success(`Airdropped ${amount} SFT to ${res.airdropped} users (total: ${res.totalDistributed} SFT)`);
+      toast.success(`${t.admin.airdropped} ${amount} SFT → ${res.airdropped} ${t.admin.toUsers} (${t.admin.totalDistributed}: ${res.totalDistributed} SFT)`);
       setSelectedUsers(new Set());
       fetchStats();
-    } catch (err: any) { toast.error(err?.message ?? "Airdrop failed"); }
+    } catch (err: any) { toast.error(err?.message ?? t.admin.airdropFailed); }
   };
 
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "overview", label: "Overview", icon: <BarChart2 size={14} /> },
-    { id: "users", label: "Users", icon: <Users size={14} /> },
-    { id: "campaigns", label: "Campaigns", icon: <ShoppingBag size={14} /> },
-    { id: "rewards", label: "Rewards", icon: <Zap size={14} /> },
+    { id: "overview", label: t.admin.tabOverview, icon: <BarChart2 size={14} /> },
+    { id: "users", label: t.admin.tabUsers, icon: <Users size={14} /> },
+    { id: "campaigns", label: t.admin.tabCampaigns, icon: <ShoppingBag size={14} /> },
+    { id: "rewards", label: t.admin.tabRewards, icon: <Zap size={14} /> },
   ];
 
   return (
@@ -172,8 +174,8 @@ export function AdminPage() {
             <Crown size={20} className="text-amber-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Admin Dashboard</h1>
-            <p className="text-xs text-slate-400">Platform management &amp; monitoring</p>
+            <h1 className="text-xl font-bold text-white">{t.admin.title}</h1>
+            <p className="text-xs text-slate-400">{t.admin.subtitle}</p>
           </div>
           <button onClick={fetchStats} className="ml-auto text-slate-500 hover:text-white transition-colors">
             <RefreshCw size={15} />
@@ -197,25 +199,25 @@ export function AdminPage() {
       {tab === "overview" && stats && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <StatCard label="Total Users" value={stats.users.total}
-              sub={`${stats.users.verified} verified`}
+            <StatCard label={t.admin.totalUsers} value={stats.users.total}
+              sub={`${stats.users.verified} ${t.admin.verified}`}
               icon={<Users size={16} />} color="#22d3ee" />
-            <StatCard label="Active Campaigns" value={stats.campaigns.active}
-              sub={`${stats.campaigns.total} total`}
+            <StatCard label={t.admin.activeCampaigns} value={stats.campaigns.active}
+              sub={`${stats.campaigns.total} ${t.admin.total}`}
               icon={<ShoppingBag size={16} />} color="#6366f1" />
-            <StatCard label="Rewards Paid" value={`${parseFloat(stats.rewards.totalPaid).toFixed(0)} SFT`}
-              sub={`${stats.rewards.pendingWithdrawals.count} pending withdrawals`}
+            <StatCard label={t.admin.rewardsPaid} value={`${parseFloat(stats.rewards.totalPaid).toFixed(0)} SFT`}
+              sub={`${stats.rewards.pendingWithdrawals.count} ${t.admin.pendingWithdrawals}`}
               icon={<Zap size={16} />} color="#10b981" />
-            <StatCard label="Revenue" value={`$${parseFloat(stats.revenue.totalFiat).toFixed(0)}`}
-              sub={`${stats.posts.total} active posts`}
+            <StatCard label={t.admin.revenue} value={`$${parseFloat(stats.revenue.totalFiat).toFixed(0)}`}
+              sub={`${stats.posts.total} ${t.admin.activePosts}`}
               icon={<BarChart2 size={16} />} color="#f59e0b" />
           </div>
 
           {/* On-chain status */}
           <div className={`glass rounded-2xl p-4 border flex items-center gap-3 ${stats.onChainEnabled ? "border-emerald-500/20" : "border-amber-500/20"}`}>
             {stats.onChainEnabled
-              ? <><CheckCircle size={16} className="text-emerald-400" /> <p className="text-sm text-slate-300">On-chain transfers <strong className="text-emerald-400">enabled</strong></p></>
-              : <><AlertTriangle size={16} className="text-amber-400" /> <p className="text-sm text-slate-300">On-chain transfers <strong className="text-amber-400">disabled</strong> — set <code className="text-xs bg-slate-800 px-1 rounded">RPC_URL</code>, <code className="text-xs bg-slate-800 px-1 rounded">TOKEN_CONTRACT_ADDRESS</code>, <code className="text-xs bg-slate-800 px-1 rounded">OPERATOR_PRIVATE_KEY</code> to enable</p></>}
+              ? <><CheckCircle size={16} className="text-emerald-400" /> <p className="text-sm text-slate-300">{t.admin.onChainEnabled} <strong className="text-emerald-400">{t.admin.enabled}</strong></p></>
+              : <><AlertTriangle size={16} className="text-amber-400" /> <p className="text-sm text-slate-300">{t.admin.onChainEnabled} <strong className="text-amber-400">{t.admin.disabled}</strong> — {t.admin.onChainDisabledHint}</p></>}
           </div>
 
           {/* Pending withdrawals banner */}
@@ -224,15 +226,15 @@ export function AdminPage() {
               <div className="flex items-center gap-2">
                 <ArrowUpRight size={15} className="text-amber-400" />
                 <p className="text-sm text-slate-300">
-                  <strong className="text-amber-400">{stats.rewards.pendingWithdrawals.count}</strong> queued withdrawals
-                  totalling <strong className="text-white">{parseFloat(stats.rewards.pendingWithdrawals.amount).toFixed(2)} SFT</strong>
+                  <strong className="text-amber-400">{stats.rewards.pendingWithdrawals.count}</strong> {t.admin.queuedWithdrawals}
+                  {t.admin.totalling} <strong className="text-white">{parseFloat(stats.rewards.pendingWithdrawals.amount).toFixed(2)} SFT</strong>
                 </p>
               </div>
               <button onClick={handleDistribute} disabled={distributing || !stats.onChainEnabled}
                 className="text-xs font-bold px-4 py-2 rounded-xl text-white disabled:opacity-40 flex items-center gap-1.5 transition-all hover:opacity-90"
                 style={{ background: "linear-gradient(135deg,#f59e0b,#ef4444)" }}>
                 {distributing ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
-                {distributing ? "Processing..." : "Distribute Now"}
+                {distributing ? t.admin.processing : t.admin.distributeNow}
               </button>
             </div>
           )}
@@ -246,7 +248,7 @@ export function AdminPage() {
           <div className="glass rounded-2xl p-3 border border-slate-700/10">
             <input value={userSearch} onChange={e => { setUserSearch(e.target.value); setUserPage(1); }}
               onKeyDown={e => e.key === "Enter" && fetchUsers(1, userSearch)}
-              placeholder="Search username, email…"
+              placeholder={t.admin.searchPlaceholder}
               className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50" />
           </div>
 
@@ -258,8 +260,8 @@ export function AdminPage() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-slate-700/20">
-                      {["", "User", "Role", "Balance", "Posts", "Verified", "Joined", "Actions"].map(h => (
-                        <th key={h} className="text-left px-4 py-3 text-slate-400 font-medium">{h}</th>
+                      {["", t.admin.thUser, t.admin.thRole, t.admin.thBalance, t.admin.thPosts, t.admin.thVerified, t.admin.thJoined, t.admin.thActions].map((h, i) => (
+                        <th key={i} className="text-left px-4 py-3 text-slate-400 font-medium">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -306,13 +308,13 @@ export function AdminPage() {
             )}
             {/* Pagination */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700/10">
-              <span className="text-xs text-slate-500">{userTotal} total users</span>
+              <span className="text-xs text-slate-500">{userTotal} {t.admin.totalUsersCount}</span>
               <div className="flex gap-2">
                 <button disabled={userPage <= 1} onClick={() => setUserPage(p => p - 1)}
-                  className="px-3 py-1 rounded-lg text-xs border border-slate-700 text-slate-400 disabled:opacity-30 hover:text-white transition-colors">Prev</button>
-                <span className="text-xs text-slate-400 self-center">pg {userPage}</span>
+                  className="px-3 py-1 rounded-lg text-xs border border-slate-700 text-slate-400 disabled:opacity-30 hover:text-white transition-colors">{t.admin.prev}</button>
+                <span className="text-xs text-slate-400 self-center">{t.admin.pg} {userPage}</span>
                 <button disabled={userPage * 20 >= userTotal} onClick={() => setUserPage(p => p + 1)}
-                  className="px-3 py-1 rounded-lg text-xs border border-slate-700 text-slate-400 disabled:opacity-30 hover:text-white transition-colors">Next</button>
+                  className="px-3 py-1 rounded-lg text-xs border border-slate-700 text-slate-400 disabled:opacity-30 hover:text-white transition-colors">{t.admin.next}</button>
               </div>
             </div>
           </div>
@@ -322,16 +324,16 @@ export function AdminPage() {
             <div className="glass rounded-2xl p-4 border border-indigo-500/20 flex items-center gap-3">
               <Gift size={16} className="text-indigo-400 flex-shrink-0" />
               <p className="text-sm text-slate-300 flex-1">
-                <strong className="text-white">{selectedUsers.size}</strong> users selected
+                <strong className="text-white">{selectedUsers.size}</strong> {t.admin.usersSelected}
               </p>
               <input type="number" value={airdropAmount} onChange={e => setAirdropAmount(e.target.value)}
                 className="w-24 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white font-mono focus:outline-none"
-                placeholder="Amount" />
-              <span className="text-xs text-slate-400">SFT each</span>
+                placeholder={t.admin.amount} />
+              <span className="text-xs text-slate-400">{t.admin.sftEach}</span>
               <button onClick={handleAirdrop}
                 className="px-4 py-1.5 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
                 style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}>
-                Airdrop
+                {t.admin.airdrop}
               </button>
             </div>
           )}
@@ -349,8 +351,8 @@ export function AdminPage() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-slate-700/20">
-                      {["Campaign", "Merchant", "Status", "Budget", "Reward Pool", "Impressions", "Actions"].map(h => (
-                        <th key={h} className="text-left px-4 py-3 text-slate-400 font-medium">{h}</th>
+                      {[t.admin.thCampaign, t.admin.thMerchant, t.admin.thStatus, t.admin.thBudget, t.admin.thRewardPool, t.admin.thImpressions, t.admin.thActions].map((h, i) => (
+                        <th key={i} className="text-left px-4 py-3 text-slate-400 font-medium">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -387,19 +389,19 @@ export function AdminPage() {
                             <div className="flex gap-1">
                               {c.status === "ACTIVE" && (
                                 <button onClick={() => handleUpdateCampaignStatus(c.id, "PAUSED")}
-                                  className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 transition-all" title="Pause">
+                                  className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 transition-all" title={t.admin.pause}>
                                   <Pause size={11} />
                                 </button>
                               )}
                               {c.status === "PAUSED" && (
                                 <button onClick={() => handleUpdateCampaignStatus(c.id, "ACTIVE")}
-                                  className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all" title="Activate">
+                                  className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all" title={t.admin.activate}>
                                   <Play size={11} />
                                 </button>
                               )}
                               {["ACTIVE", "PAUSED"].includes(c.status) && (
                                 <button onClick={() => handleUpdateCampaignStatus(c.id, "CANCELLED")}
-                                  className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all" title="Cancel">
+                                  className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all" title={t.admin.cancel}>
                                   <Ban size={11} />
                                 </button>
                               )}
@@ -413,13 +415,13 @@ export function AdminPage() {
               </div>
             )}
             <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700/10">
-              <span className="text-xs text-slate-500">{campaignTotal} total campaigns</span>
+              <span className="text-xs text-slate-500">{campaignTotal} {t.admin.totalCampaigns}</span>
               <div className="flex gap-2">
                 <button disabled={campaignPage <= 1} onClick={() => setCampaignPage(p => p - 1)}
-                  className="px-3 py-1 rounded-lg text-xs border border-slate-700 text-slate-400 disabled:opacity-30 hover:text-white transition-colors">Prev</button>
-                <span className="text-xs text-slate-400 self-center">pg {campaignPage}</span>
+                  className="px-3 py-1 rounded-lg text-xs border border-slate-700 text-slate-400 disabled:opacity-30 hover:text-white transition-colors">{t.admin.prev}</button>
+                <span className="text-xs text-slate-400 self-center">{t.admin.pg} {campaignPage}</span>
                 <button disabled={campaignPage * 20 >= campaignTotal} onClick={() => setCampaignPage(p => p + 1)}
-                  className="px-3 py-1 rounded-lg text-xs border border-slate-700 text-slate-400 disabled:opacity-30 hover:text-white transition-colors">Next</button>
+                  className="px-3 py-1 rounded-lg text-xs border border-slate-700 text-slate-400 disabled:opacity-30 hover:text-white transition-colors">{t.admin.next}</button>
               </div>
             </div>
           </div>
@@ -431,11 +433,11 @@ export function AdminPage() {
         <div className="space-y-4">
           {/* Summary */}
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Total Rewards Paid" value={`${parseFloat(stats.rewards.totalPaid).toFixed(0)} SFT`}
+            <StatCard label={t.admin.totalRewardsPaid} value={`${parseFloat(stats.rewards.totalPaid).toFixed(0)} SFT`}
               icon={<Zap size={16} />} color="#10b981" />
-            <StatCard label="Pending Withdrawals"
+            <StatCard label={t.admin.pendingWithdrawalsLabel}
               value={stats.rewards.pendingWithdrawals.count}
-              sub={`${parseFloat(stats.rewards.pendingWithdrawals.amount).toFixed(2)} SFT queued`}
+              sub={`${parseFloat(stats.rewards.pendingWithdrawals.amount).toFixed(2)} ${t.admin.sftQueued}`}
               icon={<ArrowUpRight size={16} />} color="#f59e0b" />
           </div>
 
@@ -444,10 +446,9 @@ export function AdminPage() {
             <div className="flex items-start gap-3">
               <Shield size={20} className="text-amber-400 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-bold text-white">Batch Token Distribution</p>
+                <p className="text-sm font-bold text-white">{t.admin.batchTitle}</p>
                 <p className="text-xs text-slate-400 mt-1">
-                  Process all queued (<code className="text-amber-400">CONFIRMED</code>) withdrawal requests in batch.
-                  Up to 50 per run. Tokens are sent on-chain from the operator wallet.
+                  {t.admin.batchDesc}
                 </p>
               </div>
             </div>
@@ -455,14 +456,14 @@ export function AdminPage() {
             {!stats.onChainEnabled && (
               <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                 <AlertTriangle size={13} className="text-amber-400 flex-shrink-0" />
-                <p className="text-xs text-amber-300">On-chain not configured. Set env vars to enable distribution.</p>
+                <p className="text-xs text-amber-300">{t.admin.onChainNotConfigured}</p>
               </div>
             )}
 
             <button onClick={handleDistribute} disabled={distributing || !stats.onChainEnabled}
               className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-40 transition-all hover:opacity-90"
               style={{ background: "linear-gradient(135deg,#f59e0b,#ef4444)" }}>
-              {distributing ? <><RefreshCw size={15} className="animate-spin" /> Processing batch...</> : <><Zap size={15} /> Run Batch Distribution</>}
+              {distributing ? <><RefreshCw size={15} className="animate-spin" /> {t.admin.processingBatch}</> : <><Zap size={15} /> {t.admin.runBatch}</>}
             </button>
           </div>
         </div>

@@ -2,8 +2,11 @@ import { useState, useEffect } from "react";
 import { Zap, Target, Globe, FileText, ArrowRight, CheckCircle, Sparkles, RefreshCw, Crown, Users } from "lucide-react";
 import { toast } from "sonner";
 import { adsApi } from "../lib/api";
+import { useLang } from "../contexts/LangContext";
 import type { ApiAdPackage } from "../lib/api";
+
 export function CreateAdPage() {
+  const { t } = useLang();
   const [packages, setPackages] = useState<ApiAdPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPkg, setSelectedPkg] = useState<string | null>(null);
@@ -48,7 +51,7 @@ export function CreateAdPage() {
 
   const handleCreateCampaign = async () => {
     if (!selectedPkg || !title.trim()) {
-      toast.error("Please fill in all required fields");
+      toast.error(t.createAd.fillRequired);
       return;
     }
 
@@ -69,7 +72,7 @@ export function CreateAdPage() {
       toast.success(res.message);
       setCreated({ title: res.campaign.title, id: res.campaign.id });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create campaign");
+      toast.error(err instanceof Error ? err.message : t.createAd.failed);
     } finally {
       setSubmitting(false);
     }
@@ -110,17 +113,17 @@ export function CreateAdPage() {
             <Zap size={20} className="text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Create Ad Campaign</h1>
-            <p className="text-xs text-slate-400">Reach 50K+ Web3 users with sponsored posts</p>
+            <h1 className="text-xl font-bold text-white">{t.createAd.title}</h1>
+            <p className="text-xs text-slate-400">{t.createAd.subtitle}</p>
           </div>
         </div>
 
         {/* Steps */}
         <div className="flex items-center gap-2 mt-5">
           {[
-            { n: 1, label: "Choose Package" },
-            { n: 2, label: "Campaign Details" },
-            { n: 3, label: "Review & Pay" },
+            { n: 1, label: t.createAd.step1 },
+            { n: 2, label: t.createAd.step2 },
+            { n: 3, label: t.createAd.step3 },
           ].map((s, i) => (
             <div key={s.n} className="flex items-center gap-2 flex-1">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step >= s.n
@@ -139,12 +142,12 @@ export function CreateAdPage() {
       {step === 1 && (
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Sparkles size={18} className="text-indigo-400" /> Select Your Package
+            <Sparkles size={18} className="text-indigo-400" /> {t.createAd.selectPackage}
           </h2>
 
           {loading ? (
             <div className="flex items-center justify-center py-12 text-slate-500">
-              <RefreshCw size={20} className="animate-spin mr-2" /> Loading packages...
+              <RefreshCw size={20} className="animate-spin mr-2" /> {t.createAd.loadingPackages}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -165,7 +168,7 @@ export function CreateAdPage() {
                       <span className="text-2xl">{colors.icon}</span>
                       {pkg.name === "Pro" && (
                         <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono">
-                          POPULAR
+                          {t.createAd.popular}
                         </span>
                       )}
                     </div>
@@ -176,14 +179,14 @@ export function CreateAdPage() {
                       <p className="text-2xl font-bold font-mono" style={{ color: colors.accent }}>
                         ${parseFloat(pkg.priceFiat).toLocaleString()}
                       </p>
-                      <p className="text-xs text-slate-500 font-mono mt-0.5">or {pkg.priceCrypto} ETH</p>
+                      <p className="text-xs text-slate-500 font-mono mt-0.5">{t.createAd.or} {pkg.priceCrypto} ETH</p>
                     </div>
 
                     <div className="mt-4 space-y-2">
                       {[
-                        `${pkg.impressions.toLocaleString()} impressions`,
-                        `${pkg.durationDays} days duration`,
-                        `${parseFloat(pkg.totalRewardPool).toLocaleString()} token reward pool`,
+                        `${pkg.impressions.toLocaleString()} ${t.createAd.impressions.toLowerCase()}`,
+                        `${pkg.durationDays} ${t.createAd.duration.toLowerCase()}`,
+                        `${parseFloat(pkg.totalRewardPool).toLocaleString()} ${t.createAd.rewardPool.toLowerCase()}`,
                       ].map(feature => (
                         <div key={feature} className="flex items-center gap-2">
                           <CheckCircle size={12} style={{ color: colors.accent }} />
@@ -199,10 +202,10 @@ export function CreateAdPage() {
 
           <div className="flex justify-end">
             <button
-              onClick={() => { if (selectedPkg) setStep(2); else toast.error("Select a package first"); }}
+              onClick={() => { if (selectedPkg) setStep(2); else toast.error(t.createAd.selectPackageFirst); }}
               className="px-6 py-3 rounded-xl text-sm font-semibold text-white flex items-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
               style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)", boxShadow: "0 4px 15px rgba(99,102,241,0.3)" }}>
-              Continue <ArrowRight size={16} />
+              {t.createAd.continue} <ArrowRight size={16} />
             </button>
           </div>
         </div>
@@ -212,26 +215,26 @@ export function CreateAdPage() {
       {step === 2 && (
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <FileText size={18} className="text-indigo-400" /> Campaign Details
+            <FileText size={18} className="text-indigo-400" /> {t.createAd.enterDetails}
           </h2>
 
           <div className="glass rounded-2xl p-5 border border-slate-700/10 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Campaign Title *</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.createAd.campaignTitle} *</label>
               <input
                 value={title}
                 onChange={e => setTitle(e.target.value)}
-                placeholder="e.g. Launch Week Special — 50% off minting"
+                placeholder={t.createAd.campaignTitlePlaceholder}
                 className="w-full px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Description</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.createAd.description}</label>
               <textarea
                 value={description}
                 onChange={e => setDescription(e.target.value)}
-                placeholder="Describe your campaign — what makes it special?"
+                placeholder={t.createAd.descriptionPlaceholder}
                 rows={4}
                 className="w-full px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 resize-none"
               />
@@ -239,22 +242,22 @@ export function CreateAdPage() {
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                <Globe size={13} className="inline mr-1" /> Target URL
+                <Globe size={13} className="inline mr-1" /> {t.createAd.targetUrl}
               </label>
               <input
                 value={targetUrl}
                 onChange={e => setTargetUrl(e.target.value)}
-                placeholder="https://your-project.com"
+                placeholder={t.createAd.targetUrlPlaceholder}
                 className="w-full px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Sponsored Post Content</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.createAd.postContent}</label>
               <textarea
                 value={postContent}
                 onChange={e => setPostContent(e.target.value)}
-                placeholder="Write the post that will appear in users' feeds (optional)"
+                placeholder={t.createAd.postContentPlaceholder}
                 rows={3}
                 className="w-full px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 resize-none"
               />
@@ -264,13 +267,13 @@ export function CreateAdPage() {
           {/* Audience Targeting */}
           <div className="glass rounded-2xl p-5 border border-slate-700/10 space-y-4">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Users size={14} className="text-cyan-400" /> Audience Targeting
-              <span className="text-[10px] text-slate-500 font-normal ml-1">(optional — leave blank for all users)</span>
+              <Users size={14} className="text-cyan-400" /> {t.createAd.audienceTargeting}
+              <span className="text-[10px] text-slate-500 font-normal ml-1">{t.createAd.optional}</span>
             </h3>
 
             {/* Interests */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Interests</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.createAd.interests}</label>
               <div className="flex gap-2">
                 <input
                   value={interestInput}
@@ -284,7 +287,7 @@ export function CreateAdPage() {
                       setInterestInput("");
                     }
                   }}
-                  placeholder="Type interest & press Enter (e.g. defi, gaming, nft)"
+                  placeholder={t.settings.interestsPlaceholder}
                   className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
                 />
               </div>
@@ -303,28 +306,28 @@ export function CreateAdPage() {
             {/* Location + Gender + Age */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Location</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">{t.createAd.location}</label>
                 <input
                   value={targetLocation}
                   onChange={e => setTargetLocation(e.target.value)}
-                  placeholder="e.g. Thailand"
+                  placeholder={t.settings.locationPlaceholder}
                   className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Gender</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">{t.createAd.gender}</label>
                 <select
                   value={targetGender}
                   onChange={e => setTargetGender(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50">
-                  <option value="">All</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
+                  <option value="">{t.createAd.allGenders}</option>
+                  <option value="male">{t.settings.genderMale}</option>
+                  <option value="female">{t.settings.genderFemale}</option>
+                  <option value="other">{t.settings.genderOther}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Age Range</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">{t.createAd.ageRange}</label>
                 <div className="flex gap-1.5 items-center">
                   <input
                     value={targetAgeMin}
@@ -348,13 +351,13 @@ export function CreateAdPage() {
 
           <div className="flex justify-between">
             <button onClick={() => setStep(1)} className="px-5 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white border border-slate-700/30 hover:bg-slate-800/50 transition-all">
-              Back
+              {t.createAd.back}
             </button>
             <button
-              onClick={() => { if (title.trim()) setStep(3); else toast.error("Campaign title is required"); }}
+              onClick={() => { if (title.trim()) setStep(3); else toast.error(t.createAd.titleRequired); }}
               className="px-6 py-3 rounded-xl text-sm font-semibold text-white flex items-center gap-2 transition-all hover:opacity-90"
               style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)", boxShadow: "0 4px 15px rgba(99,102,241,0.3)" }}>
-              Review <ArrowRight size={16} />
+              {t.createAd.review} <ArrowRight size={16} />
             </button>
           </div>
         </div>
@@ -364,19 +367,19 @@ export function CreateAdPage() {
       {created && (
         <div className="glass rounded-2xl p-8 border border-emerald-500/20 text-center" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.08), rgba(99,102,241,0.05))" }}>
           <div className="text-5xl mb-4">🎉</div>
-          <h2 className="text-xl font-bold text-white mb-2">Campaign Created!</h2>
-          <p className="text-sm text-slate-400 mb-1">Your campaign <strong className="text-white">"{created.title}"</strong> is now active.</p>
+          <h2 className="text-xl font-bold text-white mb-2">{t.createAd.success}</h2>
+          <p className="text-sm text-slate-400 mb-1">{t.createAd.activeMessage} <strong className="text-white">"{created.title}"</strong></p>
           <p className="text-xs text-slate-500 font-mono mb-6">ID: {created.id}</p>
           {postContent && (
             <div className="glass rounded-xl p-4 border border-slate-700/10 mb-6 text-left">
-              <p className="text-xs text-slate-500 mb-1">Sponsored Post</p>
+              <p className="text-xs text-slate-500 mb-1">{t.createAd.sponsoredPost}</p>
               <p className="text-sm text-slate-300">{postContent}</p>
             </div>
           )}
           <button onClick={resetForm}
             className="px-6 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
             style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)", boxShadow: "0 4px 15px rgba(99,102,241,0.3)" }}>
-            Create Another Campaign
+            {t.createAd.createAnother}
           </button>
         </div>
       )}
@@ -385,29 +388,29 @@ export function CreateAdPage() {
       {step === 3 && selectedPackage && !created && (
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Target size={18} className="text-indigo-400" /> Review & Launch
+            <Target size={18} className="text-indigo-400" /> {t.createAd.reviewLaunch}
           </h2>
 
           <div className="glass rounded-2xl p-5 border border-slate-700/10 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-700/20">
-              <span className="text-sm text-slate-400">Package</span>
+              <span className="text-sm text-slate-400">{t.createAd.package}</span>
               <span className="text-sm font-bold text-white flex items-center gap-1.5">
                 <Crown size={13} className="text-indigo-400" /> {selectedPackage.name}
               </span>
             </div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-700/20">
-              <span className="text-sm text-slate-400">Campaign Title</span>
+              <span className="text-sm text-slate-400">{t.createAd.campaignTitle}</span>
               <span className="text-sm font-semibold text-white">{title}</span>
             </div>
             {description && (
               <div className="pb-3 border-b border-slate-700/20">
-                <span className="text-sm text-slate-400 block mb-1">Description</span>
+                <span className="text-sm text-slate-400 block mb-1">{t.createAd.description}</span>
                 <span className="text-sm text-slate-300">{description}</span>
               </div>
             )}
             {targetUrl && (
               <div className="flex items-center justify-between pb-3 border-b border-slate-700/20">
-                <span className="text-sm text-slate-400">Target URL</span>
+                <span className="text-sm text-slate-400">{t.createAd.targetUrl}</span>
                 <a href={targetUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-cyan-400 hover:underline flex items-center gap-1">
                   {targetUrl.replace(/^https?:\/\//, '').slice(0, 30)} <Globe size={12} />
                 </a>
@@ -415,38 +418,38 @@ export function CreateAdPage() {
             )}
             {postContent && (
               <div className="pb-3 border-b border-slate-700/20">
-                <span className="text-sm text-slate-400 block mb-1">Sponsored Post</span>
+                <span className="text-sm text-slate-400 block mb-1">{t.createAd.sponsoredPost}</span>
                 <span className="text-sm text-slate-300">{postContent}</span>
               </div>
             )}
             <div className="flex items-center justify-between pb-3 border-b border-slate-700/20">
-              <span className="text-sm text-slate-400">Impressions</span>
+              <span className="text-sm text-slate-400">{t.createAd.impressions}</span>
               <span className="text-sm font-mono text-white">{selectedPackage.impressions.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-700/20">
-              <span className="text-sm text-slate-400">Duration</span>
-              <span className="text-sm font-mono text-white">{selectedPackage.durationDays} days</span>
+              <span className="text-sm text-slate-400">{t.createAd.duration}</span>
+              <span className="text-sm font-mono text-white">{selectedPackage.durationDays} {t.createAd.days}</span>
             </div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-700/20">
-              <span className="text-sm text-slate-400">Reward Pool</span>
-              <span className="text-sm font-mono text-amber-400">{parseFloat(selectedPackage.totalRewardPool).toLocaleString()} tokens</span>
+              <span className="text-sm text-slate-400">{t.createAd.rewardPool}</span>
+              <span className="text-sm font-mono text-amber-400">{parseFloat(selectedPackage.totalRewardPool).toLocaleString()} {t.createAd.tokens}</span>
             </div>
             {/* Targeting summary */}
             {(targetInterests.length > 0 || targetLocation || targetGender || targetAgeMin || targetAgeMax) && (
               <div className="pb-3 border-b border-slate-700/20">
-                <span className="text-sm text-slate-400 block mb-2">Audience Targeting</span>
+                <span className="text-sm text-slate-400 block mb-2">{t.createAd.audienceTargeting}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {targetInterests.map(i => (
                     <span key={i} className="px-2 py-0.5 rounded-full text-[10px] bg-cyan-500/15 text-cyan-400">{i}</span>
                   ))}
                   {targetLocation && <span className="px-2 py-0.5 rounded-full text-[10px] bg-indigo-500/15 text-indigo-400">{targetLocation}</span>}
                   {targetGender && <span className="px-2 py-0.5 rounded-full text-[10px] bg-pink-500/15 text-pink-400">{targetGender}</span>}
-                  {(targetAgeMin || targetAgeMax) && <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-400">Age {targetAgeMin || '?'}–{targetAgeMax || '?'}</span>}
+                  {(targetAgeMin || targetAgeMax) && <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-400">{t.createAd.age} {targetAgeMin || '?'}–{targetAgeMax || '?'}</span>}
                 </div>
               </div>
             )}
             <div className="flex items-center justify-between pt-2">
-              <span className="text-base font-bold text-white">Total</span>
+              <span className="text-base font-bold text-white">{t.createAd.total}</span>
               <span className="text-xl font-bold font-mono text-indigo-400">
                 ${parseFloat(selectedPackage.priceFiat).toLocaleString()}
               </span>
@@ -455,14 +458,14 @@ export function CreateAdPage() {
 
           <div className="flex justify-between">
             <button onClick={() => setStep(2)} className="px-5 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white border border-slate-700/30 hover:bg-slate-800/50 transition-all">
-              Back
+              {t.createAd.back}
             </button>
             <button
               onClick={handleCreateCampaign}
               disabled={submitting}
               className="px-8 py-3 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
               style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)", boxShadow: "0 4px 20px rgba(99,102,241,0.35)" }}>
-              {submitting ? <><RefreshCw size={15} className="animate-spin" /> Creating...</> : <><Zap size={16} /> Launch Campaign</>}
+              {submitting ? <><RefreshCw size={15} className="animate-spin" /> {t.createAd.creating}</> : <><Zap size={16} /> {t.createAd.launch}</>}
             </button>
           </div>
         </div>
@@ -470,12 +473,12 @@ export function CreateAdPage() {
 
       {/* How it works */}
       <div className="glass rounded-2xl p-5 border border-slate-700/10">
-        <h3 className="text-sm font-bold text-slate-300 mb-4">How Sponsored Posts Work</h3>
+        <h3 className="text-sm font-bold text-slate-300 mb-4">{t.createAd.howItWorks}</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { step: "1", title: "Choose & Pay", desc: "Select a package and complete payment via Stripe or crypto", icon: "💳" },
-            { step: "2", title: "Create Content", desc: "Your sponsored post appears in users' feeds with your branding", icon: "📝" },
-            { step: "3", title: "Earn Engagement", desc: "Users earn tokens for viewing — you get real, incentivized reach", icon: "🎯" },
+            { step: "1", title: t.createAd.steps["1"].title, desc: t.createAd.steps["1"].desc, icon: "💳" },
+            { step: "2", title: t.createAd.steps["2"].title, desc: t.createAd.steps["2"].desc, icon: "📝" },
+            { step: "3", title: t.createAd.steps["3"].title, desc: t.createAd.steps["3"].desc, icon: "🎯" },
           ].map(item => (
             <div key={item.step} className="flex items-start gap-3">
               <div className="text-2xl">{item.icon}</div>

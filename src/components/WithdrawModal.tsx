@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useWallet } from "../hooks/useWallet";
 import { ArrowUpRight, Wallet, RefreshCw, CheckCircle, ExternalLink, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { useLang } from "../contexts/LangContext";
 
 interface WithdrawModalProps {
   open: boolean;
@@ -19,6 +20,7 @@ type Step = "form" | "success";
 
 export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10, maxWithdrawal = 10000, onSuccess }: WithdrawModalProps) {
   const { user } = useAuth();
+  const { t } = useLang();
   const wallet = useWallet();
 
   const [amount, setAmount] = useState("");
@@ -42,11 +44,11 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
   const handleMax = () => setAmount(Math.min(availableBalance, maxWithdrawal).toFixed(4));
 
   const handleWithdraw = async () => {
-    if (!amountNum || amountNum <= 0) { toast.error("Enter a valid amount"); return; }
-    if (amountNum < minWithdrawal) { toast.error(`Minimum withdrawal is ${minWithdrawal} tokens`); return; }
-    if (amountNum > maxWithdrawal) { toast.error(`Maximum withdrawal is ${maxWithdrawal} tokens`); return; }
-    if (amountNum > availableBalance) { toast.error("Insufficient balance"); return; }
-    if (!targetWallet) { toast.error("Please link or connect a wallet first"); return; }
+    if (!amountNum || amountNum <= 0) { toast.error(t.withdraw.errInvalidAmount); return; }
+    if (amountNum < minWithdrawal) { toast.error(`${t.withdraw.minPrefix} ${minWithdrawal} ${t.withdraw.tokens}`); return; }
+    if (amountNum > maxWithdrawal) { toast.error(`${t.withdraw.maxPrefix} ${maxWithdrawal} ${t.withdraw.tokens}`); return; }
+    if (amountNum > availableBalance) { toast.error(t.withdraw.errInsufficientBalance); return; }
+    if (!targetWallet) { toast.error(t.withdraw.errNoWallet); return; }
 
     setLoading(true);
     try {
@@ -58,7 +60,7 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
       setStep("success");
       onSuccess?.();
     } catch (err: any) {
-      toast.error(err?.message ?? "Withdrawal failed");
+      toast.error(err?.message ?? t.withdraw.errFailed);
     } finally {
       setLoading(false);
     }
@@ -78,10 +80,10 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
               style={{ background: "linear-gradient(135deg, #22d3ee, #6366f1)" }}>
               <ArrowUpRight size={14} className="text-white" />
             </div>
-            Withdraw Tokens
+            {t.withdraw.title}
           </DialogTitle>
           <DialogDescription className="text-slate-400 text-xs">
-            Send SFT tokens from your off-chain balance to your wallet
+            {t.withdraw.subtitle}
           </DialogDescription>
         </DialogHeader>
 
@@ -90,7 +92,7 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
             {/* Balance display */}
             <div className="rounded-xl p-4 border border-slate-700/40"
               style={{ background: "rgba(34,211,238,0.05)" }}>
-              <p className="text-xs text-slate-400 mb-1">Available Balance</p>
+              <p className="text-xs text-slate-400 mb-1">{t.withdraw.availableBalance}</p>
               <p className="text-2xl font-bold font-mono text-cyan-400">
                 {availableBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                 <span className="text-sm text-slate-400 ml-1">SFT</span>
@@ -105,19 +107,19 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
                   {targetWallet.slice(0, 8)}...{targetWallet.slice(-6)}
                 </span>
               ) : (
-                <span className="text-xs text-amber-400">No wallet linked — go to Settings to link one</span>
+                <span className="text-xs text-amber-400">{t.withdraw.noWallet}</span>
               )}
             </div>
 
             {/* Amount input */}
             <div>
-              <label className="text-xs text-slate-400 mb-1.5 block">Amount to withdraw</label>
+              <label className="text-xs text-slate-400 mb-1.5 block">{t.withdraw.amountLabel}</label>
               <div className="relative">
                 <input
                   type="number"
                   value={amount}
                   onChange={e => setAmount(e.target.value)}
-                  placeholder={`Min ${minWithdrawal}`}
+                  placeholder={`${t.withdraw.minShort} ${minWithdrawal}`}
                   min={minWithdrawal}
                   max={Math.min(availableBalance, maxWithdrawal)}
                   step="0.0001"
@@ -125,12 +127,12 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
                 />
                 <button onClick={handleMax}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-cyan-400 hover:text-cyan-300 bg-slate-700/60 px-2 py-0.5 rounded-md">
-                  MAX
+                  {t.withdraw.maxShort}
                 </button>
               </div>
               <div className="flex justify-between mt-1">
-                <span className="text-xs text-slate-600">Min: {minWithdrawal} SFT</span>
-                <span className="text-xs text-slate-600">Max: {maxWithdrawal.toLocaleString()} SFT</span>
+                <span className="text-xs text-slate-600">{t.withdraw.minShort}: {minWithdrawal} SFT</span>
+                <span className="text-xs text-slate-600">{t.withdraw.maxShort}: {maxWithdrawal.toLocaleString()} SFT</span>
               </div>
             </div>
 
@@ -138,7 +140,7 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
             {!targetWallet && (
               <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                 <AlertTriangle size={13} className="text-amber-400 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-amber-300">Link a wallet in Settings before withdrawing.</p>
+                <p className="text-xs text-amber-300">{t.withdraw.linkWallet}</p>
               </div>
             )}
 
@@ -146,7 +148,7 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
             <button onClick={handleWithdraw} disabled={loading || !targetWallet || !amountNum}
               className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-40 transition-all hover:opacity-90"
               style={{ background: "linear-gradient(135deg, #22d3ee, #6366f1)", boxShadow: "0 4px 15px rgba(34,211,238,0.2)" }}>
-              {loading ? <><RefreshCw size={14} className="animate-spin" /> Processing...</> : <><ArrowUpRight size={14} /> Withdraw {amountNum > 0 ? `${amountNum} SFT` : ""}</>}
+              {loading ? <><RefreshCw size={14} className="animate-spin" /> {t.withdraw.processing}</> : <><ArrowUpRight size={14} /> {t.withdraw.btnWithdraw}{amountNum > 0 ? ` ${amountNum} SFT` : ""}</>}
             </button>
           </div>
         )}
@@ -159,28 +161,28 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
             </div>
 
             <div>
-              <h3 className="text-lg font-bold text-white">{result.status === "distributed" ? "Tokens Sent! 🎉" : "Withdrawal Queued"}</h3>
+              <h3 className="text-lg font-bold text-white">{result.status === "distributed" ? `${t.withdraw.sentTitle} 🎉` : t.withdraw.queuedTitle}</h3>
               <p className="text-xs text-slate-400 mt-1">{result.message}</p>
             </div>
 
             <div className="rounded-xl p-4 border border-slate-700/30 bg-slate-800/40 text-left space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400">Amount</span>
+                <span className="text-slate-400">{t.withdraw.amount}</span>
                 <span className="font-mono font-bold text-cyan-400">{result.amount} SFT</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400">To</span>
+                <span className="text-slate-400">{t.withdraw.to}</span>
                 <span className="font-mono text-white">{result.walletAddress.slice(0, 8)}...{result.walletAddress.slice(-6)}</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400">Status</span>
+                <span className="text-slate-400">{t.withdraw.status}</span>
                 <span className={`font-semibold ${result.status === "distributed" ? "text-emerald-400" : "text-amber-400"}`}>
-                  {result.status === "distributed" ? "On-chain ✅" : "Queued ⏳"}
+                  {result.status === "distributed" ? `${t.withdraw.onChain} ✅` : `${t.withdraw.queued} ⏳`}
                 </span>
               </div>
               {result.txHash && (
                 <div className="flex justify-between text-xs items-center">
-                  <span className="text-slate-400">Tx Hash</span>
+                  <span className="text-slate-400">{t.withdraw.txHash}</span>
                   <a href={result.explorerUrl ?? "#"} target="_blank" rel="noopener noreferrer"
                     className="font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
                     {result.txHash.slice(0, 8)}...{result.txHash.slice(-6)}
@@ -193,7 +195,7 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
             <button onClick={handleClose}
               className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
               style={{ background: "linear-gradient(135deg, #22d3ee, #6366f1)" }}>
-              Done
+              {t.withdraw.done}
             </button>
           </div>
         )}

@@ -3,12 +3,14 @@ import { useAuth } from "../contexts/AuthContext";
 import { useWallet } from "../hooks/useWallet";
 import { toast } from "sonner";
 import { Mail, Lock, User, RefreshCw, Wallet, Zap, CheckCircle, AlertTriangle } from "lucide-react";
+import { useLang } from "../contexts/LangContext";
 
 type Mode = "login" | "register";
 
 export function LoginPage() {
   const { login, register, walletLogin } = useAuth();
   const wallet = useWallet();
+  const { t } = useLang();
   const [mode, setMode] = useState<Mode>("login");
   const [isLoading, setIsLoading] = useState(false);
   const [walletConnecting, setWalletConnecting] = useState(false);
@@ -28,7 +30,7 @@ export function LoginPage() {
   // ─── MetaMask Connect + SIWE Login ───────────────────────────────────────
   const handleWalletConnect = async () => {
     if (!wallet.hasMetaMask) {
-      toast.error("MetaMask not detected! Please install MetaMask extension.", { duration: 5000 });
+      toast.error(t.auth.metaMaskNotFound, { duration: 5000 });
       window.open("https://metamask.io/download/", "_blank");
       return;
     }
@@ -39,16 +41,16 @@ export function LoginPage() {
       // 1. Connect MetaMask + switch to Sepolia
       const address = await wallet.connect();
       setWalletAddress(address);
-      toast.success(`Wallet connected! ${address.slice(0, 6)}...${address.slice(-4)}`, { duration: 3000 });
+      toast.success(`${t.auth.walletConnected} ${address.slice(0, 6)}...${address.slice(-4)}`, { duration: 3000 });
 
       // 2. Sign in via SIWE
       await walletLogin(address, wallet.signMessage);
-      toast.success("Welcome to SMFI! 🎉🦊");
+      toast.success(t.auth.welcomeSmfi);
     } catch (err: any) {
       if (err?.code === 4001) {
-        toast.error("Connection rejected by user");
+        toast.error(t.auth.connectionRejected);
       } else {
-        toast.error(err instanceof Error ? err.message : "Wallet connection failed");
+        toast.error(err instanceof Error ? err.message : t.auth.connectionFailed);
       }
       setWalletAddress(null);
     } finally {
@@ -58,13 +60,13 @@ export function LoginPage() {
 
   // ─── Email Login ─────────────────────────────────────────────────────────
   const handleLogin = async () => {
-    if (!email || !password) { toast.error("Please fill in all fields"); return; }
+    if (!email || !password) { toast.error(t.auth.fillAllFields); return; }
     try {
       setIsLoading(true);
       await login(email, password);
-      toast.success("Welcome back! 👋");
+      toast.success(t.auth.welcomeBack);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Login failed");
+      toast.error(err instanceof Error ? err.message : t.auth.loginFailed);
     } finally {
       setIsLoading(false);
     }
@@ -73,16 +75,16 @@ export function LoginPage() {
   // ─── Email Register ──────────────────────────────────────────────────────
   const handleRegister = async () => {
     if (!email || !password || !username) {
-      toast.error("Email, password, and username are required");
+      toast.error(t.auth.emailReq);
       return;
     }
-    if (password.length < 8) { toast.error("Password must be at least 8 characters"); return; }
+    if (password.length < 8) { toast.error(t.auth.passwordMin); return; }
     try {
       setIsLoading(true);
       await register({ email, password, username, displayName: displayName || username, referralCode: referralCode || undefined });
-      toast.success("Account created! Welcome to SMFI 🎉");
+      toast.success(t.auth.accountCreated);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Registration failed");
+      toast.error(err instanceof Error ? err.message : t.auth.regFailed);
     } finally {
       setIsLoading(false);
     }
@@ -92,9 +94,9 @@ export function LoginPage() {
     try {
       setIsLoading(true);
       await login(demoEmail, "Password123!");
-      toast.success("Demo login successful! 🚀");
+      toast.success(t.auth.demoSuccess);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Demo login failed — seed the database first");
+      toast.error(err instanceof Error ? err.message : t.auth.demoFailedSeed);
     } finally {
       setIsLoading(false);
     }
@@ -124,10 +126,10 @@ export function LoginPage() {
 
         {/* Heading */}
         <h1 className="text-2xl font-bold text-center text-slate-900 tracking-tight">
-          Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-indigo-500">SMFI</span>
+          {t.auth.welcomeTo} <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-indigo-500">SMFI</span>
         </h1>
         <p className="text-center text-slate-500 text-sm mt-1.5 mb-8">
-          {mode === "login" ? "Sign in to continue" : "Create your account"}
+          {mode === "login" ? t.auth.signInContinue : t.auth.createAccount}
         </p>
 
         {/* ══════════════ Connect Wallet (MetaMask) ══════════════ */}
@@ -139,9 +141,9 @@ export function LoginPage() {
               className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 text-slate-800 font-semibold text-sm hover:from-orange-100 hover:to-amber-100 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {walletConnecting ? (
-                <><RefreshCw size={16} className="animate-spin text-orange-500" /> Connecting MetaMask...</>
+                <><RefreshCw size={16} className="animate-spin text-orange-500" /> {t.auth.connectingMetaMask}</>
               ) : walletAddress ? (
-                <><CheckCircle size={16} className="text-green-500" /> Connected: {shortAddr}</>
+                <><CheckCircle size={16} className="text-green-500" /> {t.auth.connected} {shortAddr}</>
               ) : (
                 <>
                   <svg width="20" height="20" viewBox="0 0 35 33" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -154,7 +156,7 @@ export function LoginPage() {
                     <path d="M10.39 29.01L14.89 26.82L10.99 23.7L10.39 29.01Z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M20.11 26.82L24.61 29.01L24.01 23.7L20.11 26.82Z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  Connect with MetaMask
+                  {t.auth.connectMetaMaskBtn}
                 </>
               )}
             </button>
@@ -162,13 +164,13 @@ export function LoginPage() {
             {/* Sepolia badge */}
             <div className="flex items-center justify-center gap-1.5 mt-2.5">
               <div className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 6px #34d399" }} />
-              <span className="text-[10px] font-mono text-slate-400">Sepolia Testnet (ETH)</span>
+              <span className="text-[10px] font-mono text-slate-400">{t.auth.sepoliaTestnet}</span>
             </div>
 
             {/* OR divider */}
             <div className="flex items-center gap-3 my-6">
               <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-xs text-slate-400 font-medium">OR USE EMAIL</span>
+              <span className="text-xs text-slate-400 font-medium">{t.auth.orUseEmail}</span>
               <div className="flex-1 h-px bg-slate-200" />
             </div>
           </>
@@ -179,12 +181,12 @@ export function LoginPage() {
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 text-center mb-1.5">Email</label>
+            <label className="block text-sm font-medium text-slate-700 text-center mb-1.5">{t.auth.emailLabel}</label>
             <div className="relative">
               <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t.auth.emailPlaceholder2}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
@@ -195,12 +197,12 @@ export function LoginPage() {
           {/* Username (register) */}
           {mode === "register" && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 text-center mb-1.5">Username</label>
+              <label className="block text-sm font-medium text-slate-700 text-center mb-1.5">{t.auth.usernameLabel}</label>
               <div className="relative">
                 <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="crypto_alice"
+                  placeholder={t.auth.usernamePlaceholder2}
                   value={username}
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, "_"))}
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
@@ -212,12 +214,12 @@ export function LoginPage() {
           {/* Display Name (register) */}
           {mode === "register" && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 text-center mb-1.5">Display Name</label>
+              <label className="block text-sm font-medium text-slate-700 text-center mb-1.5">{t.auth.displayNameLabel}</label>
               <div className="relative">
                 <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Alice Nakamoto (optional)"
+                  placeholder={t.auth.displayNamePlaceholder2}
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
@@ -228,12 +230,12 @@ export function LoginPage() {
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 text-center mb-1.5">Password</label>
+            <label className="block text-sm font-medium text-slate-700 text-center mb-1.5">{t.auth.passwordLabel}</label>
             <div className="relative">
               <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="password"
-                placeholder="••••••••"
+                placeholder={t.auth.passwordPlaceholder2}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
@@ -244,10 +246,10 @@ export function LoginPage() {
           {/* Referral Code (register + login) */}
           {mode === "register" && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 text-center mb-1.5">Referral Code</label>
+              <label className="block text-sm font-medium text-slate-700 text-center mb-1.5">{t.auth.referralLabel}</label>
               <input
                 type="text"
-                placeholder="Optional"
+                placeholder={t.auth.optionalPlaceholder}
                 value={referralCode}
                 onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 text-sm text-center font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all"
@@ -262,8 +264,8 @@ export function LoginPage() {
             className="w-full py-3 rounded-xl bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10"
           >
             {isLoading ? (
-              <><RefreshCw size={15} className="animate-spin" /> Loading...</>
-            ) : mode === "login" ? "Sign in" : "Create Account"}
+              <><RefreshCw size={15} className="animate-spin" /> {t.auth.loading}</>
+            ) : mode === "login" ? t.auth.signInBtn : t.auth.createAccountBtn}
           </button>
         </form>
 
@@ -271,18 +273,18 @@ export function LoginPage() {
         <div className="flex items-center justify-between mt-5 text-sm">
           {mode === "login" && (
             <button className="text-indigo-500 hover:text-indigo-600 font-medium transition-colors">
-              Forgot password?
+              {t.auth.forgotPassword}
             </button>
           )}
           <div className={mode === "register" ? "w-full text-center" : "ml-auto"}>
             <span className="text-slate-500">
-              {mode === "login" ? "Need an account? " : "Already have an account? "}
+              {mode === "login" ? t.auth.noAccount : t.auth.hasAccount}
             </span>
             <button
               onClick={() => { setMode(mode === "login" ? "register" : "login"); reset(); }}
               className="text-indigo-500 hover:text-indigo-600 font-semibold transition-colors"
             >
-              {mode === "login" ? "Sign up" : "Sign in"}
+              {mode === "login" ? t.auth.signUp : t.auth.signInBtn}
             </button>
           </div>
         </div>
@@ -292,7 +294,7 @@ export function LoginPage() {
           <div className="flex items-center gap-2 mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
             <AlertTriangle size={14} className="text-amber-500 flex-shrink-0" />
             <p className="text-xs text-amber-700">
-              <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer" className="font-semibold underline">Install MetaMask</a> to connect your wallet
+              <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer" className="font-semibold underline">{t.auth.installMetaMask}</a> {t.auth.toConnectWallet}
             </p>
           </div>
         )}
@@ -300,7 +302,7 @@ export function LoginPage() {
         {/* Demo divider */}
         <div className="flex items-center gap-3 my-5">
           <div className="flex-1 h-px bg-slate-200" />
-          <span className="text-xs text-slate-400 font-medium">DEMO ACCOUNTS</span>
+          <span className="text-xs text-slate-400 font-medium">{t.auth.demoAccounts}</span>
           <div className="flex-1 h-px bg-slate-200" />
         </div>
 
@@ -311,14 +313,14 @@ export function LoginPage() {
             disabled={isLoading}
             className="py-2.5 rounded-xl text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
-            <Wallet size={13} /> Demo User
+            <Wallet size={13} /> {t.auth.demoUser}
           </button>
           <button
             onClick={() => demoLogin("merchant@nftstore.io")}
             disabled={isLoading}
             className="py-2.5 rounded-xl text-xs font-medium border border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
-            <Zap size={13} /> Demo Merchant
+            <Zap size={13} /> {t.auth.demoMerchant}
           </button>
         </div>
       </div>

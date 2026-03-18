@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Globe, CheckCircle, Mail, Music, Send, Loader2, AlertTriangle, ExternalLink } from "lucide-react";
 import { useLang } from "../contexts/LangContext";
+import { musicApi, type ApiTrack } from "../lib/api";
 import { toast } from "sonner";
 
 const CONTACT_EMAIL = "contact@musicfi.io";
@@ -22,11 +23,22 @@ export function DistributionSubmitPage() {
 
   const [artistName, setArtistName] = useState("");
   const [email, setEmail] = useState("");
-  const [trackTitle, setTrackTitle] = useState("");
+  const [selectedTrackId, setSelectedTrackId] = useState("");
   const [message, setMessage] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  
+  const [myTracks, setMyTracks] = useState<ApiTrack[]>([]);
+  const [loadingTracks, setLoadingTracks] = useState(false);
+
+  useEffect(() => {
+    setLoadingTracks(true);
+    musicApi.getMyTracks()
+      .then(res => setMyTracks(res.tracks))
+      .catch(() => toast.error(t.distribution.loadFailed))
+      .finally(() => setLoadingTracks(false));
+  }, [t]);
 
   const togglePlatform = (id: string) => {
     setSelectedPlatforms(prev =>
@@ -35,12 +47,16 @@ export function DistributionSubmitPage() {
   };
 
   const handleSubmit = async () => {
-    if (!artistName.trim() || !email.trim() || !trackTitle.trim()) {
-      toast.error("Please fill in Artist Name, Email, and Track/Album title.");
+    if (!artistName.trim() || !email.trim()) {
+      toast.error(t.distribution.fillRequired);
+      return;
+    }
+    if (!selectedTrackId) {
+      toast.error(t.distribution.selectTrackErr);
       return;
     }
     if (selectedPlatforms.length === 0) {
-      toast.error("Please select at least one target platform.");
+      toast.error(t.distribution.selectPlatformErr);
       return;
     }
 
@@ -61,7 +77,7 @@ export function DistributionSubmitPage() {
         <div>
           <h2 className="text-xl font-bold text-white mb-2">{t.distribution.success}</h2>
           <p className="text-sm text-slate-400 max-w-sm mx-auto">
-            Our curators will review your submission. If it meets our quality criteria, we will reach out to initiate the contract-signing process.
+            {t.distribution.body}
           </p>
         </div>
         <a
@@ -72,10 +88,10 @@ export function DistributionSubmitPage() {
           <Mail size={14} /> {CONTACT_EMAIL}
         </a>
         <button
-          onClick={() => { setSubmitted(false); setArtistName(""); setEmail(""); setTrackTitle(""); setMessage(""); setSelectedPlatforms([]); }}
+          onClick={() => { setSubmitted(false); setArtistName(""); setEmail(""); setSelectedTrackId(""); setMessage(""); setSelectedPlatforms([]); }}
           className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
         >
-          Submit another track →
+          {t.distribution.submitAnother}
         </button>
       </div>
     );
@@ -98,9 +114,9 @@ export function DistributionSubmitPage() {
         {/* Process steps */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { step: "01", label: "Submit", desc: "Fill out the form below" },
-            { step: "02", label: "Curate", desc: "Quality review by our team" },
-            { step: "03", label: "Distribute", desc: "Contract sign + go live" },
+            { step: "01", label: t.distribution.steps["1"].label, desc: t.distribution.steps["1"].desc },
+            { step: "02", label: t.distribution.steps["2"].label, desc: t.distribution.steps["2"].desc },
+            { step: "03", label: t.distribution.steps["3"].label, desc: t.distribution.steps["3"].desc },
           ].map(s => (
             <div key={s.step} className="flex flex-col items-center text-center p-2 rounded-xl" style={{ background: "rgba(6,182,212,0.06)", border: "1px solid rgba(6,182,212,0.12)" }}>
               <span className="text-[10px] font-black text-cyan-500 mb-1">{s.step}</span>
@@ -127,7 +143,7 @@ export function DistributionSubmitPage() {
               type="text"
               value={artistName}
               onChange={e => setArtistName(e.target.value)}
-              placeholder="Your artist name"
+              placeholder={t.distribution.artistPlaceholder}
               className="w-full px-3 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
             />
           </div>
@@ -137,22 +153,34 @@ export function DistributionSubmitPage() {
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="you@email.com"
+              placeholder={t.distribution.emailPlaceholder}
               className="w-full px-3 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
             />
           </div>
         </div>
 
-        {/* Track title */}
+        {/* Track Select */}
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">{t.distribution.trackLabel} *</label>
-          <input
-            type="text"
-            value={trackTitle}
-            onChange={e => setTrackTitle(e.target.value)}
-            placeholder="Album / Single title"
-            className="w-full px-3 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
-          />
+          {loadingTracks ? (
+            <div className="w-full px-3 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-slate-500">
+              <Loader2 size={16} className="animate-spin inline mr-2" /> {t.distribution.loadingTracks}
+            </div>
+          ) : (
+            <select
+              value={selectedTrackId}
+              onChange={e => setSelectedTrackId(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+            >
+              <option value="">{t.distribution.selectTrack}</option>
+              {myTracks.map(track => (
+                <option key={track.id} value={track.id}>{track.title} ({track.status})</option>
+              ))}
+            </select>
+          )}
+          {myTracks.length === 0 && !loadingTracks && (
+            <p className="text-[10px] text-amber-400 mt-1">{t.distribution.noTracks}</p>
+          )}
         </div>
 
         {/* Platform selector */}
@@ -197,7 +225,7 @@ export function DistributionSubmitPage() {
         {/* Submit */}
         <button
           onClick={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || !selectedTrackId || loadingTracks}
           className="w-full py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           style={{ background: "linear-gradient(135deg, #06b6d4, #8b5cf6)", color: "white" }}
         >
@@ -223,7 +251,7 @@ export function DistributionSubmitPage() {
               rel="noopener noreferrer"
               className="ml-4 inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
             >
-              <ExternalLink size={11} /> Online Form
+              <ExternalLink size={11} /> {t.distribution.onlineForm}
             </a>
           )}
         </div>
@@ -231,3 +259,4 @@ export function DistributionSubmitPage() {
     </div>
   );
 }
+

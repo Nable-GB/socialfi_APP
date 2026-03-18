@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { useLang } from "../contexts/LangContext";
 import { useWallet } from "../hooks/useWallet";
 import { usersApi, uploadApi, targetingApi } from "../lib/api";
 import { Settings, Bell, Shield, Eye, Palette, Globe, Save, CheckCircle, Lock, Wallet, User, RefreshCw, Camera, Target } from "lucide-react";
@@ -17,6 +18,7 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () =>
 
 export function SettingsPage() {
   const { user, refreshUser } = useAuth();
+  const { lang, setLang, t } = useLang();
   const wallet = useWallet();
 
   // Profile edit state
@@ -49,7 +51,7 @@ export function SettingsPage() {
   if (!user) return null;
 
   const handleSaveProfile = async () => {
-    if (!displayName.trim()) { toast.error("Display name cannot be empty"); return; }
+    if (!displayName.trim()) { toast.error(t.settings.displayNameEmpty); return; }
     setSavingProfile(true);
     try {
       await usersApi.updateProfile({
@@ -58,40 +60,40 @@ export function SettingsPage() {
         avatarUrl: avatarUrl.trim() || undefined,
       });
       await refreshUser();
-      toast.success("Profile updated!");
+      toast.success(t.settings.profileUpdated);
     } catch (err: any) {
-      toast.error(err?.message ?? "Failed to update profile");
+      toast.error(err?.message ?? t.settings.updateFailed);
     } finally {
       setSavingProfile(false);
     }
   };
 
   const handleChangePassword = async () => {
-    if (!currentPw || !newPw) { toast.error("Please fill in all password fields"); return; }
-    if (newPw !== confirmPw) { toast.error("New passwords do not match"); return; }
-    if (newPw.length < 8) { toast.error("New password must be at least 8 characters"); return; }
+    if (!currentPw || !newPw) { toast.error(t.settings.fillAllFields); return; }
+    if (newPw !== confirmPw) { toast.error(t.settings.passwordsNoMatch); return; }
+    if (newPw.length < 8) { toast.error(t.settings.passwordMin); return; }
     setSavingPw(true);
     try {
       await usersApi.changePassword({ currentPassword: currentPw, newPassword: newPw });
-      toast.success("Password changed successfully!");
+      toast.success(t.settings.passwordChanged);
       setCurrentPw(""); setNewPw(""); setConfirmPw("");
     } catch (err: any) {
-      toast.error(err?.message ?? "Failed to change password");
+      toast.error(err?.message ?? t.settings.passwordChangeFailed);
     } finally {
       setSavingPw(false);
     }
   };
 
   const handleLinkWallet = async () => {
-    if (!wallet.hasMetaMask) { toast.error("Please install MetaMask"); return; }
+    if (!wallet.hasMetaMask) { toast.error(t.settings.installMetaMask); return; }
     setLinkingWallet(true);
     try {
       const address = wallet.address || await wallet.connect();
       await usersApi.linkWallet(address);
       await refreshUser();
-      toast.success("Wallet linked successfully!");
+      toast.success(t.settings.walletLinked);
     } catch (err: any) {
-      toast.error(err?.message ?? "Failed to link wallet");
+      toast.error(err?.message ?? t.settings.linkFailed);
     } finally {
       setLinkingWallet(false);
     }
@@ -106,9 +108,9 @@ export function SettingsPage() {
         birthYear: demoBirthYear ? parseInt(demoBirthYear) : undefined,
         gender: demoGender || undefined,
       });
-      toast.success("Demographics updated! Ads will now be better targeted for you.");
+      toast.success(t.settings.demographicsUpdated);
     } catch (err: any) {
-      toast.error(err?.message ?? "Failed to save demographics");
+      toast.error(err?.message ?? t.settings.demographicsFailed);
     } finally {
       setSavingDemo(false);
     }
@@ -123,8 +125,8 @@ export function SettingsPage() {
             <Settings size={20} className="text-slate-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Settings</h1>
-            <p className="text-xs text-slate-400">Manage your account preferences</p>
+            <h1 className="text-xl font-bold text-white">{t.settings.title}</h1>
+            <p className="text-xs text-slate-400">{t.settings.subtitle}</p>
           </div>
         </div>
       </div>
@@ -132,15 +134,15 @@ export function SettingsPage() {
       {/* Account Info (read-only) */}
       <div className="glass rounded-2xl p-5 border border-slate-700/10">
         <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
-          <Shield size={15} className="text-cyan-400" /> Account Info
+          <Shield size={15} className="text-cyan-400" /> {t.settings.accountInfo}
         </h3>
         <div className="space-y-2">
           {[
-            { label: "Email", value: user.email ?? "Not set (wallet account)" },
-            { label: "Username", value: `@${user.username}` },
-            { label: "Role", value: user.role },
-            { label: "Referral Code", value: user.referralCode },
-            { label: "Wallet", value: user.walletAddress ? `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}` : "Not linked" },
+            { label: t.settings.email, value: user.email ?? t.settings.notSet },
+            { label: t.settings.username, value: `@${user.username}` },
+            { label: t.settings.role, value: user.role },
+            { label: t.settings.referralCode, value: user.referralCode },
+            { label: t.settings.wallet, value: user.walletAddress ? `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}` : t.settings.notLinked },
           ].map(item => (
             <div key={item.label} className="flex items-center justify-between py-2.5 border-b border-slate-700/10 last:border-0">
               <span className="text-sm text-slate-400">{item.label}</span>
@@ -153,23 +155,23 @@ export function SettingsPage() {
       {/* Edit Profile */}
       <div className="glass rounded-2xl p-5 border border-slate-700/10">
         <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
-          <User size={15} className="text-indigo-400" /> Edit Profile
+          <User size={15} className="text-indigo-400" /> {t.settings.editProfile}
         </h3>
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Display Name</label>
+            <label className="text-xs text-slate-400 mb-1 block">{t.settings.displayName}</label>
             <input value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={60}
               className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600"
-              placeholder="Your display name" />
+              placeholder={t.settings.displayNamePlaceholder} />
           </div>
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Bio <span className="text-slate-600">{bio.length}/300</span></label>
+            <label className="text-xs text-slate-400 mb-1 block">{t.settings.bio} <span className="text-slate-600">{bio.length}/300</span></label>
             <textarea value={bio} onChange={e => setBio(e.target.value)} maxLength={300} rows={3}
               className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600 resize-none"
-              placeholder="Tell us about yourself..." />
+              placeholder={t.settings.bioPlaceholder} />
           </div>
           <div>
-            <label className="text-xs text-slate-400 mb-1.5 block">Avatar</label>
+            <label className="text-xs text-slate-400 mb-1.5 block">{t.settings.avatar}</label>
             <div className="flex items-center gap-4">
               {/* Preview */}
               <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-800 border border-slate-700/30 flex-shrink-0">
@@ -183,24 +185,24 @@ export function SettingsPage() {
               <div className="flex-1 space-y-2">
                 <label className="flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-slate-600/50 cursor-pointer hover:border-cyan-500/40 transition-all">
                   {uploadingAvatar ? <RefreshCw size={13} className="animate-spin text-cyan-400" /> : <Camera size={13} className="text-cyan-400" />}
-                  <span className="text-xs text-slate-300">{uploadingAvatar ? "Uploading..." : "Upload image"}</span>
+                  <span className="text-xs text-slate-300">{uploadingAvatar ? t.settings.uploading : t.settings.uploadImage}</span>
                   <input type="file" accept="image/*" className="hidden" disabled={uploadingAvatar}
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      if (file.size > 5 * 1024 * 1024) { toast.error("Max 5MB"); return; }
+                      if (file.size > 5 * 1024 * 1024) { toast.error(t.settings.maxSize); return; }
                       setUploadingAvatar(true);
                       try {
                         const res = await uploadApi.avatar(file);
                         setAvatarUrl(res.url);
-                        toast.success("Avatar uploaded!");
-                      } catch (err: any) { toast.error(err?.message ?? "Upload failed"); }
+                        toast.success(t.settings.avatarUploaded);
+                      } catch (err: any) { toast.error(err?.message ?? t.settings.uploadFailed); }
                       finally { setUploadingAvatar(false); e.target.value = ""; }
                     }} />
                 </label>
                 <input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)}
                   className="w-full px-3 py-1.5 rounded-lg bg-slate-800/40 border border-slate-700/20 text-xs text-slate-400 focus:outline-none focus:border-cyan-500/50 placeholder:text-slate-600 font-mono"
-                  placeholder="or paste URL..." />
+                  placeholder={t.settings.pasteUrl} />
               </div>
             </div>
           </div>
@@ -208,7 +210,7 @@ export function SettingsPage() {
             className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:opacity-90"
             style={{ background: "linear-gradient(135deg, #22d3ee, #6366f1)" }}>
             {savingProfile ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-            {savingProfile ? "Saving..." : "Save Profile"}
+            {savingProfile ? t.settings.saving : t.settings.saveProfile}
           </button>
         </div>
       </div>
@@ -217,13 +219,13 @@ export function SettingsPage() {
       {user.email && (
         <div className="glass rounded-2xl p-5 border border-slate-700/10">
           <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
-            <Lock size={15} className="text-amber-400" /> Change Password
+            <Lock size={15} className="text-amber-400" /> {t.settings.changePassword}
           </h3>
           <div className="space-y-3">
             {[
-              { label: "Current Password", value: currentPw, set: setCurrentPw },
-              { label: "New Password", value: newPw, set: setNewPw },
-              { label: "Confirm New Password", value: confirmPw, set: setConfirmPw },
+              { label: t.settings.currentPassword, value: currentPw, set: setCurrentPw },
+              { label: t.settings.newPassword, value: newPw, set: setNewPw },
+              { label: t.settings.confirmPassword, value: confirmPw, set: setConfirmPw },
             ].map(({ label, value, set }) => (
               <div key={label}>
                 <label className="text-xs text-slate-400 mb-1 block">{label}</label>
@@ -236,7 +238,7 @@ export function SettingsPage() {
               className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:opacity-90"
               style={{ background: "linear-gradient(135deg, #f59e0b, #ef4444)" }}>
               {savingPw ? <RefreshCw size={14} className="animate-spin" /> : <Lock size={14} />}
-              {savingPw ? "Changing..." : "Change Password"}
+              {savingPw ? t.settings.changing : t.settings.changePassword}
             </button>
           </div>
         </div>
@@ -246,14 +248,14 @@ export function SettingsPage() {
       {!user.walletAddress && (
         <div className="glass rounded-2xl p-5 border border-slate-700/10">
           <h3 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
-            <Wallet size={15} className="text-emerald-400" /> Link MetaMask Wallet
+            <Wallet size={15} className="text-emerald-400" /> {t.settings.linkWallet}
           </h3>
-          <p className="text-xs text-slate-400 mb-4">Link your wallet to enable crypto features and Web3 login.</p>
+          <p className="text-xs text-slate-400 mb-4">{t.settings.linkWalletDesc}</p>
           <button onClick={handleLinkWallet} disabled={linkingWallet}
             className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:opacity-90"
             style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.8), rgba(234,88,12,0.8))" }}>
             {linkingWallet ? <RefreshCw size={14} className="animate-spin" /> : <Wallet size={14} />}
-            {linkingWallet ? "Linking..." : "Link Wallet"}
+            {linkingWallet ? t.settings.linking : t.settings.linkWalletBtn}
           </button>
         </div>
       )}
@@ -261,13 +263,13 @@ export function SettingsPage() {
       {/* Demographics / Ad Targeting */}
       <div className="glass rounded-2xl p-5 border border-slate-700/10">
         <h3 className="text-sm font-bold text-slate-300 mb-1 flex items-center gap-2">
-          <Target size={15} className="text-cyan-400" /> Ad Preferences
+          <Target size={15} className="text-cyan-400" /> {t.settings.adPreferences}
         </h3>
-        <p className="text-xs text-slate-500 mb-4">Help us show you relevant ads & earn better rewards</p>
+        <p className="text-xs text-slate-500 mb-4">{t.settings.adPreferencesDesc}</p>
         <div className="space-y-3">
           {/* Interests */}
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Interests</label>
+            <label className="text-xs text-slate-400 mb-1 block">{t.settings.interests}</label>
             <div className="flex gap-2">
               <input
                 value={demoInterestInput}
@@ -280,7 +282,7 @@ export function SettingsPage() {
                     setDemoInterestInput("");
                   }
                 }}
-                placeholder="Type & press Enter (e.g. defi, gaming, nft)"
+                placeholder={t.settings.interestsPlaceholder}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
               />
             </div>
@@ -298,25 +300,25 @@ export function SettingsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Location</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t.settings.location}</label>
               <input value={demoLocation} onChange={e => setDemoLocation(e.target.value)}
-                placeholder="e.g. Thailand"
+                placeholder={t.settings.locationPlaceholder}
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50" />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Birth Year</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t.settings.birthYear}</label>
               <input type="number" value={demoBirthYear} onChange={e => setDemoBirthYear(e.target.value)}
-                placeholder="e.g. 1995"
+                placeholder={t.settings.birthYearPlaceholder}
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50" />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Gender</label>
+              <label className="text-xs text-slate-400 mb-1 block">{t.settings.gender}</label>
               <select value={demoGender} onChange={e => setDemoGender(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50">
-                <option value="">Prefer not to say</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="">{t.settings.genderPreferNotSay}</option>
+                <option value="male">{t.settings.genderMale}</option>
+                <option value="female">{t.settings.genderFemale}</option>
+                <option value="other">{t.settings.genderOther}</option>
               </select>
             </div>
           </div>
@@ -325,7 +327,7 @@ export function SettingsPage() {
             className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:opacity-90"
             style={{ background: "linear-gradient(135deg, #22d3ee, #06b6d4)" }}>
             {savingDemo ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-            {savingDemo ? "Saving..." : "Save Preferences"}
+            {savingDemo ? t.settings.saving : t.settings.savePreferences}
           </button>
         </div>
       </div>
@@ -333,15 +335,15 @@ export function SettingsPage() {
       {/* Notifications */}
       <div className="glass rounded-2xl p-5 border border-slate-700/10">
         <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
-          <Bell size={15} className="text-indigo-400" /> Notifications
+          <Bell size={15} className="text-indigo-400" /> {t.settings.notifications}
         </h3>
         <div className="space-y-3">
           {([
-            { key: "likes", label: "Likes on your posts" },
-            { key: "comments", label: "Comments & replies" },
-            { key: "follows", label: "New followers" },
-            { key: "rewards", label: "Reward earnings" },
-            { key: "ads", label: "Sponsored content updates" },
+            { key: "likes", label: t.settings.notifyLikes },
+            { key: "comments", label: t.settings.notifyComments },
+            { key: "follows", label: t.settings.notifyFollows },
+            { key: "rewards", label: t.settings.notifyRewards },
+            { key: "ads", label: t.settings.notifyAds },
           ] as const).map(item => (
             <div key={item.key} className="flex items-center justify-between py-2">
               <span className="text-sm text-slate-300">{item.label}</span>
@@ -354,13 +356,13 @@ export function SettingsPage() {
       {/* Privacy */}
       <div className="glass rounded-2xl p-5 border border-slate-700/10">
         <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
-          <Eye size={15} className="text-amber-400" /> Privacy
+          <Eye size={15} className="text-amber-400" /> {t.settings.privacy}
         </h3>
         <div className="space-y-3">
           {([
-            { key: "publicProfile", label: "Public profile" },
-            { key: "showBalance", label: "Show token balance" },
-            { key: "showEmail", label: "Show email on profile" },
+            { key: "publicProfile", label: t.settings.publicProfile },
+            { key: "showBalance", label: t.settings.showBalance },
+            { key: "showEmail", label: t.settings.showEmail },
           ] as const).map(item => (
             <div key={item.key} className="flex items-center justify-between py-2">
               <span className="text-sm text-slate-300">{item.label}</span>
@@ -373,19 +375,19 @@ export function SettingsPage() {
       {/* Theme */}
       <div className="glass rounded-2xl p-5 border border-slate-700/10">
         <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
-          <Palette size={15} className="text-purple-400" /> Appearance
+          <Palette size={15} className="text-purple-400" /> {t.settings.appearance}
         </h3>
         <div className="flex gap-3">
           {[
-            { id: "dark", label: "Dark", bg: "#0f172a" },
-            { id: "midnight", label: "Midnight", bg: "#1e1b4b" },
-            { id: "light", label: "Light (soon)", bg: "#f1f5f9" },
-          ].map(t => (
-            <button key={t.id} onClick={() => { if (t.id !== "light") setTheme(t.id); else toast.info("Light theme coming soon!"); }}
-              className={`flex-1 p-3 rounded-xl border-2 transition-all text-center ${theme === t.id ? "border-cyan-500/50 ring-1 ring-cyan-500/20" : "border-slate-700/20 hover:border-slate-600/40"}`}>
-              <div className="w-full h-8 rounded-lg mb-2" style={{ background: t.bg, border: "1px solid rgba(255,255,255,0.1)" }} />
-              <span className="text-xs font-medium text-slate-300">{t.label}</span>
-              {theme === t.id && <CheckCircle size={12} className="text-cyan-400 mx-auto mt-1" />}
+            { id: "dark", label: t.settings.themeDark, bg: "#0f172a" },
+            { id: "midnight", label: t.settings.themeMidnight, bg: "#1e1b4b" },
+            { id: "light", label: t.settings.themeLight, bg: "#f1f5f9" },
+          ].map(th => (
+            <button key={th.id} onClick={() => { if (th.id !== "light") setTheme(th.id); else toast.info(t.settings.lightThemeComing); }}
+              className={`flex-1 p-3 rounded-xl border-2 transition-all text-center ${theme === th.id ? "border-cyan-500/50 ring-1 ring-cyan-500/20" : "border-slate-700/20 hover:border-slate-600/40"}`}>
+              <div className="w-full h-8 rounded-lg mb-2" style={{ background: th.bg, border: "1px solid rgba(255,255,255,0.1)" }} />
+              <span className="text-xs font-medium text-slate-300">{th.label}</span>
+              {theme === th.id && <CheckCircle size={12} className="text-cyan-400 mx-auto mt-1" />}
             </button>
           ))}
         </div>
@@ -394,13 +396,16 @@ export function SettingsPage() {
       {/* Language */}
       <div className="glass rounded-2xl p-5 border border-slate-700/10">
         <h3 className="text-sm font-bold text-slate-300 mb-4 flex items-center gap-2">
-          <Globe size={15} className="text-emerald-400" /> Language
+          <Globe size={15} className="text-emerald-400" /> {t.settings.language}
         </h3>
-        <select className="w-full px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50">
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value as any)}
+          className="w-full px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+        >
           <option value="en">English</option>
+          <option value="ko">한국어</option>
           <option value="th">ไทย</option>
-          <option value="zh">中文</option>
-          <option value="ja">日本語</option>
         </select>
       </div>
     </div>

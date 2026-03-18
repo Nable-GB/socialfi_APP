@@ -3,6 +3,7 @@ import { Music, Play, Pause, Heart, MessageCircle, Trash2, Youtube, Loader2, Ext
 import { musicApi, type ApiTrack } from "../lib/api";
 import { usePlayer } from "../contexts/PlayerContext";
 import { useAuth } from "../contexts/AuthContext";
+import { useLang } from "../contexts/LangContext";
 import { toast } from "sonner";
 
 function formatDuration(sec?: number): string {
@@ -13,25 +14,28 @@ function formatDuration(sec?: number): string {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const { t } = useLang();
   const styles: Record<string, string> = {
     DRAFT: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
     PUBLISHED: "bg-green-500/15 text-green-400 border-green-500/30",
     ARCHIVED: "bg-slate-500/15 text-slate-400 border-slate-500/30",
   };
+  const label = status === "DRAFT" ? t.myMusic.status.draft : status === "PUBLISHED" ? t.myMusic.status.published : t.myMusic.status.archived;
   return (
     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${styles[status] || styles.DRAFT}`}>
-      {status}
+      {label}
     </span>
   );
 }
 
 function DistributionBadge({ status, url }: { status: string; url?: string }) {
+  const { t } = useLang();
   const map: Record<string, { icon: any; color: string; label: string }> = {
-    PENDING: { icon: Clock, color: "text-yellow-400", label: "Queued" },
-    SUBMITTED: { icon: Loader2, color: "text-blue-400", label: "Processing" },
-    LIVE: { icon: CheckCircle, color: "text-green-400", label: "Live" },
-    REJECTED: { icon: AlertCircle, color: "text-red-400", label: "Rejected" },
-    REMOVED: { icon: AlertCircle, color: "text-slate-400", label: "Removed" },
+    PENDING: { icon: Clock, color: "text-yellow-400", label: t.myMusic.distStatus.queued },
+    SUBMITTED: { icon: Loader2, color: "text-blue-400", label: t.myMusic.distStatus.processing },
+    LIVE: { icon: CheckCircle, color: "text-green-400", label: t.myMusic.distStatus.live },
+    REJECTED: { icon: AlertCircle, color: "text-red-400", label: t.myMusic.distStatus.rejected },
+    REMOVED: { icon: AlertCircle, color: "text-slate-400", label: t.myMusic.distStatus.removed },
   };
   const info = map[status] || map.PENDING;
   const Icon = info.icon;
@@ -50,6 +54,7 @@ function DistributionBadge({ status, url }: { status: string; url?: string }) {
 
 export function MyMusicPage() {
   const { isAuthenticated } = useAuth();
+  const { t } = useLang();
   const { currentTrack, isPlaying, play, pause, resume, setQueue } = usePlayer();
   const [tracks, setTracks] = useState<ApiTrack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,15 +68,15 @@ export function MyMusicPage() {
     setLoading(true);
     musicApi.getMyTracks()
       .then(res => setTracks(res.tracks))
-      .catch(() => toast.error("Failed to load tracks"))
+      .catch(() => toast.error(t.distribution.loadFailed))
       .finally(() => setLoading(false));
-  }, [isAuthenticated]);
+  }, [isAuthenticated, t]);
 
   if (!isAuthenticated) {
     return (
       <div className="text-center py-16">
         <Music size={48} className="mx-auto text-slate-600 mb-4" />
-        <h3 className="text-lg font-semibold text-slate-400">Login to view your music</h3>
+        <h3 className="text-lg font-semibold text-slate-400">{t.myMusic.loginToView}</h3>
       </div>
     );
   }
@@ -88,20 +93,20 @@ export function MyMusicPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this track?")) return;
+    if (!confirm(t.myMusic.deletePrompt)) return;
     try {
       await musicApi.deleteTrack(id);
       setTracks(ts => ts.filter(t => t.id !== id));
-      toast.success("Track deleted");
-    } catch { toast.error("Failed to delete"); }
+      toast.success(t.myMusic.trackDeleted);
+    } catch { toast.error(t.myMusic.deleteFailed); }
   };
 
   const handlePublish = async (id: string) => {
     try {
       await musicApi.updateTrack(id, { status: "PUBLISHED" } as any);
       setTracks(ts => ts.map(t => t.id === id ? { ...t, status: "PUBLISHED" as const } : t));
-      toast.success("Track published!");
-    } catch { toast.error("Failed to publish"); }
+      toast.success(t.myMusic.publishSuccess);
+    } catch { toast.error(t.myMusic.publishFailed); }
   };
 
   const handleGlobalDistribute = async (id: string, platform: string) => {
@@ -109,11 +114,11 @@ export function MyMusicPage() {
     setDistModalTrack(null);
     try {
       const res = await musicApi.submitDistribution(id, platform);
-      toast.success(res.message);
+      toast.success(t.myMusic.distributeSuccess);
       const updated = await musicApi.getMyTracks();
       setTracks(updated.tracks);
     } catch (err: any) {
-      toast.error(err.message || "Distribution failed");
+      toast.error(err.message || t.myMusic.distributeFailed);
     } finally {
       setDistributing(null);
     }
@@ -131,9 +136,9 @@ export function MyMusicPage() {
         pricePerFraction: 5,
         royaltyPercent: 10,
       });
-      toast.success("Music NFT minted! Available in NFT marketplace.");
+      toast.success(t.myMusic.mintSuccess);
     } catch (err: any) {
-      toast.error(err.message || "Mint failed");
+      toast.error(err.message || t.myMusic.mintFailed);
     } finally {
       setMinting(null);
     }
@@ -143,9 +148,9 @@ export function MyMusicPage() {
     <div className="max-w-4xl mx-auto px-2">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Music size={24} className="text-cyan-400" /> My Music
+          <Music size={24} className="text-cyan-400" /> {t.myMusic.title}
         </h1>
-        <span className="text-sm text-slate-500">{tracks.length} track{tracks.length !== 1 ? "s" : ""}</span>
+        <span className="text-sm text-slate-500">{tracks.length} {tracks.length !== 1 ? t.myMusic.tracks : t.myMusic.track}</span>
       </div>
 
       {/* Filter tabs */}
@@ -155,7 +160,12 @@ export function MyMusicPage() {
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               filter === f ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "bg-slate-800/40 text-slate-400 border border-slate-700/20"
             }`}>
-            {f === "ALL" ? `All (${tracks.length})` : `${f} (${tracks.filter(t => t.status === f).length})`}
+            {f === "ALL" 
+              ? `${t.myMusic.filterAll} (${tracks.length})` 
+              : f === "PUBLISHED" 
+                ? `${t.myMusic.filterPublished} (${tracks.filter(t => t.status === f).length})`
+                : `${t.myMusic.filterDraft} (${tracks.filter(t => t.status === f).length})`
+            }
           </button>
         ))}
       </div>
@@ -169,8 +179,8 @@ export function MyMusicPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           <Music size={48} className="mx-auto text-slate-600 mb-4" />
-          <h3 className="text-lg font-semibold text-slate-400">No tracks yet</h3>
-          <p className="text-sm text-slate-500 mt-1">Upload your first AI-generated track!</p>
+          <h3 className="text-lg font-semibold text-slate-400">{t.myMusic.noTracks}</h3>
+          <p className="text-sm text-slate-500 mt-1">{t.myMusic.uploadFirst}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -207,10 +217,15 @@ export function MyMusicPage() {
                   <span className="flex items-center gap-0.5"><Heart size={9} /> {track.likeCount}</span>
                   <span className="flex items-center gap-0.5"><MessageCircle size={9} /> {track.commentCount}</span>
                 </div>
-                {/* YouTube distribution status */}
+                {/* Distributions */}
                 {track.distributions && track.distributions.length > 0 && (
-                  <div className="mt-1">
-                    <DistributionBadge status={track.distributions[0].status} url={track.distributions[0].youtubeUrl} />
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {track.distributions.map((dist: any) => (
+                      <div key={dist.id} className="flex items-center gap-1 bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-700/30">
+                        <span className="text-[9px] text-slate-400 font-semibold">{dist.platform?.replace(/_/g, " ") || "Platform"}</span>
+                        <DistributionBadge status={dist.status} url={dist.youtubeUrl || dist.externalUrl} />
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -220,7 +235,7 @@ export function MyMusicPage() {
                 {track.status === "DRAFT" && (
                   <button onClick={() => handlePublish(track.id)}
                     className="px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-colors">
-                    Publish
+                    {t.myMusic.publish}
                   </button>
                 )}
                 {track.status === "PUBLISHED" && (
@@ -228,12 +243,12 @@ export function MyMusicPage() {
                     <button onClick={() => handleMintNFT(track)} disabled={minting === track.id}
                       className="px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-purple-500/15 text-purple-400 border border-purple-500/30 hover:bg-purple-500/25 transition-colors flex items-center gap-1 disabled:opacity-40">
                       {minting === track.id ? <Loader2 size={10} className="animate-spin" /> : <Gem size={10} />}
-                      Mint NFT
+                      {t.myMusic.mintNft}
                     </button>
                     <button onClick={() => setDistModalTrack(track.id)} disabled={distributing === track.id}
                       className="px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors flex items-center gap-1 disabled:opacity-40">
                       {distributing === track.id ? <Loader2 size={10} className="animate-spin" /> : <Globe size={10} />}
-                      Distribute
+                      {t.myMusic.distribute}
                     </button>
                   </>
                 )}
@@ -251,7 +266,7 @@ export function MyMusicPage() {
       {distModalTrack && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60" onClick={() => setDistModalTrack(null)}>
           <div className="rounded-2xl p-5 w-[320px] space-y-3" style={{ background: "rgba(15,23,42,0.98)", border: "1px solid rgba(100,116,139,0.2)" }} onClick={e => e.stopPropagation()}>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2"><Globe size={16} className="text-blue-400" /> Distribute to Platform</h3>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2"><Globe size={16} className="text-blue-400" /> {t.myMusic.distributeTo}</h3>
             {["YOUTUBE_MUSIC", "SPOTIFY", "APPLE_MUSIC", "AMAZON_MUSIC", "TIDAL", "DEEZER"].map(pl => (
               <button key={pl} onClick={() => handleGlobalDistribute(distModalTrack, pl)}
                 className="w-full py-2.5 px-3 rounded-xl text-xs font-medium text-left transition-all hover:bg-slate-700/40 flex items-center gap-2"
@@ -265,7 +280,7 @@ export function MyMusicPage() {
                 <span className="text-slate-300">{pl.replace(/_/g, " ")}</span>
               </button>
             ))}
-            <button onClick={() => setDistModalTrack(null)} className="w-full py-2 text-xs text-slate-500 hover:text-white transition-colors">Cancel</button>
+            <button onClick={() => setDistModalTrack(null)} className="w-full py-2 text-xs text-slate-500 hover:text-white transition-colors">{t.myMusic.cancel}</button>
           </div>
         </div>
       )}

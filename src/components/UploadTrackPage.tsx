@@ -22,10 +22,16 @@ export function UploadTrackPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [genre, setGenre] = useState("OTHER");
-  const [tags, setTags] = useState("");
   const [bpm, setBpm] = useState("");
   const [musicalKey, setMusicalKey] = useState("");
-  const [moodTags, setMoodTags] = useState("");
+  
+  // Tag state
+  const [tagInput, setTagInput] = useState("");
+  const [tagsList, setTagsList] = useState<string[]>([]);
+  
+  const [moodInput, setMoodInput] = useState("");
+  const [moodList, setMoodList] = useState<string[]>([]);
+
   const [publishNow, setPublishNow] = useState(true);
 
   // Copyright declarations
@@ -49,7 +55,7 @@ export function UploadTrackPage() {
     return (
       <div className="text-center py-16">
         <Music size={48} className="mx-auto text-slate-600 mb-4" />
-        <h3 className="text-lg font-semibold text-slate-400">Login to upload tracks</h3>
+        <h3 className="text-lg font-semibold text-slate-400">{t.upload.loginToUpload}</h3>
       </div>
     );
   }
@@ -71,9 +77,9 @@ export function UploadTrackPage() {
     try {
       const res = await uploadApi.uploadAudio(file);
       setAudioUrl(res.url);
-      toast.success("Audio uploaded!");
+      toast.success(t.upload.audioUploaded);
     } catch (err: any) {
-      toast.error(err.message || "Audio upload failed");
+      toast.error(err.message || t.upload.audioUploadFailed);
       setAudioFile(null);
     } finally {
       setUploadingAudio(false);
@@ -89,9 +95,9 @@ export function UploadTrackPage() {
     try {
       const res = await uploadApi.uploadMedia(file);
       setCoverUrl(res.url);
-      toast.success("Cover uploaded!");
+      toast.success(t.upload.coverUploaded);
     } catch (err: any) {
-      toast.error(err.message || "Cover upload failed");
+      toast.error(err.message || t.upload.coverUploadFailed);
       setCoverFile(null);
       setCoverPreview("");
     } finally {
@@ -100,8 +106,8 @@ export function UploadTrackPage() {
   };
 
   const handleSubmit = async () => {
-    if (!title.trim()) { toast.error("Title is required"); return; }
-    if (!audioUrl) { toast.error("Upload an audio file first"); return; }
+    if (!title.trim()) { toast.error(t.upload.titleRequired); return; }
+    if (!audioUrl) { toast.error(t.upload.uploadAudioFirst); return; }
 
     if (!allCopyrightSigned) { toast.error(t.copyright.required); return; }
 
@@ -111,8 +117,8 @@ export function UploadTrackPage() {
         title: title.trim(),
         description: description.trim() || undefined,
         genre: genre as any,
-        tags: tags.split(",").map(tag => tag.trim().toLowerCase()).filter(Boolean),
-        moodTags: moodTags.split(",").map(tag => tag.trim().toLowerCase()).filter(Boolean),
+        tags: tagsList,
+        moodTags: moodList,
         bpm: bpm ? parseInt(bpm) : undefined,
         key: musicalKey || undefined,
         duration: audioDuration ?? undefined,
@@ -121,14 +127,17 @@ export function UploadTrackPage() {
         coverUrl: coverUrl || undefined,
         status: publishNow ? "PUBLISHED" : "DRAFT",
       });
-      toast.success(publishNow ? "Track published!" : "Track saved as draft!");
+      toast.success(publishNow ? t.upload.trackPublished : t.upload.trackDraft);
       // Reset form
-      setTitle(""); setDescription(""); setGenre("OTHER"); setTags(""); setMoodTags(""); setBpm("");
-      setMusicalKey(""); setAudioFile(null); setAudioUrl("");
+      setTitle(""); setDescription(""); setGenre("OTHER"); 
+      setTagsList([]); setTagInput("");
+      setMoodList([]); setMoodInput("");
+      setBpm(""); setMusicalKey(""); 
+      setAudioFile(null); setAudioUrl("");
       setCoverFile(null); setCoverPreview(""); setCoverUrl(""); setAudioDuration(null);
       setCopy1(false); setCopy2(false); setCopy3(false);
     } catch (err: any) {
-      toast.error(err.message || "Failed to create track");
+      toast.error(err.message || t.upload.createFailed);
     } finally {
       setSubmitting(false);
     }
@@ -194,7 +203,7 @@ export function UploadTrackPage() {
               className="w-full p-8 rounded-xl border-2 border-dashed border-slate-700/50 hover:border-cyan-500/50 transition-colors flex flex-col items-center gap-2 text-slate-500 hover:text-cyan-400"
             >
               <Upload size={32} />
-              <span className="text-sm font-medium">Click to upload audio</span>
+              <span className="text-sm font-medium">{t.upload.clickToUpload}</span>
               <span className="text-xs">{t.upload.audioHint}</span>
             </button>
           )}
@@ -228,7 +237,7 @@ export function UploadTrackPage() {
               <button onClick={() => coverInputRef.current?.click()}
                 className="w-24 h-24 rounded-xl border-2 border-dashed border-slate-700/50 hover:border-cyan-500/50 transition-colors flex flex-col items-center justify-center gap-1 text-slate-500 hover:text-cyan-400 flex-shrink-0">
                 <Image size={20} />
-                <span className="text-[10px]">Add Cover</span>
+                <span className="text-[10px]">{t.upload.addCover}</span>
               </button>
             )}
             <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverSelect} />
@@ -255,7 +264,12 @@ export function UploadTrackPage() {
             <label className="block text-xs font-medium text-slate-400 mb-1">{t.upload.genreLabel}</label>
             <select value={genre} onChange={e => setGenre(e.target.value)}
               className="w-full px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50">
-              {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
+              {GENRES.map(g => (
+                <option key={g} value={g}>
+                  {/* @ts-ignore */}
+                  {t.musicFeed.genres[g.toLowerCase()] || g}
+                </option>
+              ))}
             </select>
           </div>
           <div>
@@ -273,15 +287,66 @@ export function UploadTrackPage() {
         {/* Tags */}
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.upload.tagsLabel}</label>
-          <input type="text" value={tags} onChange={e => setTags(e.target.value)} placeholder={t.upload.tagsPlaceholder}
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50" />
+          <div className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 focus-within:border-cyan-500/50 flex flex-wrap gap-2">
+            {tagsList.map((tag, i) => (
+              <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-cyan-500/10 text-cyan-400 text-xs font-medium border border-cyan-500/20">
+                #{tag}
+                <button onClick={() => setTagsList(l => l.filter((_, idx) => idx !== i))} className="hover:text-white"><X size={10} /></button>
+              </span>
+            ))}
+            <input
+              type="text"
+              value={tagInput}
+              onChange={e => setTagInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ',') {
+                  e.preventDefault();
+                  const val = tagInput.trim().toLowerCase();
+                  if (val && !tagsList.includes(val)) {
+                    setTagsList([...tagsList, val]);
+                    setTagInput("");
+                  }
+                } else if (e.key === 'Backspace' && !tagInput && tagsList.length > 0) {
+                  setTagsList(tagsList.slice(0, -1));
+                }
+              }}
+              placeholder={tagsList.length === 0 ? t.upload.tagsPlaceholder : ""}
+              className="bg-transparent border-none outline-none text-sm text-white placeholder-slate-500 flex-1 min-w-[100px]"
+            />
+          </div>
+          <p className="text-[10px] text-slate-500 mt-1">{t.upload.tagHint}</p>
         </div>
 
         {/* Mood Tags */}
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.upload.moodLabel}</label>
-          <input type="text" value={moodTags} onChange={e => setMoodTags(e.target.value)} placeholder={t.upload.moodPlaceholder}
-            className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50" />
+          <div className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 focus-within:border-cyan-500/50 flex flex-wrap gap-2">
+            {moodList.map((mood, i) => (
+              <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-purple-500/10 text-purple-400 text-xs font-medium border border-purple-500/20">
+                {mood}
+                <button onClick={() => setMoodList(l => l.filter((_, idx) => idx !== i))} className="hover:text-white"><X size={10} /></button>
+              </span>
+            ))}
+            <input
+              type="text"
+              value={moodInput}
+              onChange={e => setMoodInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ',') {
+                  e.preventDefault();
+                  const val = moodInput.trim().toLowerCase();
+                  if (val && !moodList.includes(val)) {
+                    setMoodList([...moodList, val]);
+                    setMoodInput("");
+                  }
+                } else if (e.key === 'Backspace' && !moodInput && moodList.length > 0) {
+                  setMoodList(moodList.slice(0, -1));
+                }
+              }}
+              placeholder={moodList.length === 0 ? t.upload.moodPlaceholder : ""}
+              className="bg-transparent border-none outline-none text-sm text-white placeholder-slate-500 flex-1 min-w-[100px]"
+            />
+          </div>
           <p className="text-[10px] text-slate-500 mt-1">{t.upload.moodHint}</p>
         </div>
 

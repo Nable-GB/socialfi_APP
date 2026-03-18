@@ -3,21 +3,8 @@ import { Search, TrendingUp, Clock, Heart, Play, Pause, Music, Sparkles, Zap, Sh
 import { musicApi, type ApiTrack } from "../lib/api";
 import { usePlayer } from "../contexts/PlayerContext";
 import { useAuth } from "../contexts/AuthContext";
+import { useLang } from "../contexts/LangContext";
 import { toast } from "sonner";
-
-const GENRES = [
-  { value: "", label: "All" },
-  { value: "POP", label: "Pop" },
-  { value: "HIPHOP", label: "Hip-Hop" },
-  { value: "RNB", label: "R&B" },
-  { value: "EDM", label: "EDM" },
-  { value: "ROCK", label: "Rock" },
-  { value: "JAZZ", label: "Jazz" },
-  { value: "LOFI", label: "Lo-Fi" },
-  { value: "AMBIENT", label: "Ambient" },
-  { value: "EXPERIMENTAL", label: "Experimental" },
-  { value: "OTHER", label: "Other" },
-];
 
 function formatDuration(sec?: number): string {
   if (!sec) return "--:--";
@@ -33,25 +20,26 @@ function TrackCard({ track, onPlay, isCurrentTrack, isPlaying }: {
   isPlaying: boolean;
 }) {
   const { isAuthenticated } = useAuth();
+  const { t } = useLang();
   const [liked, setLiked] = useState(track.isLiked ?? false);
   const [likeCount, setLikeCount] = useState(track.likeCount || 0);
 
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAuthenticated) { toast.error("Login to like tracks"); return; }
+    if (!isAuthenticated) { toast.error(t.musicFeed.loginToLike); return; }
     try {
       const res = await musicApi.toggleLike(track.id);
       setLiked(res.liked);
       setLikeCount(c => res.liked ? c + 1 : c - 1);
-    } catch { toast.error("Failed to like"); }
+    } catch { toast.error(t.musicFeed.failedToLike); }
   };
 
   return (
     <div
-      className={`group relative rounded-xl overflow-hidden transition-all hover:scale-[1.02] cursor-pointer ${
-        isCurrentTrack ? "ring-2 ring-cyan-500/50" : ""
+      className={`group relative rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.03] cursor-pointer ${
+        isCurrentTrack ? "ring-2 ring-cyan-500/40 shadow-lg shadow-cyan-500/10" : "hover:shadow-lg hover:shadow-cyan-500/5"
       }`}
-      style={{ background: "rgba(30,41,59,0.6)", border: "1px solid rgba(100,116,139,0.15)" }}
+      style={{ background: "rgba(10,16,32,0.8)", border: "1px solid rgba(148,163,184,0.06)" }}
       onClick={() => onPlay(track)}
     >
       {/* Cover */}
@@ -93,11 +81,11 @@ function TrackCard({ track, onPlay, isCurrentTrack, isPlaying }: {
           <button onClick={handleLike} className={`flex items-center gap-1 transition-colors ${liked ? "text-red-400" : "hover:text-red-400"}`}>
             <Heart size={10} fill={liked ? "currentColor" : "none"} /> {likeCount}
           </button>
-          <button onClick={(e) => { e.stopPropagation(); if (!isAuthenticated) { toast.error("Login to boost"); return; } musicApi.boostTrack(track.id).then(r => toast.success(r.message)).catch((err: any) => toast.error(err.message || "Boost failed")); }}
+          <button onClick={(e) => { e.stopPropagation(); if (!isAuthenticated) { toast.error(t.musicFeed.loginToBoost); return; } musicApi.boostTrack(track.id).then(r => toast.success(r.message)).catch((err: any) => toast.error(err.message || t.musicFeed.boostFailed)); }}
             className="flex items-center gap-1 hover:text-yellow-400 transition-colors">
             <Zap size={10} />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); if (!isAuthenticated) { toast.error("Login to repost"); return; } musicApi.repostTrack(track.id).then(r => toast.success(r.message)).catch((err: any) => toast.error(err.message || "Repost failed")); }}
+          <button onClick={(e) => { e.stopPropagation(); if (!isAuthenticated) { toast.error(t.musicFeed.loginToRepost); return; } musicApi.repostTrack(track.id).then(r => toast.success(r.message)).catch((err: any) => toast.error(err.message || t.musicFeed.repostFailed)); }}
             className="flex items-center gap-1 hover:text-green-400 transition-colors">
             <Share2 size={10} />
           </button>
@@ -116,6 +104,21 @@ export function MusicFeedPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const { currentTrack, isPlaying, play, pause, resume, setQueue } = usePlayer();
+  const { t } = useLang();
+
+  const GENRES = [
+    { value: "", label: t.musicFeed.genres.all },
+    { value: "POP", label: t.musicFeed.genres.pop },
+    { value: "HIPHOP", label: t.musicFeed.genres.hiphop },
+    { value: "RNB", label: t.musicFeed.genres.rnb },
+    { value: "EDM", label: t.musicFeed.genres.edm },
+    { value: "ROCK", label: t.musicFeed.genres.rock },
+    { value: "JAZZ", label: t.musicFeed.genres.jazz },
+    { value: "LOFI", label: t.musicFeed.genres.lofi },
+    { value: "AMBIENT", label: t.musicFeed.genres.ambient },
+    { value: "EXPERIMENTAL", label: t.musicFeed.genres.experimental },
+    { value: "OTHER", label: t.musicFeed.genres.other },
+  ];
 
   const fetchTracks = useCallback(async () => {
     setLoading(true);
@@ -124,7 +127,7 @@ export function MusicFeedPage() {
       setTracks(res.tracks);
       setTotalPages(res.pagination.pages);
     } catch (err) {
-      toast.error("Failed to load tracks");
+      toast.error(t.musicFeed.loadFailed);
     } finally {
       setLoading(false);
     }
@@ -141,14 +144,20 @@ export function MusicFeedPage() {
     }
   };
 
+  const sortOptions = [
+    { value: "latest", label: t.musicFeed.sortLatest, icon: Clock },
+    { value: "trending", label: t.musicFeed.sortTrending, icon: TrendingUp },
+    { value: "top", label: t.musicFeed.sortTop, icon: Heart },
+  ] as const;
+
   return (
     <div className="max-w-5xl mx-auto px-2">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Music size={24} className="text-cyan-400" /> Discover Music
+          <Music size={24} className="text-cyan-400" /> {t.musicFeed.title}
         </h1>
-        <p className="text-sm text-slate-400 mt-1">AI-generated tracks from the community</p>
+        <p className="text-sm text-slate-400 mt-1">{t.musicFeed.subtitle}</p>
       </div>
 
       {/* Search + Filters */}
@@ -157,22 +166,20 @@ export function MusicFeedPage() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             type="text"
-            placeholder="Search tracks, artists..."
+            placeholder={t.musicFeed.searchPlaceholder}
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/40 transition-colors"
           />
         </div>
         <div className="flex gap-2">
-          {(["latest", "trending", "top"] as const).map(s => (
-            <button key={s} onClick={() => { setSort(s); setPage(1); }}
+          {sortOptions.map(s => (
+            <button key={s.value} onClick={() => { setSort(s.value); setPage(1); }}
               className={`px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                sort === s ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" : "bg-slate-800/40 text-slate-400 border border-slate-700/20 hover:text-white"
+                sort === s.value ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/25" : "bg-white/[0.03] text-slate-400 border border-white/[0.06] hover:text-white hover:bg-white/[0.06]"
               }`}>
-              {s === "latest" && <Clock size={12} />}
-              {s === "trending" && <TrendingUp size={12} />}
-              {s === "top" && <Heart size={12} />}
-              {s.charAt(0).toUpperCase() + s.slice(1)}
+              <s.icon size={12} />
+              {s.label}
             </button>
           ))}
         </div>
@@ -183,7 +190,7 @@ export function MusicFeedPage() {
         {GENRES.map(g => (
           <button key={g.value} onClick={() => { setGenre(g.value); setPage(1); }}
             className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              genre === g.value ? "bg-cyan-500 text-white" : "bg-slate-800/50 text-slate-400 hover:text-white border border-slate-700/20"
+              genre === g.value ? "bg-cyan-500 text-white shadow-lg shadow-cyan-500/20" : "bg-white/[0.04] text-slate-400 hover:text-white border border-white/[0.06] hover:bg-white/[0.07]"
             }`}>
             {g.label}
           </button>
@@ -194,11 +201,11 @@ export function MusicFeedPage() {
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="rounded-xl overflow-hidden animate-pulse" style={{ background: "rgba(30,41,59,0.4)" }}>
-              <div className="aspect-square bg-slate-700/30" />
+            <div key={i} className="rounded-xl overflow-hidden animate-pulse" style={{ background: "rgba(10,16,32,0.6)" }}>
+              <div className="aspect-square bg-white/[0.03]" />
               <div className="p-3 space-y-2">
-                <div className="h-3 bg-slate-700/30 rounded w-3/4" />
-                <div className="h-2 bg-slate-700/20 rounded w-1/2" />
+                <div className="h-3 bg-white/[0.05] rounded w-3/4" />
+                <div className="h-2 bg-white/[0.03] rounded w-1/2" />
               </div>
             </div>
           ))}
@@ -206,8 +213,8 @@ export function MusicFeedPage() {
       ) : tracks.length === 0 ? (
         <div className="text-center py-16">
           <Music size={48} className="mx-auto text-slate-600 mb-4" />
-          <h3 className="text-lg font-semibold text-slate-400">No tracks found</h3>
-          <p className="text-sm text-slate-500 mt-1">Be the first to upload your AI-generated music!</p>
+          <h3 className="text-lg font-semibold text-slate-400">{t.musicFeed.noTracks}</h3>
+          <p className="text-sm text-slate-500 mt-1">{t.musicFeed.noTracksSub}</p>
         </div>
       ) : (
         <>
@@ -228,12 +235,12 @@ export function MusicFeedPage() {
             <div className="flex justify-center gap-2 mt-8">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
                 className="px-3 py-1.5 rounded-lg text-xs bg-slate-800/50 text-slate-400 disabled:opacity-30 hover:text-white border border-slate-700/20">
-                Prev
+                {t.musicFeed.prev}
               </button>
               <span className="px-3 py-1.5 text-xs text-slate-500">{page} / {totalPages}</span>
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
                 className="px-3 py-1.5 rounded-lg text-xs bg-slate-800/50 text-slate-400 disabled:opacity-30 hover:text-white border border-slate-700/20">
-                Next
+                {t.musicFeed.next}
               </button>
             </div>
           )}
@@ -242,3 +249,4 @@ export function MusicFeedPage() {
     </div>
   );
 }
+

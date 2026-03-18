@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Home, TrendingUp, PlusSquare, User, Users, Wallet, Search,
-  Heart, MessageCircle, Share2,
-  Zap, Star, ShoppingBag, ChevronUp, Flame, Award, Shield,
-  ExternalLink, RefreshCw, Crown, Image,
-  CheckCircle, Globe, Settings, LogOut, Mail, X, ArrowUpRight, Menu,
-  Music, Headphones, Upload, Gem, BarChart3, Trash2
+  Zap, Star, ShoppingBag, ChevronUp, ChevronDown, Flame, Award, Shield,
+  RefreshCw, Crown, Image,
+  Globe, Settings, LogOut, Mail, X, ArrowUpRight, Menu,
+  Music, Headphones, Upload, Gem, BarChart3
 } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import { useLang } from "./contexts/LangContext";
@@ -13,7 +12,7 @@ import { useFeed } from "./hooks/useFeed";
 import { useRewards } from "./hooks/useRewards";
 import { useWallet } from "./hooks/useWallet";
 import { AuthModal } from "./components/AuthModal";
-import { LoginPage } from "./components/LoginPage";
+// LoginPage replaced by SocialMusicFiLanding for unauthenticated users
 import { MarketplacePage } from "./components/MarketplacePage";
 import { CreateAdPage } from "./components/CreateAdPage";
 import { ExplorePage } from "./components/ExplorePage";
@@ -38,6 +37,7 @@ import { MusicNFTPage } from "./components/MusicNFTPage";
 import { RevenueDashboardPage } from "./components/RevenueDashboardPage";
 import { DistributionSubmitPage } from "./components/DistributionSubmitPage";
 import { WalletPage } from "./components/WalletPage";
+import { SocialMusicFiLanding } from "./components/SocialMusicFiLanding";
 import type { ApiPost, ApiComment } from "./lib/api";
 import { authApi, uploadApi } from "./lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -132,18 +132,19 @@ const TOP_SPONSORS = [
 
 function TrendingNFTsWidget() {
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
+  const { t } = useLang();
 
   return (
     <div className="glass rounded-2xl p-4 border border-slate-700/10">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <TrendingUp size={15} className="text-cyan-400" />
-          <span className="font-bold text-sm text-slate-100">Trending Music Albums</span>
+          <span className="font-bold text-sm text-slate-100">{t.feed.trendingAlbums}</span>
         </div>
         <button 
-          onClick={() => toast.info("Full marketplace coming soon! 🛒")}
+          onClick={() => toast.info(t.widgets.fullMarketplaceComing)}
           className="flex items-center gap-1 text-xs hover:text-cyan-400 transition-colors text-slate-500">
-          View all <ChevronUp size={12} className="rotate-90" />
+          {t.feed.viewAll} <ChevronUp size={12} className="rotate-90" />
         </button>
       </div>
 
@@ -179,7 +180,7 @@ function TrendingNFTsWidget() {
       </div>
 
       <button 
-        onClick={() => toast.info("Exploring marketplace... 🌟")}
+        onClick={() => toast.info(t.widgets.exploringMarketplace)}
         className="w-full mt-3 py-2.5 rounded-xl text-xs font-bold transition-all hover:opacity-90"
         style={{
           background:'linear-gradient(135deg, rgba(34,211,238,0.1), rgba(99,102,241,0.1))',
@@ -188,7 +189,7 @@ function TrendingNFTsWidget() {
         }}>
         <span className="flex items-center justify-center gap-1.5">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          Discover New Albums
+          {t.feed.discoverAlbums}
         </span>
       </button>
 
@@ -205,19 +206,19 @@ function TrendingNFTsWidget() {
             <div className="space-y-4 pt-4">
               <img src={selectedNFT.image} alt={selectedNFT.name} className="w-full aspect-square rounded-xl object-cover" />
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-400">Price</span>
+                <span className="text-sm text-slate-400">{t.widgets.price}</span>
                 <span className="text-lg font-bold font-mono" style={{ color: selectedNFT.accent }}>{selectedNFT.price_eth} ETH</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-400">24h Change</span>
+                <span className="text-sm text-slate-400">{t.widgets.change24h}</span>
                 <span className="text-sm font-semibold text-emerald-400">{(selectedNFT as any).change}</span>
               </div>
               <Button 
-                onClick={() => { toast.success("Purchase initiated! 💎"); setSelectedNFT(null); }}
+                onClick={() => { toast.success(t.widgets.purchaseInitiated); setSelectedNFT(null); }}
                 className="w-full"
                 style={{ background: selectedNFT.accent }}
               >
-                Buy Now
+                {t.widgets.buyNow}
               </Button>
             </div>
           )}
@@ -230,13 +231,14 @@ function TrendingNFTsWidget() {
 function TopSponsorsWidget() {
   const tierIcon = (t: string) => ({ Platinum: <Crown size={11} />, Gold: <Star size={11} />, Silver: <Award size={11} />, Bronze: <Shield size={11} /> }[t]);
   const [selectedSponsor, setSelectedSponsor] = useState<typeof TOP_SPONSORS[0] | null>(null);
+  const { t } = useLang();
 
   return (
     <div className="glass rounded-2xl p-4 border border-slate-700/10">
       <div className="flex items-center gap-2 mb-4">
         <Flame size={15} className="text-orange-500" />
-        <span className="font-bold text-sm text-slate-100">Top Sponsors</span>
-        <span className="text-xs ml-auto text-slate-600 font-mono">This Week</span>
+        <span className="font-bold text-sm text-slate-100">{t.feed.topSponsors}</span>
+        <span className="text-xs ml-auto text-slate-600 font-mono">{t.feed.thisWeek}</span>
       </div>
 
       <div className="space-y-2">
@@ -251,12 +253,16 @@ function TopSponsorsWidget() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-semibold text-slate-200 truncate">{s.name}</div>
-              <div className="text-xs text-slate-600 font-mono">{s.category}</div>
+              <div className="text-xs text-slate-600 font-mono">
+                {t.widgets.categories[s.category as keyof typeof t.widgets.categories] || s.category}
+              </div>
             </div>
             <div className="text-right">
               <div className="flex items-center gap-1 justify-end mb-0.5 text-[10px]" style={{ color: s.color }}>
                 {tierIcon(s.tier)}
-                <span className="font-mono font-semibold">{s.tier}</span>
+                <span className="font-mono font-semibold">
+                  {t.widgets.tiers[s.tier as keyof typeof t.widgets.tiers] || s.tier}
+                </span>
               </div>
               <div className="text-xs text-slate-600 font-mono">{s.spent}</div>
             </div>
@@ -265,13 +271,13 @@ function TopSponsorsWidget() {
       </div>
 
       <div className="mt-3 p-3 rounded-xl text-center bg-amber-500/5 border border-amber-500/20">
-        <p className="text-xs font-semibold text-amber-400">💡 Become a sponsor</p>
-        <p className="text-xs mt-1 text-slate-500">Reach 50K+ Web3 users</p>
+        <p className="text-xs font-semibold text-amber-400">💡 {t.feed.becomeSponsor}</p>
+        <p className="text-xs mt-1 text-slate-500">{t.feed.reach50k}</p>
         <button 
-          onClick={() => toast.info("Campaign creation coming soon! 🚀")}
+          onClick={() => toast.info(t.widgets.campaignComing)}
           className="mt-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:opacity-90"
           style={{background:'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(239,68,68,0.15))', border:'1px solid rgba(245,158,11,0.3)', color:'#fbbf24'}}>
-          Create Ad Campaign
+          {t.nav.createAd}
         </button>
       </div>
 
@@ -284,26 +290,26 @@ function TopSponsorsWidget() {
               {selectedSponsor?.name}
             </DialogTitle>
             <DialogDescription className="text-slate-400">
-              {selectedSponsor?.category} · {selectedSponsor?.tier} Sponsor
+              {selectedSponsor && (t.widgets.categories[selectedSponsor.category as keyof typeof t.widgets.categories] || selectedSponsor.category)} · {selectedSponsor && (t.widgets.tiers[selectedSponsor.tier as keyof typeof t.widgets.tiers] || selectedSponsor.tier)} {t.widgets.sponsor}
             </DialogDescription>
           </DialogHeader>
           {selectedSponsor && (
             <div className="space-y-4 pt-4">
               <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl">
-                <span className="text-sm text-slate-400">Total Spent</span>
+                <span className="text-sm text-slate-400">{t.widgets.totalSpent}</span>
                 <span className="text-lg font-bold font-mono" style={{ color: selectedSponsor.color }}>{selectedSponsor.spent}</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl">
-                <span className="text-sm text-slate-400">Tier</span>
+                <span className="text-sm text-slate-400">{t.widgets.tier}</span>
                 <span className="text-sm font-semibold flex items-center gap-1" style={{ color: selectedSponsor.color }}>
-                  {tierIcon(selectedSponsor.tier)} {selectedSponsor.tier}
+                  {tierIcon(selectedSponsor.tier)} {t.widgets.tiers[selectedSponsor.tier as keyof typeof t.widgets.tiers] || selectedSponsor.tier}
                 </span>
               </div>
               <Button 
-                onClick={() => { toast.success(`Visiting ${selectedSponsor.name}... 🔗`); setSelectedSponsor(null); }}
+                onClick={() => { toast.success(`${t.widgets.visiting} ${selectedSponsor.name}... 🔗`); setSelectedSponsor(null); }}
                 className="w-full bg-indigo-500 hover:bg-indigo-600"
               >
-                Visit Website
+                {t.widgets.visitWebsite}
               </Button>
             </div>
           )}
@@ -338,6 +344,16 @@ function LangSwitcher() {
         }`}>
         한국어
       </button>
+      <div className="w-px h-4 bg-slate-700/50" />
+      <button
+        onClick={() => setLang('th')}
+        className={`px-2.5 py-1.5 text-xs font-bold transition-all ${
+          lang === 'th'
+            ? 'bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 text-cyan-400'
+            : 'text-slate-500 hover:text-slate-300'
+        }`}>
+        ไทย
+      </button>
     </div>
   );
 }
@@ -361,26 +377,25 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
   const handleConnectWallet = async () => {
     try {
       const addr = await wallet.connect();
-      toast.success(`Wallet connected: ${addr.slice(0, 6)}...${addr.slice(-4)}`);
+      toast.success(`${t.auth.walletConnected} ${addr.slice(0, 6)}...${addr.slice(-4)}`);
     } catch (err: any) {
       if (err?.code === 4001) {
-        toast.error("Connection rejected by user");
+        toast.error(t.auth.connectionRejected);
       } else if (!wallet.hasMetaMask) {
-        toast.error("Please install MetaMask extension");
+        toast.error(t.auth.metaMaskNotFound);
       } else {
-        toast.error(err?.message || "Failed to connect wallet");
+        toast.error(err?.message || t.auth.connectionFailed);
       }
     }
   };
 
   return (
-    <header className="glass sticky top-0 z-50 border-b border-slate-700/10">
+    <header className="sticky top-0 z-50 border-b border-white/[0.04]" style={{ background: 'rgba(3,7,17,0.92)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
       <div className="max-w-screen-xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
         {/* Logo */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-gradient-to-br from-cyan-400 to-indigo-500"
-            style={{boxShadow:'0 0 12px rgba(34,211,238,0.4)'}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+          <div className="w-7 h-7 rounded-lg overflow-hidden bg-slate-900" style={{ boxShadow: '0 0 12px rgba(34,211,238,0.4)' }}>
+            <img src="/smfi-logo.jpeg" alt="SMFI logo" className="w-full h-full object-cover" />
           </div>
           <div className="hidden sm:flex flex-col leading-none">
             <span className="font-extrabold text-sm tracking-tight shimmer-text">SMFI</span>
@@ -389,7 +404,7 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
         </div>
 
         {/* Search */}
-        <div className="hidden md:flex flex-1 max-w-sm items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/70 border border-slate-700/20">
+        <div className="hidden md:flex flex-1 max-w-sm items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
           <Search size={14} className="text-slate-500" />
           <input placeholder={tHeader.searchPlaceholder} className="bg-transparent text-sm outline-none w-full text-slate-300" />
         </div>
@@ -428,7 +443,7 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
               ) : (
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21.3 3L13 8.9l1.5-3.6L21.3 3z" fill="#E17726"/><path d="M2.7 3l8.2 6-1.4-3.7L2.7 3zM18.2 17l-2.2 3.3 4.7 1.3 1.3-4.6h-3.8zM2 17l1.3 4.6 4.7-1.3L5.8 17H2z" fill="#E27625"/></svg>
               )}
-              <span className="hidden sm:inline">{wallet.isConnecting ? "Connecting..." : "Connect Wallet"}</span>
+              <span className="hidden sm:inline">{wallet.isConnecting ? t.header.connecting : t.header.connectWallet}</span>
             </button>
           )}
 
@@ -495,6 +510,8 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
 
 function DesktopNavUserChip({ onOpenAuth }: { onOpenAuth: () => void }) {
   const { user, isAuthenticated, logout } = useAuth();
+  const { t } = useLang();
+  
   if (!isAuthenticated) {
     return (
       <div className="mt-auto pt-6 pb-2">
@@ -502,7 +519,7 @@ function DesktopNavUserChip({ onOpenAuth }: { onOpenAuth: () => void }) {
           onClick={onOpenAuth}
           className="w-full py-2.5 rounded-xl text-sm font-bold transition-all"
           style={{background:'linear-gradient(135deg,rgba(99,102,241,0.2),rgba(168,85,247,0.15))',border:'1px solid rgba(99,102,241,0.35)',color:'#a5b4fc'}}>
-          Sign In / Register
+          {t.header.signInRegister}
         </button>
       </div>
     );
@@ -518,7 +535,7 @@ function DesktopNavUserChip({ onOpenAuth }: { onOpenAuth: () => void }) {
           <p className="text-xs truncate text-slate-600 font-mono">@{user?.username}</p>
         </div>
         <button
-          onClick={() => { logout(); toast.info('Signed out'); }}
+          onClick={() => { logout(); toast.info(t.header.signedOut); }}
           className="text-slate-500 hover:text-red-400 ml-auto flex-shrink-0 p-1 rounded-lg hover:bg-slate-700 transition-colors">
           <LogOut size={14} />
         </button>
@@ -528,55 +545,89 @@ function DesktopNavUserChip({ onOpenAuth }: { onOpenAuth: () => void }) {
 }
 
 function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string; setActiveNav: (id: string) => void; onOpenAuth: () => void }) {
+  const { user } = useAuth();
   const { t } = useLang();
-  const nav = t.nav;
-  const navItems = [
-    { id: "feed", icon: Home, label: nav.homeFeed },
-    { id: "music", icon: Headphones, label: nav.discoverMusic },
-    { id: "upload-track", icon: Upload, label: nav.uploadTrack },
-    { id: "my-music", icon: Music, label: nav.myMusic },
-    { id: "music-nfts", icon: Gem, label: nav.musicNFTs },
-    { id: "revenue", icon: BarChart3, label: nav.revenue },
-    { id: "distribution", icon: Globe, label: nav.distribution },
-    { id: "market", icon: ShoppingBag, label: nav.marketplace },
-    { id: "create", icon: PlusSquare, label: nav.createAd },
-    { id: "profile", icon: User, label: nav.myProfile },
-    { id: "explore", icon: Globe, label: nav.explore },
-    { id: "nft-market", icon: Image, label: nav.nftMarket },
-    { id: "my-nfts", icon: Image, label: nav.myNFTs },
-    { id: "referrals", icon: Users, label: nav.referrals },
-    { id: "analytics", icon: TrendingUp, label: nav.analytics },
-    { id: "subscription", icon: Crown, label: nav.subscription },
-    { id: "services", icon: ShoppingBag, label: nav.services },
-    { id: "wallet", icon: Wallet, label: nav.wallet ?? "Wallet" },
-    { id: "transactions", icon: ArrowUpRight, label: nav.transactions },
-    { id: "settings", icon: Settings, label: nav.settings },
-    ...(useAuth().user?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: nav.admin }] : []),
+  const [meOpen, setMeOpen] = useState(false);
+
+  const mainItems = [
+    { id: "music", icon: Headphones, label: t.nav.listen },
+    { id: "feed", icon: Home, label: t.nav.community },
+    { id: "upload-track", icon: Upload, label: t.nav.upload },
+    { id: "explore", icon: Globe, label: t.nav.explore },
   ];
+
+  const meItems = [
+    { id: "profile", icon: User, label: t.nav.myProfile },
+    { id: "my-music", icon: Music, label: t.nav.myMusic },
+    { id: "revenue", icon: BarChart3, label: t.nav.revenue },
+    { id: "music-nfts", icon: Gem, label: t.nav.musicNFTs },
+    { id: "wallet", icon: Wallet, label: t.nav.wallet },
+    { id: "distribution", icon: Globe, label: t.nav.distribution },
+    { id: "market", icon: ShoppingBag, label: t.nav.marketplace },
+    { id: "create", icon: PlusSquare, label: t.nav.createAd },
+    { id: "nft-market", icon: Image, label: t.nav.nftMarket },
+    { id: "my-nfts", icon: Image, label: t.nav.myNFTs },
+    { id: "referrals", icon: Users, label: t.nav.referrals },
+    { id: "analytics", icon: TrendingUp, label: t.nav.analytics },
+    { id: "subscription", icon: Crown, label: t.nav.subscription },
+    { id: "services", icon: ShoppingBag, label: t.nav.services },
+    { id: "transactions", icon: ArrowUpRight, label: t.nav.transactions },
+    { id: "settings", icon: Settings, label: t.nav.settings },
+    ...(user?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: t.nav.admin }] : []),
+  ];
+
+  const isInMe = meItems.some(i => i.id === activeNav);
 
   return (
     <nav className="sticky top-14 pt-6 flex flex-col gap-1 h-fit">
-      {navItems.map(item => (
+      {mainItems.map(item => (
         <button
           key={item.id}
-          onClick={() => setActiveNav(item.id)}
-          className={`nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all ${activeNav === item.id ? 'active' : ''}`}
+          onClick={() => { setActiveNav(item.id); setMeOpen(false); }}
+          className={`nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all ${activeNav === item.id && !isInMe ? 'active' : ''}`}
           style={{
-            color: activeNav === item.id ? '#22d3ee' : '#94a3b8',
-            fontWeight: activeNav === item.id ? 600 : 400,
-            borderLeft: activeNav === item.id ? '' : '3px solid transparent',
+            color: activeNav === item.id && !isInMe ? '#22d3ee' : '#94a3b8',
+            fontWeight: activeNav === item.id && !isInMe ? 600 : 400,
+            borderLeft: activeNav === item.id && !isInMe ? '' : '3px solid transparent',
           }}>
           <item.icon size={18} />
           <span className="text-sm">{item.label}</span>
-          {item.id === 'market' && (
-            <span className="ml-auto text-xs px-1.5 py-0.5 rounded font-bold bg-cyan-400/10 text-cyan-400 font-mono text-[9px]">
-              NEW
-            </span>
-          )}
         </button>
       ))}
 
-      {/* User chip */}
+      {/* Me section */}
+      <button
+        onClick={() => setMeOpen(!meOpen)}
+        className={`nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all ${isInMe ? 'active' : ''}`}
+        style={{
+          color: isInMe ? '#22d3ee' : '#94a3b8',
+          fontWeight: isInMe ? 600 : 400,
+          borderLeft: isInMe ? '' : '3px solid transparent',
+        }}>
+        <User size={18} />
+        <span className="text-sm">{t.nav.me}</span>
+        <ChevronUp size={14} className={`ml-auto transition-transform ${meOpen || isInMe ? '' : 'rotate-180'}`} />
+      </button>
+
+      {(meOpen || isInMe) && (
+        <div className="ml-3 pl-4 border-l border-slate-700/20 space-y-0.5 fade-in">
+          {meItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveNav(item.id)}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all w-full ${activeNav === item.id ? '' : 'hover:bg-white/[0.03]'}`}
+              style={{
+                color: activeNav === item.id ? '#22d3ee' : '#64748b',
+                fontWeight: activeNav === item.id ? 600 : 400,
+                background: activeNav === item.id ? 'rgba(34,211,238,0.08)' : undefined,
+              }}>
+              <item.icon size={14} />
+              <span className="text-xs">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <DesktopNavUserChip onOpenAuth={onOpenAuth} />
     </nav>
   );
@@ -588,33 +639,32 @@ function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTa
   const [moreOpen, setMoreOpen] = useState(false);
   const { user: authUser } = useAuth();
   const { t } = useLang();
-  const nav = t.nav;
 
   const mainItems = [
-    { id: "feed", icon: Home, label: nav.homeFeed },
-    { id: "music", icon: Headphones, label: nav.discoverMusic },
-    { id: "upload-track", icon: Upload, label: nav.uploadTrack },
-    { id: "profile", icon: User, label: nav.myProfile },
+    { id: "music", icon: Headphones, label: t.nav.listen },
+    { id: "feed", icon: Home, label: t.nav.community },
+    { id: "upload-track", icon: Upload, label: t.nav.upload },
+    { id: "profile", icon: User, label: t.nav.me },
   ];
 
   const moreItems = [
-    { id: "my-music", icon: Music, label: nav.myMusic },
-    { id: "music-nfts", icon: Gem, label: nav.musicNFTs },
-    { id: "revenue", icon: BarChart3, label: nav.revenue },
-    { id: "distribution", icon: Globe, label: nav.distribution },
-    { id: "market", icon: ShoppingBag, label: nav.marketplace },
-    { id: "create", icon: PlusSquare, label: nav.createAd },
-    { id: "explore", icon: Globe, label: nav.explore },
-    { id: "nft-market", icon: Image, label: nav.nftMarket },
-    { id: "my-nfts", icon: Image, label: nav.myNFTs },
-    { id: "referrals", icon: Users, label: nav.referrals },
-    { id: "analytics", icon: TrendingUp, label: nav.analytics },
-    { id: "subscription", icon: Crown, label: nav.subscription },
-    { id: "services", icon: ShoppingBag, label: nav.services },
-    { id: "wallet", icon: Wallet, label: nav.wallet ?? "Wallet" },
-    { id: "transactions", icon: ArrowUpRight, label: nav.transactions },
-    { id: "settings", icon: Settings, label: nav.settings },
-    ...(authUser?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: nav.admin }] : []),
+    { id: "my-music", icon: Music, label: t.nav.myMusic },
+    { id: "music-nfts", icon: Gem, label: t.nav.musicNFTs },
+    { id: "revenue", icon: BarChart3, label: t.nav.revenue },
+    { id: "distribution", icon: Globe, label: t.nav.distribution },
+    { id: "market", icon: ShoppingBag, label: t.nav.marketplace },
+    { id: "create", icon: PlusSquare, label: t.nav.createAd },
+    { id: "explore", icon: Globe, label: t.nav.explore },
+    { id: "nft-market", icon: Image, label: t.nav.nftMarket },
+    { id: "my-nfts", icon: Image, label: t.nav.myNFTs },
+    { id: "referrals", icon: Users, label: t.nav.referrals },
+    { id: "analytics", icon: TrendingUp, label: t.nav.analytics },
+    { id: "subscription", icon: Crown, label: t.nav.subscription },
+    { id: "services", icon: ShoppingBag, label: t.nav.services },
+    { id: "wallet", icon: Wallet, label: t.nav.wallet },
+    { id: "transactions", icon: ArrowUpRight, label: t.nav.transactions },
+    { id: "settings", icon: Settings, label: t.nav.settings },
+    ...(authUser?.role === "ADMIN" ? [{ id: "admin", icon: Shield, label: t.nav.admin }] : []),
   ];
 
   const isMoreActive = moreItems.some(i => i.id === mobileTab);
@@ -623,21 +673,21 @@ function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTa
     <>
       {/* More drawer overlay */}
       {moreOpen && (
-        <div className="fixed inset-0 z-[60] bg-black/50 lg:hidden" onClick={() => setMoreOpen(false)}>
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setMoreOpen(false)}>
           <div
-            className="absolute bottom-0 inset-x-0 rounded-t-2xl p-4 pb-24"
-            style={{ background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)" }}
+            className="absolute bottom-0 inset-x-0 rounded-t-2xl p-4 pb-24 slide-up-modal"
+            style={{ background: "linear-gradient(180deg, #111827 0%, #030711 100%)", border: "1px solid rgba(148,163,184,0.07)" }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="w-10 h-1 rounded-full bg-slate-600 mx-auto mb-4" />
-            <h3 className="text-sm font-bold text-slate-300 mb-3 px-1">More</h3>
+            <div className="w-10 h-1 rounded-full bg-slate-700 mx-auto mb-4" />
+            <h3 className="text-sm font-bold text-slate-300 mb-3 px-1">{t.nav.more}</h3>
             <div className="grid grid-cols-4 gap-2">
               {moreItems.map(item => (
                 <button
                   key={item.id}
                   onClick={() => { setMobileTab(item.id); setMoreOpen(false); }}
                   className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all ${
-                    mobileTab === item.id ? "bg-cyan-500/15 border border-cyan-500/30" : "bg-slate-800/60 border border-slate-700/20 hover:bg-slate-700/40"
+                    mobileTab === item.id ? "bg-cyan-500/15 border border-cyan-500/30" : "bg-white/[0.03] border border-white/[0.04] hover:bg-white/[0.06]"
                   }`}
                 >
                   <item.icon size={20} style={{ color: mobileTab === item.id ? "#22d3ee" : "#94a3b8" }} />
@@ -652,21 +702,22 @@ function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTa
       )}
 
       {/* Bottom bar */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 glass border-t border-slate-700/20 flex lg:hidden">
+      <nav className="fixed bottom-0 inset-x-0 z-50 border-t border-white/[0.04] flex lg:hidden"
+        style={{ background: "rgba(3,7,17,0.95)", backdropFilter: "blur(20px)" }}>
         {mainItems.map(item => (
           <button key={item.id} onClick={() => { setMobileTab(item.id); setMoreOpen(false); }}
             className={`bnav-item flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all ${mobileTab === item.id && !isMoreActive ? 'active' : ''}`}
-            style={{color: mobileTab === item.id && !isMoreActive ? '#22d3ee' : '#64748b'}}>
+            style={{color: mobileTab === item.id && !isMoreActive ? '#22d3ee' : '#475569'}}>
             <item.icon size={20} className="bnav-icon" />
-            <span className="text-[10px] font-mono" style={{fontWeight: mobileTab === item.id && !isMoreActive ? 600 : 400}}>{item.label}</span>
+            <span className="text-[10px]" style={{fontWeight: mobileTab === item.id && !isMoreActive ? 600 : 400}}>{item.label}</span>
           </button>
         ))}
         {/* More button */}
         <button onClick={() => setMoreOpen(!moreOpen)}
           className={`bnav-item flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all ${isMoreActive || moreOpen ? 'active' : ''}`}
-          style={{color: isMoreActive || moreOpen ? '#22d3ee' : '#64748b'}}>
+          style={{color: isMoreActive || moreOpen ? '#22d3ee' : '#475569'}}>
           <Menu size={20} className="bnav-icon" />
-          <span className="text-[10px] font-mono" style={{fontWeight: isMoreActive || moreOpen ? 600 : 400}}>More</span>
+          <span className="text-[10px]" style={{fontWeight: isMoreActive || moreOpen ? 600 : 400}}>{t.nav.more}</span>
         </button>
       </nav>
     </>
@@ -675,252 +726,11 @@ function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTa
 
 // ─── Real API Feed Components ────────────────────────────────────────────────
 
-function RealFeedPost({ post, onClaimReward, onLike, onComment, onClaimAdReward, onDelete, onGetComments }: {
-  post: ApiPost;
-  onClaimReward: (postId: string, type: 'VIEW' | 'ENGAGEMENT', amount: string) => void;
-  onLike: (postId: string) => Promise<void>;
-  onComment: (postId: string, text: string) => Promise<void>;
-  onClaimAdReward: (postId: string, type: 'VIEW' | 'ENGAGEMENT') => Promise<{ type: string; amount: string; postId: string }>;
-  onDelete: (postId: string) => Promise<void>;
-  onGetComments: (postId: string, cursor?: string) => Promise<{ comments: ApiComment[]; nextCursor: string | null; hasMore: boolean }>;
-}) {
-  const { isAuthenticated, user } = useAuth();
-  const [liked, setLiked] = useState((post.userInteractions ?? []).includes('LIKE'));
-  const [likeCount, setLikeCount] = useState(post.likesCount ?? 0);
-  const [commentOpen, setCommentOpen] = useState(false);
-  const [commentText, setCommentText] = useState('');
-  const [commentCount, setCommentCount] = useState(post.commentsCount ?? 0);
-  const [comments, setComments] = useState<ApiComment[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
-  const [commentsLoadingMore, setCommentsLoadingMore] = useState(false);
-  const [commentsCursor, setCommentsCursor] = useState<string | null>(null);
-  const [commentsHasMore, setCommentsHasMore] = useState(false);
-  const isOwner = isAuthenticated && user?.id === post.author.id;
-
-  const handleLike = async () => {
-    if (!isAuthenticated) { toast.error('Sign in to interact'); return; }
-    setLiked(p => !p);
-    setLikeCount(p => liked ? p - 1 : p + 1);
-    await onLike(post.id);
-  };
-
-  const handleOpenComments = async () => {
-    setCommentOpen(true);
-    if (comments.length === 0) {
-      setCommentsLoading(true);
-      const res = await onGetComments(post.id);
-      setComments(res.comments);
-      setCommentsCursor(res.nextCursor);
-      setCommentsHasMore(res.hasMore);
-      setCommentsLoading(false);
-    }
-  };
-
-  const handleLoadMoreComments = async () => {
-    if (!commentsCursor || commentsLoadingMore) return;
-    setCommentsLoadingMore(true);
-    const res = await onGetComments(post.id, commentsCursor);
-    setComments(prev => [...prev, ...res.comments]);
-    setCommentsCursor(res.nextCursor);
-    setCommentsHasMore(res.hasMore);
-    setCommentsLoadingMore(false);
-  };
-
-  const handleComment = async () => {
-    if (!commentText.trim()) return;
-    await onComment(post.id, commentText);
-    const newComment: ApiComment = {
-      id: `temp-${Date.now()}`,
-      text: commentText,
-      createdAt: new Date().toISOString(),
-      author: {
-        id: user?.id ?? '',
-        username: user?.username ?? '',
-        displayName: user?.displayName,
-        avatarUrl: user?.avatarUrl,
-        isVerified: user?.isVerified ?? false,
-      },
-    };
-    setComments(prev => [newComment, ...prev]);
-    setCommentCount(p => p + 1);
-    setCommentText('');
-  };
-
-  const handleDelete = async () => {
-    if (!confirm('Delete this post?')) return;
-    await onDelete(post.id);
-  };
-
-  const handleEarn = async () => {
-    if (!isAuthenticated) { toast.error('Sign in to earn tokens'); return; }
-    try {
-      const reward = await onClaimAdReward(post.id, 'VIEW');
-      onClaimReward(post.id, 'VIEW', reward.amount);
-    } catch { /* handled inside hook */ }
-  };
-
-  const avatarUrl = post.author.avatarUrl ?? `https://api.dicebear.com/9.x/avataaars/svg?seed=${post.author.username}`;
-
-  return (
-    <>
-      <article className={`rounded-2xl p-5 feed-item border ${
-        post.isSponsored
-          ? 'border-indigo-500/25 bg-gradient-to-br from-slate-900/90 to-slate-800/80'
-          : 'glass border-slate-700/10'
-      }`}>
-        {post.isSponsored && (
-          <div className="flex items-center gap-2 mb-3 pb-2.5 border-b border-indigo-500/20">
-            <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" style={{boxShadow:'0 0 4px #818cf8'}} />
-            <span className="text-xs font-medium text-indigo-400 font-mono tracking-wider">SPONSORED</span>
-          </div>
-        )}
-        <div className="flex items-start gap-3">
-          <img src={avatarUrl} alt={post.author.username} className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-slate-700/40" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="font-semibold text-sm text-slate-100">{post.author.displayName ?? post.author.username}</span>
-              {post.author.isVerified && <CheckCircle size={13} className="text-cyan-400" />}
-              <span className="text-xs text-slate-600 font-mono">@{post.author.username}</span>
-              <span className="text-xs text-slate-700 font-mono ml-auto">{new Date(post.createdAt).toLocaleDateString()}</span>
-            </div>
-            <p className="mt-2 text-sm leading-relaxed text-slate-300 whitespace-pre-wrap">{post.content}</p>
-          </div>
-        </div>
-
-        {/* Media preview */}
-        {post.mediaUrl && (
-          <div className="mt-3 rounded-xl overflow-hidden border border-slate-700/20 max-h-96 bg-slate-800/30">
-            {post.mediaUrl.match(/\.(mp4|webm|mov)(\?|$)/i) ? (
-              <video
-                src={post.mediaUrl}
-                controls
-                className="w-full max-h-96 object-contain"
-                preload="metadata"
-              />
-            ) : (
-              <img
-                src={post.mediaUrl}
-                alt="Post media"
-                className="w-full max-h-96 object-cover"
-                loading="lazy"
-              />
-            )}
-          </div>
-        )}
-
-        {/* Earn button for sponsored posts */}
-        {post.isSponsored && (
-          <button
-            onClick={handleEarn}
-            disabled={post.rewardClaimed}
-            className="mt-4 w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
-            style={post.rewardClaimed ? {
-              background:'rgba(16,185,129,0.15)', border:'1px solid rgba(16,185,129,0.3)', color:'#34d399', cursor:'default'
-            } : {
-              background:'linear-gradient(135deg,#4f46e5,#7c3aed)', border:'1px solid rgba(99,102,241,0.4)', color:'#fff',
-              boxShadow:'0 4px 15px rgba(99,102,241,0.3)'
-            }}>
-            {post.rewardClaimed
-              ? <><CheckCircle size={15}/> Reward Claimed 🪙</>
-              : <><Zap size={15}/> Watch & Earn {post.rewardPerView ? `${parseFloat(post.rewardPerView).toFixed(3)} tokens` : ''} 🪙</>}
-          </button>
-        )}
-
-        {/* Actions */}
-        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-700/10">
-          <button onClick={handleLike}
-            className="flex items-center gap-1.5 text-slate-400 hover:text-pink-400 transition-colors">
-            <Heart size={16} className={liked ? 'text-pink-400 fill-pink-400' : ''} />
-            <span className="text-xs font-mono">{likeCount}</span>
-          </button>
-          <button onClick={handleOpenComments}
-            className="flex items-center gap-1.5 text-slate-400 hover:text-cyan-400 transition-colors">
-            <MessageCircle size={16} />
-            <span className="text-xs font-mono">{commentCount}</span>
-          </button>
-          <button onClick={() => { navigator.clipboard.writeText(`https://smfi.app/post/${post.id}`); toast.success('Link copied! 📋'); }}
-            className="flex items-center gap-1.5 text-slate-400 hover:text-indigo-400 transition-colors">
-            <Share2 size={16} />
-            <span className="text-xs font-mono">{post.sharesCount}</span>
-          </button>
-          {post.adCampaign?.targetUrl && (
-            <a href={post.adCampaign.targetUrl} target="_blank" rel="noreferrer"
-              className="ml-auto flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300">
-              <ExternalLink size={12} />Learn More
-            </a>
-          )}
-          {isOwner && !post.isSponsored && (
-            <button onClick={handleDelete}
-              className="ml-auto flex items-center gap-1 text-slate-600 hover:text-red-400 transition-colors">
-              <Trash2 size={14} />
-            </button>
-          )}
-        </div>
-      </article>
-
-      <Dialog open={commentOpen} onOpenChange={setCommentOpen}>
-        <DialogContent className="bg-slate-900 border border-slate-700 text-white max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Comments</DialogTitle>
-            <DialogDescription className="text-slate-400">{commentCount} comment{commentCount !== 1 ? 's' : ''}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 pt-2 max-h-[50vh] overflow-y-auto pr-1">
-            {commentsLoading ? (
-              <div className="flex items-center justify-center py-6 text-slate-500">
-                <RefreshCw size={16} className="animate-spin mr-2" /> Loading comments...
-              </div>
-            ) : comments.length === 0 ? (
-              <p className="text-center text-slate-500 text-sm py-6">No comments yet. Be the first!</p>
-            ) : (
-              <>
-                {comments.map(c => (
-                  <div key={c.id} className="flex items-start gap-2.5">
-                    <img
-                      src={c.author.avatarUrl ?? `https://api.dicebear.com/9.x/avataaars/svg?seed=${c.author.username}`}
-                      alt={c.author.username}
-                      className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-slate-700/40"
-                    />
-                    <div className="flex-1 min-w-0 bg-slate-800/50 rounded-xl px-3 py-2">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="text-xs font-semibold text-slate-200">{c.author.displayName ?? c.author.username}</span>
-                        {c.author.isVerified && <CheckCircle size={11} className="text-cyan-400" />}
-                        <span className="text-xs text-slate-600 ml-auto font-mono">{new Date(c.createdAt).toLocaleDateString()}</span>
-                      </div>
-                      <p className="text-sm text-slate-300 leading-relaxed">{c.text}</p>
-                    </div>
-                  </div>
-                ))}
-                {commentsHasMore && (
-                  <button
-                    onClick={handleLoadMoreComments}
-                    disabled={commentsLoadingMore}
-                    className="w-full py-2 text-xs text-slate-500 hover:text-cyan-400 flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    {commentsLoadingMore
-                      ? <><RefreshCw size={12} className="animate-spin" /> Loading...</>
-                      : <><ChevronUp size={12} className="rotate-180" /> Load more comments</>}
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-          {isAuthenticated && (
-            <div className="flex gap-2 pt-3 border-t border-slate-700/30">
-              <Textarea value={commentText} onChange={e => setCommentText(e.target.value)}
-                placeholder="Write a comment..." className="bg-slate-800 border-slate-700 text-white min-h-[60px] resize-none flex-1 text-sm" />
-              <div className="flex flex-col gap-2">
-                <Button onClick={handleComment} disabled={!commentText.trim()} className="bg-cyan-500 hover:bg-cyan-600 h-full">Post</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
+import { FeedPost } from "./components/FeedPost";
 
 function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VIEW' | 'ENGAGEMENT', amount: string) => void }) {
   const { isAuthenticated } = useAuth();
+  const { t } = useLang();
   const { posts, isLoading, isLoadingMore, hasMore, loadMore, createPost, likePost, commentPost, claimAdReward, deletePost, getComments } = useFeed();
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
@@ -929,7 +739,7 @@ function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VI
 
   const handlePost = async () => {
     if (!content.trim()) return;
-    if (!isAuthenticated) { toast.error('Sign in to post'); return; }
+    if (!isAuthenticated) { toast.error(t.feed.signInToPost); return; }
     try {
       setIsPosting(true);
       await createPost(content, mediaUrl || undefined);
@@ -945,7 +755,7 @@ function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VI
       {/* Compose */}
       <div className="glass rounded-2xl p-4 border border-slate-700/10">
         <Textarea value={content} onChange={e => setContent(e.target.value)}
-          placeholder={isAuthenticated ? "What's happening in Web3 today?" : "Sign in to post..."}
+          placeholder={isAuthenticated ? t.feed.whatsHappening : t.feed.signInToPost}
           className="bg-slate-800/60 border-slate-700/20 text-white placeholder:text-slate-500 min-h-[80px] resize-none"
           disabled={!isAuthenticated} />
         {/* Media preview */}
@@ -963,92 +773,102 @@ function RealFeed({ onClaimReward }: { onClaimReward: (postId: string, type: 'VI
             {/* Media upload button */}
             <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all ${uploadingMedia ? 'opacity-50' : 'hover:bg-slate-700/50'} border border-slate-700/30 text-slate-400`}>
               {uploadingMedia ? <RefreshCw size={12} className="animate-spin" /> : <Image size={12} />}
-              {uploadingMedia ? 'Uploading...' : 'Media'}
+              {uploadingMedia ? t.feed.uploading : t.feed.media}
               <input type="file" accept="image/*,video/mp4,video/webm" className="hidden" disabled={uploadingMedia}
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  if (file.size > 10 * 1024 * 1024) { toast.error('Max 10MB'); return; }
+                  if (file.size > 10 * 1024 * 1024) { toast.error(t.feed.maxFileSize); return; }
                   setUploadingMedia(true);
                   try {
                     const res = await uploadApi.media(file);
                     setMediaUrl(res.url);
-                  } catch (err: any) { toast.error(err?.message ?? 'Upload failed'); }
+                  } catch (err: any) { toast.error(err?.message ?? t.feed.uploadFailed); }
                   finally { setUploadingMedia(false); e.target.value = ''; }
                 }} />
             </label>
             <div className="flex-1" />
-            <Button variant="outline" onClick={() => setContent('')} className="border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800">Cancel</Button>
+            <Button variant="outline" onClick={() => setContent('')} className="border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800">{t.feed.cancelBtn}</Button>
             <Button onClick={handlePost} disabled={isPosting || !content.trim()}
               style={{background:'linear-gradient(135deg,#22d3ee,#6366f1)',boxShadow:'0 4px 12px rgba(34,211,238,0.25)'}}>
-              {isPosting ? <><RefreshCw size={14} className="animate-spin mr-1" />Posting...</> : 'Post'}
+              {isPosting ? <><RefreshCw size={14} className="animate-spin mr-1" />{t.feed.posting}</> : t.feed.postBtn}
             </Button>
           </div>
         )}
       </div>
 
-      {/* Feed items */}
+      {/* Feed */}
       {isLoading ? (
         <div className="space-y-4">
-          {[1,2,3].map(i => (
+          {[1, 2, 3].map(i => (
             <div key={i} className="glass rounded-2xl p-5 border border-slate-700/10 animate-pulse">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-full bg-slate-700/60 flex-shrink-0" />
+              <div className="flex gap-3">
+                <div className="w-9 h-9 rounded-full bg-slate-700/50" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-slate-700/60 rounded w-1/3" />
-                  <div className="h-3 bg-slate-700/40 rounded w-full" />
-                  <div className="h-3 bg-slate-700/40 rounded w-4/5" />
+                  <div className="h-3 bg-slate-700/50 rounded w-1/3" />
+                  <div className="h-2 bg-slate-700/30 rounded w-3/4" />
+                  <div className="h-2 bg-slate-700/30 rounded w-1/2" />
                 </div>
-              </div>
-              <div className="mt-4 h-40 bg-slate-700/30 rounded-xl" />
-              <div className="mt-4 flex gap-6">
-                <div className="h-4 bg-slate-700/40 rounded w-10" />
-                <div className="h-4 bg-slate-700/40 rounded w-10" />
-                <div className="h-4 bg-slate-700/40 rounded w-10" />
               </div>
             </div>
           ))}
         </div>
       ) : posts.length === 0 ? (
-        <div className="glass rounded-2xl p-8 text-center border border-slate-700/10">
-          <p className="text-slate-400">No posts yet. Be the first to post!</p>
+        <div className="text-center py-10 text-slate-500">
+          <p>{t.feed.noPosts}</p>
         </div>
       ) : (
-        posts.map(post => (
-          <RealFeedPost
-            key={post.id}
-            post={post}
-            onClaimReward={onClaimReward}
-            onLike={likePost}
-            onComment={commentPost}
-            onClaimAdReward={claimAdReward}
-            onDelete={deletePost}
-            onGetComments={getComments}
-          />
-        ))
-      )}
-
-      {/* Load more */}
-      {hasMore && (
-        <button onClick={loadMore} disabled={isLoadingMore}
-          className="w-full py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-80 bg-slate-800/50 border border-slate-700/10 text-slate-500">
-          {isLoadingMore ? <><RefreshCw size={14} className="animate-spin" /> Loading...</> : <><RefreshCw size={14} /> Load more</>}
-        </button>
+        <div className="space-y-4">
+          {posts.map(post => (
+            <FeedPost
+              key={post.id}
+              post={post}
+              onClaimReward={onClaimReward}
+              onLike={likePost}
+              onComment={commentPost}
+              onClaimAdReward={claimAdReward}
+              onDelete={deletePost}
+              onGetComments={getComments}
+            />
+          ))}
+          {hasMore && (
+            <button onClick={loadMore} disabled={isLoadingMore}
+              className="w-full py-3 rounded-xl glass border border-slate-700/10 text-sm text-slate-400 hover:text-cyan-400 transition-all flex items-center justify-center gap-2">
+              {isLoadingMore ? <RefreshCw size={14} className="animate-spin" /> : <ChevronDown size={14} />}
+              {t.feed.loadMore}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
 }
 
-
-
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const { t } = useLang();
   const { balance, totalEarned, onRewardClaimed } = useRewards();
-  const [mobileTab, setMobileTab] = useState("feed");
-  const [activeNav, setActiveNav] = useState("feed");
+  
+  // Persist navigation state
+  const [mobileTab, setMobileTab] = useState(() => localStorage.getItem("mobileTab") || "music");
+  const [activeNav, setActiveNav] = useState(() => localStorage.getItem("activeNav") || "music");
+
+  useEffect(() => { localStorage.setItem("mobileTab", mobileTab); }, [mobileTab]);
+  useEffect(() => { localStorage.setItem("activeNav", activeNav); }, [activeNav]);
+
   const [authOpen, setAuthOpen] = useState(false);
+  const [showLanding, setShowLanding] = useState(true); // Default true, update effect will handle it
+  
+  // Sync showLanding with auth state once loading finishes
+  useEffect(() => {
+    if (!isLoading) {
+      if (isAuthenticated) setShowLanding(false);
+      else setShowLanding(true);
+    }
+  }, [isLoading, isAuthenticated]);
+
   const [verifyBannerDismissed, setVerifyBannerDismissed] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
 
@@ -1064,6 +884,22 @@ export default function App() {
     return <ResetPasswordPage token={resetToken} onDone={() => { window.history.replaceState({}, "", "/"); window.location.reload(); }} />;
   }
 
+  // Show loading state to prevent flash
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#030711] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-purple-600 animate-pulse" />
+          <div className="flex gap-1">
+            <div className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce" style={{ animationDelay: "0s" }} />
+            <div className="w-2 h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: "0.1s" }} />
+            <div className="w-2 h-2 rounded-full bg-pink-500 animate-bounce" style={{ animationDelay: "0.2s" }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const handleClaimReward = async (_postId: string, _type: 'VIEW' | 'ENGAGEMENT', amount: string) => {
     await onRewardClaimed(amount);
   };
@@ -1072,9 +908,9 @@ export default function App() {
     setSendingVerification(true);
     try {
       await authApi.sendVerification();
-      toast.success("Verification email sent! Check your inbox.");
+      toast.success(t.auth.verificationSent);
     } catch (err: any) {
-      toast.error(err?.message ?? "Failed to send verification email");
+      toast.error(err?.message ?? t.auth.verificationFailed);
     } finally {
       setSendingVerification(false);
     }
@@ -1082,9 +918,17 @@ export default function App() {
 
   const displayBalance = parseFloat(balance).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
-  // Show full-page login when not authenticated
-  if (!isAuthenticated) {
-    return <LoginPage />;
+  // Show landing page for first-time / unauthenticated visitors
+  if (!isAuthenticated && showLanding) {
+    return (
+      <>
+        <SocialMusicFiLanding
+          onLaunchApp={() => setShowLanding(false)}
+          onApplyArtist={() => setAuthOpen(true)}
+        />
+        <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
+      </>
+    );
   }
 
   // Email verification banner — show if user has email but not verified
@@ -1102,12 +946,12 @@ export default function App() {
           <div className="max-w-screen-xl mx-auto px-4 py-2.5 flex items-center gap-3">
             <Mail size={15} className="text-amber-400 flex-shrink-0" />
             <p className="text-xs text-amber-300 flex-1">
-              <strong>Verify your email</strong> to unlock all features and secure your account.
+              {t.auth.verifyEmailBanner}
             </p>
             <button onClick={handleSendVerification} disabled={sendingVerification}
               className="text-xs font-semibold text-amber-400 hover:text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg transition-all disabled:opacity-50 flex items-center gap-1 flex-shrink-0">
               {sendingVerification ? <RefreshCw size={11} className="animate-spin" /> : null}
-              {sendingVerification ? "Sending..." : "Send link"}
+              {sendingVerification ? t.auth.sending : t.auth.sendLink}
             </button>
             <button onClick={() => setVerifyBannerDismissed(true)} className="text-slate-500 hover:text-slate-300 flex-shrink-0">
               <X size={14} />
@@ -1151,11 +995,11 @@ export default function App() {
             <TopSponsorsWidget />
             {/* Stats chip */}
             <div className="glass rounded-2xl p-4 border border-slate-700/10">
-              <p className="text-xs font-semibold mb-3 text-slate-300">Your Stats</p>
+              <p className="text-xs font-semibold mb-3 text-slate-300">{t.profile.yourStats}</p>
               {[
-                { label: "Username", value: isAuthenticated ? `@${user?.username}` : 'Guest', icon: User, color: '#22d3ee' },
-                { label: "Earned", value: `${displayBalance} 🪙`, icon: Zap, color: '#f59e0b' },
-                { label: "Total Earned", value: parseFloat(totalEarned).toFixed(2), icon: Image, color: '#a855f7' },
+                { label: t.profile.username, value: isAuthenticated ? `@${user?.username}` : 'Guest', icon: User, color: '#22d3ee' },
+                { label: t.profile.earned, value: `${displayBalance} 🪙`, icon: Zap, color: '#f59e0b' },
+                { label: t.profile.totalEarned, value: parseFloat(totalEarned).toFixed(2), icon: Image, color: '#a855f7' },
               ].map(s => (
                 <div key={s.label} className="flex items-center justify-between py-2 border-b border-slate-700/10 last:border-0">
                   <div className="flex items-center gap-2">
@@ -1169,7 +1013,7 @@ export default function App() {
                 <button onClick={() => setAuthOpen(true)}
                   className="w-full mt-3 py-2 rounded-xl text-xs font-bold transition-all"
                   style={{background:'linear-gradient(135deg,rgba(34,211,238,0.1),rgba(99,102,241,0.1))',border:'1px solid rgba(34,211,238,0.25)',color:'#67e8f9'}}>
-                  Sign in to earn tokens
+                  {t.feed.signInEarn}
                 </button>
               )}
             </div>

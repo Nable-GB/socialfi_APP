@@ -6,14 +6,14 @@
 
 @layer base {
   :root {
-    --background: 222 47% 3%;
+    --background: 225 55% 2%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 6%;
+    --card: 225 50% 4%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 6%;
+    --popover: 225 50% 4%;
     --popover-foreground: 210 40% 98%;
     --primary: 188 94% 53%;
-    --primary-foreground: 222 47% 3%;
+    --primary-foreground: 225 55% 2%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 4.8% 95.9%;
@@ -22,8 +22,8 @@
     --accent-foreground: 240 5.9% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
+    --border: 220 30% 12%;
+    --input: 220 30% 12%;
     --ring: 188 94% 53%;
     --radius: 0.625rem;
     
@@ -33,11 +33,11 @@
     --pink: #ec4899;
     --gold: #f59e0b;
     --green: #10b981;
-    --bg0: #020617;
-    --bg1: #0f172a;
-    --bg2: #1e293b;
-    --glass: rgba(15, 23, 42, 0.75);
-    --border-color: rgba(148, 163, 184, 0.1);
+    --bg0: #030711;
+    --bg1: #0a1020;
+    --bg2: #111827;
+    --glass: rgba(8, 14, 30, 0.85);
+    --border-color: rgba(148, 163, 184, 0.07);
     --text1: #f1f5f9;
     --text2: #94a3b8;
     --text3: #475569;
@@ -171,12 +171,71 @@
 
 /* Background mesh */
 .bg-mesh {
-  background-color: #020617;
+  background-color: #030711;
   background-image:
-    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99,102,241,0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(168,85,247,0.07) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(34,211,238,0.04) 0%, transparent 60%);
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99,102,241,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(168,85,247,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(34,211,238,0.03) 0%, transparent 60%);
 }
+
+/* ── Now Playing animations ──────────────────────────────────── */
+@keyframes album-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.album-spin {
+  animation: album-spin 12s linear infinite;
+}
+.album-spin.paused {
+  animation-play-state: paused;
+}
+
+@keyframes waveform-bar {
+  0%, 100% { height: 12%; }
+  50%      { height: var(--bar-h, 80%); }
+}
+.waveform-bar {
+  animation: waveform-bar var(--bar-speed, 0.8s) ease-in-out infinite;
+}
+.waveform-bar.paused {
+  animation-play-state: paused;
+  height: 12%;
+}
+
+@keyframes slide-up-modal {
+  from { transform: translateY(100%); opacity: 0.5; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+@keyframes slide-down-modal {
+  from { transform: translateY(0); opacity: 1; }
+  to   { transform: translateY(100%); opacity: 0; }
+}
+.slide-up-modal {
+  animation: slide-up-modal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.slide-down-modal {
+  animation: slide-down-modal 0.3s ease-in forwards;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 30px rgba(34,211,238,0.15), 0 0 60px rgba(99,102,241,0.08); }
+  50%      { box-shadow: 0 0 50px rgba(34,211,238,0.3), 0 0 90px rgba(99,102,241,0.15); }
+}
+.glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.fade-in {
+  animation: fade-in 0.3s ease forwards;
+}
+
+/* Scrollbar hide for genre pills */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* NFT card hover */
 .nft-card { 

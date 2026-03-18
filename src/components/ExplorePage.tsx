@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, TrendingUp, Flame, Users, Hash, Star, Globe, RefreshCw, UserCheck } from "lucide-react";
-import { usersApi, type ApiUser } from "../lib/api";
+import { Search, TrendingUp, Flame, Users, Hash, Star, Globe, RefreshCw, UserCheck, Music } from "lucide-react";
+import { usersApi, musicApi, type ApiUser } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
+import { useLang } from "../contexts/LangContext";
 import { toast } from "sonner";
 
 const TRENDING_TOPICS = [
@@ -17,43 +18,49 @@ type SearchUser = ApiUser & { isFollowing: boolean };
 
 export function ExplorePage() {
   const { isAuthenticated } = useAuth();
+  const { t } = useLang();
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"trending" | "people" | "topics">("trending");
+  const [activeTab, setActiveTab] = useState<"trending" | "people" | "topics" | "tracks">("trending");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
+  const [trackResults, setTrackResults] = useState<any[]>([]); // Use ApiTrack type if available
   const [searching, setSearching] = useState(false);
   const [followingSet, setFollowingSet] = useState<Set<string>>(new Set());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doSearch = useCallback(async (q: string) => {
-    if (!q.trim()) { setSearchResults([]); return; }
+    if (!q.trim()) { setSearchResults([]); setTrackResults([]); return; }
     setSearching(true);
     try {
-      const { users } = await usersApi.search(q);
-      setSearchResults(users);
-      // Seed following state from results
-      const followed = new Set(users.filter(u => u.isFollowing).map(u => u.id));
-      setFollowingSet(followed);
+      if (activeTab === "people") {
+        const { users } = await usersApi.search(q);
+        setSearchResults(users);
+        const followed = new Set(users.filter(u => u.isFollowing).map(u => u.id));
+        setFollowingSet(followed);
+      } else if (activeTab === "tracks") {
+        const { tracks } = await musicApi.getTracks({ search: q, limit: 20 });
+        setTrackResults(tracks);
+      }
     } catch {
       // ignore search errors
     } finally {
       setSearching(false);
     }
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (activeTab === "people") {
+    if (activeTab === "people" || activeTab === "tracks") {
       debounceRef.current = setTimeout(() => doSearch(search), 400);
     }
   }, [search, activeTab, doSearch]);
 
-  // When switching to People tab, load initial results
+  // When switching to People or Tracks tab, load initial results
   useEffect(() => {
-    if (activeTab === "people") doSearch(search || "a");
+    if ((activeTab === "people" || activeTab === "tracks") && search) doSearch(search);
   }, [activeTab]); // eslint-disable-line
 
   const handleToggleFollow = async (user: SearchUser) => {
-    if (!isAuthenticated) { toast.error("Please sign in to follow users"); return; }
+    if (!isAuthenticated) { toast.error(t.explore.signInToFollow); return; }
     try {
       const { following, message } = await usersApi.toggleFollow(user.id);
       setFollowingSet(prev => {
@@ -63,7 +70,7 @@ export function ExplorePage() {
       });
       toast.success(message);
     } catch (err: any) {
-      toast.error(err?.message ?? "Failed to follow user");
+      toast.error(err?.message ?? t.explore.followFailed);
     }
   };
 
@@ -80,15 +87,16 @@ export function ExplorePage() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search people, topics, posts..."
+            placeholder={t.explore.searchPlaceholder}
             className="w-full pl-10 pr-10 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50"
           />
         </div>
         <div className="flex gap-2 mt-3">
           {([
-            { id: "trending", icon: Flame, label: "Trending" },
-            { id: "people", icon: Users, label: "People" },
-            { id: "topics", icon: Hash, label: "Topics" },
+            { id: "trending", icon: Flame, label: t.explore.tabTrending },
+            { id: "people", icon: Users, label: t.explore.tabPeople },
+            { id: "tracks", icon: Music, label: t.explore.tabTracks },
+            { id: "topics", icon: Hash, label: t.explore.tabTopics },
           ] as const).map(tab => (
             <button
               key={tab.id}
@@ -106,7 +114,7 @@ export function ExplorePage() {
       {activeTab === "trending" && (
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <TrendingUp size={18} className="text-cyan-400" /> Trending Now
+            <TrendingUp size={18} className="text-cyan-400" /> {t.explore.trendingNow}
           </h2>
           {[
             { author: "0xNova", content: "Just discovered a new yield farming strategy that's generating 40% APY. Thread 🧵👇", likes: 342, comments: 89 },
@@ -131,12 +139,59 @@ export function ExplorePage() {
         </div>
       )}
 
+      {/* Tracks Tab */}
+      {activeTab === "tracks" && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Music size={18} className="text-pink-400" />
+            {search ? `${t.explore.tracksMatching} "${search}"` : t.explore.discoverTracks}
+          </h2>
+          {searching && (
+            <div className="flex justify-center py-8">
+              <RefreshCw size={20} className="text-slate-500 animate-spin" />
+            </div>
+          )}
+          {!searching && trackResults.length === 0 && (
+            <div className="glass rounded-2xl p-8 border border-slate-700/10 text-center">
+              <Music size={32} className="text-slate-600 mx-auto mb-2" />
+              <p className="text-sm text-slate-400">{t.explore.noTracksFound}{search ? ` ${t.explore.resultsFor} "${search}"` : ""}</p>
+            </div>
+          )}
+          {!searching && trackResults.map((track: any) => (
+            <div key={track.id} className="glass rounded-2xl p-3 border border-slate-700/10 flex items-center gap-3 hover:bg-slate-800/40 transition-all">
+              <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-slate-800">
+                {track.coverUrl ? (
+                  <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900 to-slate-900">
+                    <Music size={16} className="text-slate-600" />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-sm text-white truncate">{track.title}</h3>
+                <p className="text-xs text-slate-400 truncate">{track.artist?.displayName || track.artist?.username}</p>
+                <div className="flex gap-2 mt-1">
+                  {track.tags?.slice(0, 3).map((tag: string) => (
+                    <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-400">#{tag}</span>
+                  ))}
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0 text-[10px] text-slate-500 space-y-1">
+                <div className="flex items-center justify-end gap-1"><TrendingUp size={10} /> {track.playCount}</div>
+                <div className="flex items-center justify-end gap-1"><Star size={10} /> {track.likeCount}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* People — Real API */}
       {activeTab === "people" && (
         <div className="space-y-3">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <Users size={18} className="text-indigo-400" />
-            {search ? `Results for "${search}"` : "Suggested for You"}
+            {search ? `${t.explore.resultsFor} "${search}"` : t.explore.suggestedForYou}
           </h2>
           {searching && (
             <div className="flex justify-center py-8">
@@ -146,7 +201,7 @@ export function ExplorePage() {
           {!searching && searchResults.length === 0 && (
             <div className="glass rounded-2xl p-8 border border-slate-700/10 text-center">
               <Users size={32} className="text-slate-600 mx-auto mb-2" />
-              <p className="text-sm text-slate-400">No users found{search ? ` for "${search}"` : ""}</p>
+              <p className="text-sm text-slate-400">{t.explore.noUsersFound}{search ? ` ${t.explore.resultsFor} "${search}"` : ""}</p>
             </div>
           )}
           {!searching && searchResults.map(user => (
@@ -167,7 +222,7 @@ export function ExplorePage() {
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="text-xs text-slate-500 font-mono mb-1.5">
-                  {(user._count?.followers ?? 0).toLocaleString()} followers
+                  {(user._count?.followers ?? 0).toLocaleString()} {t.explore.followers}
                 </p>
                 {isAuthenticated && (
                   <button
@@ -176,7 +231,7 @@ export function ExplorePage() {
                       ? "bg-slate-800 text-slate-400 border border-slate-700"
                       : "text-white border border-cyan-500/30"}`}
                     style={!followingSet.has(user.id) ? { background: "linear-gradient(135deg, #22d3ee, #6366f1)" } : {}}>
-                    {followingSet.has(user.id) ? <><UserCheck size={11} /> Following</> : "Follow"}
+                    {followingSet.has(user.id) ? <><UserCheck size={11} /> {t.explore.following}</> : t.explore.follow}
                   </button>
                 )}
               </div>
@@ -189,7 +244,7 @@ export function ExplorePage() {
       {activeTab === "topics" && (
         <div className="space-y-3">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Hash size={18} className="text-amber-400" /> Trending Topics
+            <Hash size={18} className="text-amber-400" /> {t.explore.trendingTopics}
           </h2>
           <div className="glass rounded-2xl border border-slate-700/10 overflow-hidden">
             {TRENDING_TOPICS.map((topic, i) => (
@@ -199,7 +254,7 @@ export function ExplorePage() {
                   <span className="text-xs font-mono text-slate-600 w-4">{i + 1}</span>
                   <div>
                     <p className="font-semibold text-sm text-white">{topic.tag}</p>
-                    <p className="text-xs text-slate-500">{topic.posts} posts</p>
+                    <p className="text-xs text-slate-500">{topic.posts} {t.explore.posts}</p>
                   </div>
                 </div>
                 <span className="text-xs font-bold font-mono text-emerald-400">{topic.trend}</span>
@@ -215,8 +270,8 @@ export function ExplorePage() {
         <div className="flex items-center gap-3">
           <Globe size={20} className="text-cyan-400" />
           <div>
-            <p className="text-sm font-bold text-white">Join the SMFI Community</p>
-            <p className="text-xs text-slate-400 mt-0.5">Connect with artists and collectors, earn tokens, and shape the future of music.</p>
+            <p className="text-sm font-bold text-white">{t.explore.joinCommunity}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{t.explore.communityDesc}</p>
           </div>
         </div>
       </div>

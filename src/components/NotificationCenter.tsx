@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNotifications } from "../hooks/useNotifications";
+import { useLang } from "../contexts/LangContext";
 import {
   Bell, Users, Heart, MessageCircle, Zap, ArrowUpRight, Gift,
   CheckCheck, Trash2, X, RefreshCw, Info
@@ -16,14 +17,15 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   SYSTEM:          { icon: <Info size={14} />,            color: "#64748b" },
 };
 
-function timeAgo(dateStr: string): string {
+function TimeAgo({ dateStr }: { dateStr: string }) {
+  const { t } = useLang();
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
+  if (m < 1) return <>{t.notifications.justNow}</>;
+  if (m < 60) return <>{m}{t.notifications.ago.m}</>;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+  if (h < 24) return <>{h}{t.notifications.ago.h}</>;
+  return <>{Math.floor(h / 24)}{t.notifications.ago.d}</>;
 }
 
 function NotifItem({ notif, onRead, onDelete }: { notif: ApiNotification; onRead: (id: string) => void; onDelete: (id: string) => void }) {
@@ -48,7 +50,7 @@ function NotifItem({ notif, onRead, onDelete }: { notif: ApiNotification; onRead
           )}
         </div>
         <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{notif.message}</p>
-        <p className="text-xs text-slate-600 mt-1">{timeAgo(notif.createdAt)}</p>
+        <p className="text-xs text-slate-600 mt-1"><TimeAgo dateStr={notif.createdAt} /></p>
       </div>
 
       {/* Delete button */}
@@ -65,6 +67,7 @@ export function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const { notifications, unreadCount, loading, markRead, markAllRead, deleteNotif } = useNotifications();
+  const { t } = useLang();
 
   // Close on outside click
   useEffect(() => {
@@ -101,7 +104,7 @@ export function NotificationCenter() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/20">
             <div className="flex items-center gap-2">
               <Bell size={14} className="text-cyan-400" />
-              <span className="text-sm font-bold text-white">Notifications</span>
+              <span className="text-sm font-bold text-white">{t.notifications.title}</span>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 text-xs font-bold border border-cyan-500/25">
                   {unreadCount}
@@ -112,7 +115,7 @@ export function NotificationCenter() {
               {unreadCount > 0 && (
                 <button onClick={markAllRead}
                   className="flex items-center gap-1 text-xs text-slate-400 hover:text-cyan-400 transition-colors px-2 py-1 rounded-lg hover:bg-slate-800">
-                  <CheckCheck size={11} /> All read
+                  <CheckCheck size={11} /> {t.notifications.allRead}
                 </button>
               )}
               <button onClick={() => setOpen(false)}
@@ -132,7 +135,7 @@ export function NotificationCenter() {
             {!loading && notifications.length === 0 && (
               <div className="py-10 text-center">
                 <Bell size={28} className="text-slate-700 mx-auto mb-2" />
-                <p className="text-xs text-slate-500">No notifications yet</p>
+                <p className="text-xs text-slate-500">{t.notifications.empty}</p>
               </div>
             )}
             {!loading && notifications.map(n => (
@@ -145,7 +148,7 @@ export function NotificationCenter() {
           {/* Footer */}
           {notifications.length > 0 && (
             <div className="px-4 py-2.5 border-t border-slate-700/20 text-center">
-              <p className="text-xs text-slate-600">{notifications.length} notifications loaded</p>
+              <p className="text-xs text-slate-600">{notifications.length} {t.notifications.loaded}</p>
             </div>
           )}
         </div>

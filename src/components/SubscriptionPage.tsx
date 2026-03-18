@@ -3,6 +3,7 @@ import { subscriptionApi } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { Crown, Check, Zap, Star, RefreshCw, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useLang } from "../contexts/LangContext";
 
 const TIER_COLORS: Record<string, { bg: string; border: string; text: string; badge: string }> = {
   FREE: { bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.2)", text: "#94a3b8", badge: "bg-slate-700/30 text-slate-400" },
@@ -12,6 +13,7 @@ const TIER_COLORS: Record<string, { bg: string; border: string; text: string; ba
 
 export function SubscriptionPage() {
   const { } = useAuth();
+  const { t } = useLang();
   const [tiers, setTiers] = useState<any[]>([]);
   const [mySub, setMySub] = useState<{ tier: string; subscription: any } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,14 +41,14 @@ export function SubscriptionPage() {
       const res = await subscriptionApi.checkout(tierId);
       if (res.checkoutUrl) window.location.href = res.checkoutUrl;
     } catch (err: any) {
-      toast.error(err?.message || "Failed to start checkout");
+      toast.error(err?.message || t.subscription.failedCheckout);
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleCancel = async () => {
-    if (!confirm("Cancel your subscription? You'll keep access until the end of the billing period.")) return;
+    if (!confirm(t.subscription.cancelConfirm)) return;
     setActionLoading("cancel");
     try {
       const res = await subscriptionApi.cancel();
@@ -54,7 +56,7 @@ export function SubscriptionPage() {
       const subRes = await subscriptionApi.getMySubscription();
       setMySub(subRes);
     } catch (err: any) {
-      toast.error(err?.message || "Failed to cancel");
+      toast.error(err?.message || t.subscription.failedCancel);
     } finally {
       setActionLoading(null);
     }
@@ -76,20 +78,20 @@ export function SubscriptionPage() {
             <Crown size={20} className="text-purple-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Subscription Plans</h1>
-            <p className="text-xs text-slate-400">Unlock premium features & boost your experience</p>
+            <h1 className="text-xl font-bold text-white">{t.subscription.title}</h1>
+            <p className="text-xs text-slate-400">{t.subscription.subtitle}</p>
           </div>
         </div>
 
         {/* Current plan badge */}
         <div className="mt-4 flex items-center gap-2">
-          <span className="text-xs text-slate-500">Current plan:</span>
+          <span className="text-xs text-slate-500">{t.subscription.currentPlan}</span>
           <span className={`px-3 py-1 rounded-full text-xs font-bold ${TIER_COLORS[currentTier]?.badge}`}>
             {currentTier}
           </span>
           {mySub?.subscription?.cancelAtPeriodEnd && (
             <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-500/15 text-red-400 border border-red-500/25">
-              Cancels {new Date(mySub.subscription.currentPeriodEnd).toLocaleDateString()}
+              {t.subscription.cancels} {new Date(mySub.subscription.currentPeriodEnd).toLocaleDateString()}
             </span>
           )}
         </div>
@@ -119,7 +121,7 @@ export function SubscriptionPage() {
                 </div>
                 {isCurrent && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: `${colors.text}20`, color: colors.text }}>
-                    CURRENT
+                    {t.subscription.current}
                   </span>
                 )}
               </div>
@@ -127,7 +129,7 @@ export function SubscriptionPage() {
               {/* Price */}
               <div className="mb-4">
                 <span className="text-3xl font-bold text-white">${tier.monthlyPriceUsd}</span>
-                {tier.monthlyPriceUsd > 0 && <span className="text-xs text-slate-500">/month</span>}
+                {tier.monthlyPriceUsd > 0 && <span className="text-xs text-slate-500">{t.subscription.perMonth}</span>}
               </div>
 
               {/* Features */}
@@ -143,7 +145,7 @@ export function SubscriptionPage() {
               {/* Action button */}
               {tier.id === "FREE" ? (
                 isCurrent ? (
-                  <div className="text-center text-xs text-slate-600 py-2">Your current plan</div>
+                  <div className="text-center text-xs text-slate-600 py-2">{t.subscription.yourCurrentPlan}</div>
                 ) : null
               ) : isCurrent ? (
                 <button
@@ -152,7 +154,7 @@ export function SubscriptionPage() {
                   className="w-full py-2.5 rounded-xl text-xs font-medium border border-red-500/25 text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {actionLoading === "cancel" ? <RefreshCw size={12} className="animate-spin" /> : <XCircle size={12} />}
-                  {mySub?.subscription?.cancelAtPeriodEnd ? "Cancellation pending" : "Cancel subscription"}
+                  {mySub?.subscription?.cancelAtPeriodEnd ? t.subscription.cancellationPending : t.subscription.cancelSubscription}
                 </button>
               ) : (isUpgrade || isPremiumUpgrade) ? (
                 <button
@@ -162,7 +164,7 @@ export function SubscriptionPage() {
                   style={{ background: `linear-gradient(135deg, ${colors.text}, ${colors.border})` }}
                 >
                   {actionLoading === tier.id ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
-                  Subscribe to {tier.name}
+                  {t.subscription.subscribeTo} {tier.name}
                 </button>
               ) : null}
             </div>
@@ -173,14 +175,14 @@ export function SubscriptionPage() {
       {/* Subscription details */}
       {mySub?.subscription && (
         <div className="glass rounded-2xl p-4 border border-slate-700/10">
-          <p className="text-xs font-semibold text-slate-400 mb-3">Billing Details</p>
+          <p className="text-xs font-semibold text-slate-400 mb-3">{t.subscription.billingDetails}</p>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
-              <span className="text-slate-500">Status</span>
+              <span className="text-slate-500">{t.subscription.status}</span>
               <p className="text-white font-medium">{mySub.subscription.status}</p>
             </div>
             <div>
-              <span className="text-slate-500">Period</span>
+              <span className="text-slate-500">{t.subscription.period}</span>
               <p className="text-white font-medium">
                 {new Date(mySub.subscription.currentPeriodStart).toLocaleDateString()} - {new Date(mySub.subscription.currentPeriodEnd).toLocaleDateString()}
               </p>

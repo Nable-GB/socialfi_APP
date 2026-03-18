@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { referralApi } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
+import { useLang } from "../contexts/LangContext";
 import {
   Users, Copy, CheckCheck, Zap, Trophy, TrendingUp,
   RefreshCw, Share2, Crown, Star
@@ -39,6 +40,7 @@ const TIER_ICONS: Record<string, React.ReactNode> = {
 
 // ─── Tier Progress Bar ────────────────────────────────────────────────────────
 function TierCard({ tier, referralCount }: { tier: TierInfo; referralCount: number }) {
+  const { t } = useLang();
   return (
     <div className="glass rounded-2xl p-5 border" style={{ borderColor: `${tier.color}30` }}>
       <div className="flex items-center justify-between mb-4">
@@ -48,12 +50,12 @@ function TierCard({ tier, referralCount }: { tier: TierInfo; referralCount: numb
             {TIER_ICONS[tier.label] ?? <Star size={18} />}
           </div>
           <div>
-            <p className="text-xs text-slate-400">Current Tier</p>
+            <p className="text-xs text-slate-400">{t.referral.currentTier}</p>
             <p className="text-lg font-extrabold" style={{ color: tier.color }}>{tier.label}</p>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-xs text-slate-400">Bonus Rate</p>
+          <p className="text-xs text-slate-400">{t.referral.bonusRate}</p>
           <p className="text-2xl font-bold font-mono text-white">{(tier.rate * 100).toFixed(0)}%</p>
         </div>
       </div>
@@ -77,7 +79,7 @@ function TierCard({ tier, referralCount }: { tier: TierInfo; referralCount: numb
           <div className="h-2 rounded-full flex-1 overflow-hidden" style={{ background: `${tier.color}30` }}>
             <div className="h-full rounded-full w-full" style={{ background: tier.color }} />
           </div>
-          <span className="text-xs font-bold" style={{ color: tier.color }}>MAX TIER 🏆</span>
+          <span className="text-xs font-bold" style={{ color: tier.color }}>{t.referral.maxTier} 🏆</span>
         </div>
       )}
     </div>
@@ -86,19 +88,20 @@ function TierCard({ tier, referralCount }: { tier: TierInfo; referralCount: numb
 
 // ─── Referral Link Box ────────────────────────────────────────────────────────
 function ReferralLinkBox({ code, link }: { code: string; link: string }) {
+  const { t } = useLang();
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
 
   const copy = (text: string, type: "code" | "link") => {
     navigator.clipboard.writeText(text);
     setCopied(type);
-    toast.success(type === "code" ? "Referral code copied!" : "Referral link copied!");
+    toast.success(type === "code" ? t.referral.codeCopied : t.referral.linkCopied);
     setTimeout(() => setCopied(null), 2000);
   };
 
   const share = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Join SMFI (Social Music Fi)!", text: "Earn SFT tokens by supporting real artists!", url: link });
+        await navigator.share({ title: t.referral.shareTitle, text: t.referral.shareText, url: link });
       } catch { /* user cancelled */ }
     } else {
       copy(link, "link");
@@ -108,13 +111,13 @@ function ReferralLinkBox({ code, link }: { code: string; link: string }) {
   return (
     <div className="glass rounded-2xl p-5 border border-slate-700/10 space-y-3">
       <p className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-        <Share2 size={12} className="text-cyan-400" /> Your Referral Link
+        <Share2 size={12} className="text-cyan-400" /> {t.referral.yourLink}
       </p>
 
       {/* Code */}
       <div className="flex items-center gap-2">
         <div className="flex-1 flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30">
-          <span className="text-xs text-slate-400">Code</span>
+          <span className="text-xs text-slate-400">{t.referral.code}</span>
           <span className="font-mono font-bold text-white text-lg tracking-widest">{code}</span>
         </div>
         <button onClick={() => copy(code, "code")}
@@ -137,7 +140,7 @@ function ReferralLinkBox({ code, link }: { code: string; link: string }) {
       <button onClick={share}
         className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
         style={{ background: "linear-gradient(135deg,#22d3ee,#6366f1)" }}>
-        <Share2 size={13} /> Share Referral Link
+        <Share2 size={13} /> {t.referral.shareBtn}
       </button>
     </div>
   );
@@ -148,6 +151,7 @@ type Tab = "overview" | "referrals" | "bonuses" | "leaderboard";
 
 export function ReferralPage() {
   const { isAuthenticated } = useAuth();
+  const { t } = useLang();
   const [tab, setTab] = useState<Tab>("overview");
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -182,10 +186,10 @@ export function ReferralPage() {
   useEffect(() => { if (tab === "leaderboard") fetchLeaderboard(); }, [tab, fetchLeaderboard]);
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "referrals", label: `Referrals (${stats?.totals.referralCount ?? 0})` },
-    { id: "bonuses", label: "Bonus History" },
-    { id: "leaderboard", label: "Leaderboard" },
+    { id: "overview",     label: t.referral.tabOverview },
+    { id: "referrals",   label: `${t.referral.tabReferrals} (${stats?.totals.referralCount ?? 0})` },
+    { id: "bonuses",     label: t.referral.tabBonuses },
+    { id: "leaderboard", label: t.referral.tabLeaderboard },
   ];
 
   if (loading) return (
@@ -202,8 +206,8 @@ export function ReferralPage() {
             <Users size={20} className="text-cyan-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Referral Program</h1>
-            <p className="text-xs text-slate-400">Invite friends, earn tiered bonuses forever</p>
+            <h1 className="text-xl font-bold text-white">{t.referral.title}</h1>
+            <p className="text-xs text-slate-400">{t.referral.subtitle}</p>
           </div>
           <button onClick={fetchStats} className="ml-auto text-slate-500 hover:text-white transition-colors">
             <RefreshCw size={15} />
@@ -211,10 +215,10 @@ export function ReferralPage() {
         </div>
 
         <div className="flex gap-1.5 overflow-x-auto">
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${tab === t.id ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/25" : "text-slate-500 hover:text-slate-300 border border-transparent"}`}>
-              {t.label}
+          {TABS.map(tabItem => (
+            <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${tab === tabItem.id ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/25" : "text-slate-500 hover:text-slate-300 border border-transparent"}`}>
+              {tabItem.label}
             </button>
           ))}
         </div>
@@ -226,9 +230,9 @@ export function ReferralPage() {
           {/* Stats cards */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Referrals", value: stats.totals.referralCount, color: "#22d3ee", icon: <Users size={16} /> },
-              { label: "Bonus Earned", value: `${parseFloat(stats.totals.bonusEarned).toFixed(2)} SFT`, color: "#10b981", icon: <Zap size={16} /> },
-              { label: "Bonus Txs", value: stats.totals.bonusTransactions, color: "#6366f1", icon: <TrendingUp size={16} /> },
+              { label: t.referral.statReferrals,   value: stats.totals.referralCount, color: "#22d3ee", icon: <Users size={16} /> },
+              { label: t.referral.statBonusEarned, value: `${parseFloat(stats.totals.bonusEarned).toFixed(2)} SFT`, color: "#10b981", icon: <Zap size={16} /> },
+              { label: t.referral.statBonusTxs,    value: stats.totals.bonusTransactions, color: "#6366f1", icon: <TrendingUp size={16} /> },
             ].map(s => (
               <div key={s.label} className="glass rounded-2xl p-4 border border-slate-700/10">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-2"
@@ -248,20 +252,20 @@ export function ReferralPage() {
           {/* All tiers table */}
           <div className="glass rounded-2xl p-5 border border-slate-700/10">
             <p className="text-xs font-semibold text-slate-300 mb-4 flex items-center gap-1.5">
-              <Trophy size={12} className="text-amber-400" /> Tier Breakdown
+              <Trophy size={12} className="text-amber-400" /> {t.referral.tierBreakdown}
             </p>
             <div className="space-y-2">
-              {tiers.map((t, i) => {
-                const isActive = stats.tier.label === t.label;
+              {tiers.map((tier, i) => {
+                const isActive = stats.tier.label === tier.label;
                 return (
                   <div key={i} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${isActive ? "border" : "border border-transparent opacity-60"}`}
-                    style={isActive ? { borderColor: `${t.color}35`, background: `${t.color}0a` } : {}}>
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: t.color }} />
-                    <span className="text-xs font-bold w-16 flex-shrink-0" style={{ color: t.color }}>{t.label}</span>
-                    <span className="text-xs text-slate-400 flex-1">{t.minReferrals}+ referrals</span>
-                    <span className="text-xs font-mono font-bold text-white">{(t.rate * 100).toFixed(0)}%</span>
-                    {t.bonus > 0 && <span className="text-xs text-amber-400 font-mono">+{t.bonus} SFT</span>}
-                    {isActive && <span className="text-xs px-1.5 py-0.5 rounded-md font-bold" style={{ background: `${t.color}20`, color: t.color }}>YOU</span>}
+                    style={isActive ? { borderColor: `${tier.color}35`, background: `${tier.color}0a` } : {}}>
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: tier.color }} />
+                    <span className="text-xs font-bold w-16 flex-shrink-0" style={{ color: tier.color }}>{tier.label}</span>
+                    <span className="text-xs text-slate-400 flex-1">{tier.minReferrals}+ {t.referral.referralsUnit}</span>
+                    <span className="text-xs font-mono font-bold text-white">{(tier.rate * 100).toFixed(0)}%</span>
+                    {tier.bonus > 0 && <span className="text-xs text-amber-400 font-mono">+{tier.bonus} SFT</span>}
+                    {isActive && <span className="text-xs px-1.5 py-0.5 rounded-md font-bold" style={{ background: `${tier.color}20`, color: tier.color }}>YOU</span>}
                   </div>
                 );
               })}
@@ -276,8 +280,8 @@ export function ReferralPage() {
           {stats.referrals.length === 0 ? (
             <div className="py-12 text-center">
               <Users size={36} className="text-slate-700 mx-auto mb-3" />
-              <p className="text-sm text-slate-400">No referrals yet</p>
-              <p className="text-xs text-slate-600 mt-1">Share your link to start earning bonuses</p>
+              <p className="text-sm text-slate-400">{t.referral.noReferrals}</p>
+              <p className="text-xs text-slate-600 mt-1">{t.referral.shareToEarn}</p>
             </div>
           ) : (
             stats.referrals.map((r, i) => (
@@ -306,7 +310,7 @@ export function ReferralPage() {
           {stats.recentBonuses.length === 0 ? (
             <div className="py-12 text-center">
               <Zap size={36} className="text-slate-700 mx-auto mb-3" />
-              <p className="text-sm text-slate-400">No bonus transactions yet</p>
+              <p className="text-sm text-slate-400">{t.referral.noBonuses}</p>
             </div>
           ) : (
             stats.recentBonuses.map(b => (
@@ -334,7 +338,7 @@ export function ReferralPage() {
           {leaderboard.length === 0 ? (
             <div className="py-12 text-center">
               <Trophy size={36} className="text-slate-700 mx-auto mb-3" />
-              <p className="text-sm text-slate-400">Leaderboard loading...</p>
+              <p className="text-sm text-slate-400">{t.referral.leaderboardLoading}</p>
             </div>
           ) : (
             leaderboard.map(entry => (
@@ -363,7 +367,7 @@ export function ReferralPage() {
 
                 <div className="text-right flex-shrink-0">
                   <p className="text-sm font-bold text-white">{entry.referralCount}</p>
-                  <p className="text-xs text-slate-500">referrals</p>
+                  <p className="text-xs text-slate-500">{t.referral.referralsUnit}</p>
                 </div>
               </div>
             ))

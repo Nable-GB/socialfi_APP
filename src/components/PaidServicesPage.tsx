@@ -5,6 +5,7 @@ import {
   RefreshCw, ShoppingCart, Clock, CheckCircle
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLang } from "../contexts/LangContext";
 
 const SERVICE_ICONS: Record<string, React.ReactNode> = {
   BOOST_POST: <Rocket size={18} />,
@@ -23,6 +24,7 @@ const SERVICE_COLORS: Record<string, string> = {
 };
 
 export function PaidServicesPage() {
+  const { t } = useLang();
   const [services, setServices] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +53,7 @@ export function PaidServicesPage() {
       const res = await serviceApi.checkout(serviceId);
       if (res.checkoutUrl) window.location.href = res.checkoutUrl;
     } catch (err: any) {
-      toast.error(err?.message || "Checkout failed");
+      toast.error(err?.message || t.paidServices.checkoutFailed);
     } finally {
       setBuyLoading(null);
     }
@@ -71,19 +73,19 @@ export function PaidServicesPage() {
             <ShoppingCart size={20} className="text-amber-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Paid Services</h1>
-            <p className="text-xs text-slate-400">Boost your presence with one-time purchases</p>
+            <h1 className="text-xl font-bold text-white">{t.paidServices.title}</h1>
+            <p className="text-xs text-slate-400">{t.paidServices.subtitle}</p>
           </div>
         </div>
 
         <div className="flex gap-1.5">
           <button onClick={() => setTab("services")}
             className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${tab === "services" ? "bg-amber-500/15 text-amber-400 border border-amber-500/25" : "text-slate-500 border border-transparent"}`}>
-            Available Services
+            {t.paidServices.tabServices}
           </button>
           <button onClick={() => setTab("history")}
             className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${tab === "history" ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/25" : "text-slate-500 border border-transparent"}`}>
-            Purchase History ({purchases.length})
+            {t.paidServices.tabHistory} ({purchases.length})
           </button>
         </div>
       </div>
@@ -111,13 +113,13 @@ export function PaidServicesPage() {
                 {svc.durationDays && (
                   <div className="flex items-center gap-1.5 mb-3">
                     <Clock size={10} className="text-slate-500" />
-                    <span className="text-[10px] text-slate-500">{svc.durationDays} days</span>
+                    <span className="text-[10px] text-slate-500">{svc.durationDays} {t.paidServices.days}</span>
                   </div>
                 )}
                 {!svc.durationDays && (
                   <div className="flex items-center gap-1.5 mb-3">
                     <CheckCircle size={10} className="text-emerald-400" />
-                    <span className="text-[10px] text-emerald-400">Permanent</span>
+                    <span className="text-[10px] text-emerald-400">{t.paidServices.permanent}</span>
                   </div>
                 )}
 
@@ -131,7 +133,7 @@ export function PaidServicesPage() {
                     style={{ background: `linear-gradient(135deg, ${color}, ${color}aa)` }}
                   >
                     {buyLoading === svc.id ? <RefreshCw size={11} className="animate-spin" /> : <ShoppingCart size={11} />}
-                    Buy
+                    {t.paidServices.buy}
                   </button>
                 </div>
               </div>
@@ -146,7 +148,7 @@ export function PaidServicesPage() {
           {purchases.length === 0 ? (
             <div className="p-8 text-center">
               <ShoppingCart size={24} className="text-slate-600 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">No purchases yet</p>
+              <p className="text-sm text-slate-500">{t.paidServices.noPurchases}</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-700/10">

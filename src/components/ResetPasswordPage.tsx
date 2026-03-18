@@ -2,6 +2,7 @@ import { useState } from "react";
 import { authApi } from "../lib/api";
 import { Lock, CheckCircle, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { useLang } from "../contexts/LangContext";
 
 interface ResetPasswordPageProps {
   token: string;
@@ -9,6 +10,7 @@ interface ResetPasswordPageProps {
 }
 
 export function ResetPasswordPage({ token, onDone }: ResetPasswordPageProps) {
+  const { t } = useLang();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -17,15 +19,15 @@ export function ResetPasswordPage({ token, onDone }: ResetPasswordPageProps) {
 
   const handleReset = async () => {
     if (!newPassword || !confirmPassword) {
-      toast.error("Please fill in both fields");
+      toast.error(t.auth.fillBothFields);
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error(t.auth.passwordsNoMatch);
       return;
     }
     if (newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters");
+      toast.error(t.auth.passwordMin);
       return;
     }
 
@@ -34,7 +36,7 @@ export function ResetPasswordPage({ token, onDone }: ResetPasswordPageProps) {
       await authApi.resetPassword(token, newPassword);
       setSuccess(true);
     } catch (err: any) {
-      toast.error(err?.message ?? "Failed to reset password");
+      toast.error(err?.message ?? t.auth.resetFailed);
     } finally {
       setLoading(false);
     }
@@ -53,13 +55,13 @@ export function ResetPasswordPage({ token, onDone }: ResetPasswordPageProps) {
                 style={{ border: "2px solid rgba(245,158,11,0.3)" }}>
                 <Lock size={28} className="text-amber-400" />
               </div>
-              <h2 className="text-xl font-bold text-white">Reset Your Password</h2>
-              <p className="text-sm text-slate-400 mt-1">Enter your new password below.</p>
+              <h2 className="text-xl font-bold text-white">{t.auth.resetYourPassword}</h2>
+              <p className="text-sm text-slate-400 mt-1">{t.auth.enterNewPassword}</p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">New Password</label>
+                <label className="text-xs text-slate-400 mb-1 block">{t.auth.newPasswordLabel}</label>
                 <div className="relative">
                   <input
                     type={showPw ? "text" : "password"}
@@ -67,7 +69,7 @@ export function ResetPasswordPage({ token, onDone }: ResetPasswordPageProps) {
                     onChange={e => setNewPassword(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && handleReset()}
                     className="w-full px-4 py-3 pr-10 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-amber-500/50 placeholder:text-slate-600"
-                    placeholder="Min. 8 characters"
+                    placeholder={t.auth.passwordMinPlaceholder}
                   />
                   <button onClick={() => setShowPw(v => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
@@ -77,14 +79,14 @@ export function ResetPasswordPage({ token, onDone }: ResetPasswordPageProps) {
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Confirm New Password</label>
+                <label className="text-xs text-slate-400 mb-1 block">{t.auth.confirmPasswordLabel}</label>
                 <input
                   type={showPw ? "text" : "password"}
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && handleReset()}
                   className="w-full px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-amber-500/50 placeholder:text-slate-600"
-                  placeholder="Repeat password"
+                  placeholder={t.auth.repeatPasswordPlaceholder}
                 />
               </div>
 
@@ -100,7 +102,7 @@ export function ResetPasswordPage({ token, onDone }: ResetPasswordPageProps) {
                 className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all hover:opacity-90 mt-2"
                 style={{ background: "linear-gradient(135deg, #f59e0b, #ef4444)" }}>
                 {loading ? <RefreshCw size={15} className="animate-spin" /> : <Lock size={15} />}
-                {loading ? "Resetting..." : "Reset Password"}
+                {loading ? t.auth.resetting : t.auth.resetTitle}
               </button>
             </div>
           </>
@@ -110,12 +112,12 @@ export function ResetPasswordPage({ token, onDone }: ResetPasswordPageProps) {
               style={{ border: "2px solid rgba(16,185,129,0.3)" }}>
               <CheckCircle size={32} className="text-emerald-400" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Password Reset!</h2>
-            <p className="text-sm text-slate-400 mb-6">Your password has been updated. You can now log in with your new password.</p>
+            <h2 className="text-xl font-bold text-white mb-2">{t.auth.passwordResetSuccess}</h2>
+            <p className="text-sm text-slate-400 mb-6">{t.auth.passwordResetSuccessDesc}</p>
             <button onClick={onDone}
               className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
               style={{ background: "linear-gradient(135deg, #22d3ee, #6366f1)" }}>
-              Go to Login →
+              {t.auth.goToLogin}
             </button>
           </div>
         )}
