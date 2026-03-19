@@ -19,6 +19,35 @@ export function SubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  const getTierLabel = (tierId: string, fallback?: string) => {
+    if (tierId === "FREE") return t.subscription.tierFree;
+    if (tierId === "PRO") return t.subscription.tierPro;
+    if (tierId === "PREMIUM") return t.subscription.tierPremium;
+    return fallback ?? tierId;
+  };
+
+  const getFeatureLabel = (feature: string) => {
+    const featureMap: Record<string, string> = {
+      "Unlimited posts": t.subscription.featureUnlimitedPosts,
+      "Priority feed ranking": t.subscription.featurePriorityFeed,
+      "Advanced analytics": t.subscription.featureAdvancedAnalytics,
+      "Premium badge": t.subscription.featurePremiumBadge,
+      "Verified badge": t.subscription.featureVerifiedBadge,
+      "Dedicated support": t.subscription.featureDedicatedSupport,
+      "Custom profile themes": t.subscription.featureCustomThemes,
+    };
+    return featureMap[feature] ?? feature;
+  };
+
+  const getSubscriptionStatusLabel = (status?: string) => {
+    if (status === "ACTIVE") return t.subscription.statusActive;
+    if (status === "CANCELED") return t.subscription.statusCanceled;
+    if (status === "PAST_DUE") return t.subscription.statusPastDue;
+    if (status === "TRIALING") return t.subscription.statusTrialing;
+    if (status === "INCOMPLETE") return t.subscription.statusIncomplete;
+    return status ?? "-";
+  };
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -87,7 +116,7 @@ export function SubscriptionPage() {
         <div className="mt-4 flex items-center gap-2">
           <span className="text-xs text-slate-500">{t.subscription.currentPlan}</span>
           <span className={`px-3 py-1 rounded-full text-xs font-bold ${TIER_COLORS[currentTier]?.badge}`}>
-            {currentTier}
+            {getTierLabel(currentTier)}
           </span>
           {mySub?.subscription?.cancelAtPeriodEnd && (
             <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-500/15 text-red-400 border border-red-500/25">
@@ -117,7 +146,7 @@ export function SubscriptionPage() {
                 <div className="flex items-center gap-2">
                   {tier.id === "PREMIUM" && <Star size={16} style={{ color: colors.text }} />}
                   {tier.id === "PRO" && <Zap size={16} style={{ color: colors.text }} />}
-                  <h2 className="text-lg font-bold" style={{ color: colors.text }}>{tier.name}</h2>
+                  <h2 className="text-lg font-bold" style={{ color: colors.text }}>{getTierLabel(tier.id, tier.name)}</h2>
                 </div>
                 {isCurrent && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: `${colors.text}20`, color: colors.text }}>
@@ -137,7 +166,7 @@ export function SubscriptionPage() {
                 {tier.features.map((f: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-slate-300">
                     <Check size={12} className="mt-0.5 flex-shrink-0" style={{ color: colors.text }} />
-                    {f}
+                    {getFeatureLabel(f)}
                   </li>
                 ))}
               </ul>
@@ -164,7 +193,7 @@ export function SubscriptionPage() {
                   style={{ background: `linear-gradient(135deg, ${colors.text}, ${colors.border})` }}
                 >
                   {actionLoading === tier.id ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
-                  {t.subscription.subscribeTo} {tier.name}
+                  {t.subscription.subscribeTo} {getTierLabel(tier.id, tier.name)}
                 </button>
               ) : null}
             </div>
@@ -179,7 +208,7 @@ export function SubscriptionPage() {
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
               <span className="text-slate-500">{t.subscription.status}</span>
-              <p className="text-white font-medium">{mySub.subscription.status}</p>
+              <p className="text-white font-medium">{getSubscriptionStatusLabel(mySub.subscription.status)}</p>
             </div>
             <div>
               <span className="text-slate-500">{t.subscription.period}</span>

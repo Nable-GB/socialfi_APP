@@ -31,6 +31,32 @@ export function PaidServicesPage() {
   const [buyLoading, setBuyLoading] = useState<string | null>(null);
   const [tab, setTab] = useState<"services" | "history">("services");
 
+  const getServiceName = (type?: string, fallback?: string) => {
+    if (type === "BOOST_POST") return t.paidServices.serviceBoostPost;
+    if (type === "PREMIUM_BADGE") return t.paidServices.servicePremiumBadge;
+    if (type === "ANALYTICS_PRO") return t.paidServices.serviceAnalyticsPro;
+    if (type === "VERIFIED_BADGE") return t.paidServices.serviceVerifiedBadge;
+    if (type === "EXTRA_STORAGE") return t.paidServices.serviceExtraStorage;
+    return fallback ?? type ?? "-";
+  };
+
+  const getServiceDescription = (type?: string, fallback?: string) => {
+    if (type === "BOOST_POST") return t.paidServices.serviceBoostPostDesc;
+    if (type === "PREMIUM_BADGE") return t.paidServices.servicePremiumBadgeDesc;
+    if (type === "ANALYTICS_PRO") return t.paidServices.serviceAnalyticsProDesc;
+    if (type === "VERIFIED_BADGE") return t.paidServices.serviceVerifiedBadgeDesc;
+    if (type === "EXTRA_STORAGE") return t.paidServices.serviceExtraStorageDesc;
+    return fallback ?? "";
+  };
+
+  const getPurchaseStatusLabel = (status?: string) => {
+    if (status === "COMPLETED") return t.paidServices.statusCompleted;
+    if (status === "PENDING") return t.paidServices.statusPending;
+    if (status === "FAILED") return t.paidServices.statusFailed;
+    if (status === "CANCELED") return t.paidServices.statusCanceled;
+    return status ?? "-";
+  };
+
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -106,8 +132,8 @@ export function PaidServicesPage() {
                 </div>
 
                 {/* Name & Description */}
-                <h3 className="text-sm font-bold text-white mb-1">{svc.name}</h3>
-                <p className="text-xs text-slate-400 mb-3 leading-relaxed">{svc.description}</p>
+                <h3 className="text-sm font-bold text-white mb-1">{getServiceName(svc.type, svc.name)}</h3>
+                <p className="text-xs text-slate-400 mb-3 leading-relaxed">{getServiceDescription(svc.type, svc.description)}</p>
 
                 {/* Duration */}
                 {svc.durationDays && (
@@ -161,7 +187,7 @@ export function PaidServicesPage() {
                       {SERVICE_ICONS[p.service?.type] || <ShoppingCart size={14} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white truncate">{p.service?.name}</p>
+                      <p className="text-xs font-medium text-white truncate">{getServiceName(p.service?.type, p.service?.name)}</p>
                       <p className="text-[10px] text-slate-500">{new Date(p.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -171,7 +197,7 @@ export function PaidServicesPage() {
                         p.status === "PENDING" ? "bg-amber-500/15 text-amber-400" :
                         "bg-red-500/15 text-red-400"
                       }`}>
-                        {p.status}
+                        {getPurchaseStatusLabel(p.status)}
                       </span>
                     </div>
                   </div>

@@ -205,15 +205,19 @@ export async function getUserProfile(req: Request, res: Response): Promise<void>
           where: { type: "ORGANIC", isActive: true },
           orderBy: { createdAt: "desc" },
           take: 20,
-          select: {
-            id: true,
-            content: true,
-            mediaUrl: true,
-            mediaType: true,
-            likesCount: true,
-            commentsCount: true,
-            sharesCount: true,
-            createdAt: true,
+          include: {
+            author: {
+              select: {
+                id: true,
+                username: true,
+                displayName: true,
+                avatarUrl: true,
+                isVerified: true,
+              },
+            },
+            interactions: requesterId
+              ? { where: { userId: requesterId }, select: { type: true } }
+              : false,
           },
         },
       },
@@ -224,9 +228,27 @@ export async function getUserProfile(req: Request, res: Response): Promise<void>
       return;
     }
 
+    const posts = user.posts.map((post: any) => ({
+      id: post.id,
+      content: post.content,
+      type: post.type,
+      mediaUrl: post.mediaUrl,
+      mediaType: post.mediaType,
+      likesCount: post.likesCount,
+      commentsCount: post.commentsCount,
+      sharesCount: post.sharesCount,
+      viewsCount: 0,
+      rewardClaimed: false,
+      userInteractions: requesterId ? (post.interactions ?? []).map((interaction: any) => interaction.type) : [],
+      isSponsored: post.type === "SPONSORED",
+      createdAt: post.createdAt,
+      author: post.author,
+    }));
+
     res.json({
       user: {
         ...user,
+        posts,
         isFollowing: requesterId ? (user as any).followers?.length > 0 : false,
         followers: undefined,
       },

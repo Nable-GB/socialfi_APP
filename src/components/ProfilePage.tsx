@@ -21,6 +21,16 @@ export function ProfilePage() {
 
   const displayBalance = parseFloat(balance).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
+  const getRewardTypeLabel = (type: string) => {
+    if (type === "AD_VIEW") return t.transactions.typeAdView;
+    if (type === "ENGAGEMENT") return t.transactions.typeEngagement;
+    if (type === "REFERRAL") return t.transactions.typeReferral;
+    if (type === "AIRDROP") return t.transactions.typeAirdrop;
+    if (type === "SIGNUP_BONUS") return t.transactions.typeSignupBonus;
+    if (type === "WITHDRAWAL") return t.transactions.typeWithdrawal;
+    return type.replace(/_/g, " ");
+  };
+
   useEffect(() => {
     if (user?.id) {
       loadMyPosts();
@@ -32,7 +42,7 @@ export function ProfilePage() {
     setLoadingPosts(true);
     try {
       const res = await usersApi.getProfile(user.id);
-      setMyPosts(res.user.posts || []);
+      setMyPosts((res.user.posts || []).filter((post: ApiPost) => post?.id && post?.author?.id));
     } catch {
       toast.error(t.profile.failedToLoadPosts);
     } finally {
@@ -225,7 +235,7 @@ export function ProfilePage() {
                     <Award size={14} />
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-white">{reward.type.replace(/_/g, " ")}</p>
+                    <p className="text-xs font-medium text-white">{getRewardTypeLabel(reward.type)}</p>
                     <p className="text-[10px] text-slate-500">{new Date(reward.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>

@@ -28,6 +28,22 @@ export function CreateAdPage() {
   const [targetAgeMax, setTargetAgeMax] = useState("");
   const [interestInput, setInterestInput] = useState("");
 
+  const getPackageLabel = (name?: string) => {
+    if (name === "Starter") return t.createAd.packageStarter;
+    if (name === "Growth") return t.createAd.packageGrowth;
+    if (name === "Pro") return t.createAd.packagePro;
+    if (name === "Enterprise") return t.createAd.packageEnterprise;
+    return name ?? "-";
+  };
+
+  const getPackageDescription = (name?: string, fallback?: string) => {
+    if (name === "Starter") return t.createAd.packageStarterDesc;
+    if (name === "Growth") return t.createAd.packageGrowthDesc;
+    if (name === "Pro") return t.createAd.packageProDesc;
+    if (name === "Enterprise") return t.createAd.packageEnterpriseDesc;
+    return fallback ?? "";
+  };
+
   useEffect(() => {
     loadPackages();
   }, []);
@@ -172,8 +188,8 @@ export function CreateAdPage() {
                         </span>
                       )}
                     </div>
-                    <h3 className="text-lg font-bold text-white">{pkg.name}</h3>
-                    <p className="text-xs text-slate-400 mt-1">{pkg.description}</p>
+                    <h3 className="text-lg font-bold text-white">{getPackageLabel(pkg.name)}</h3>
+                    <p className="text-xs text-slate-400 mt-1">{getPackageDescription(pkg.name, pkg.description)}</p>
 
                     <div className="mt-4 pt-4 border-t border-slate-700/20">
                       <p className="text-2xl font-bold font-mono" style={{ color: colors.accent }}>
@@ -395,7 +411,7 @@ export function CreateAdPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-700/20">
               <span className="text-sm text-slate-400">{t.createAd.package}</span>
               <span className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Crown size={13} className="text-indigo-400" /> {selectedPackage.name}
+                <Crown size={13} className="text-indigo-400" /> {getPackageLabel(selectedPackage.name)}
               </span>
             </div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-700/20">
