@@ -146,6 +146,8 @@
     "verifyingEmail": "Verifying your email...",
     "pleaseWait": "Please wait a moment.",
     "emailVerified": "Email Verified! ✅",
+    "verifyEmailPrompt": "Click the button below to securely verify your email address.",
+    "verifyEmailCta": "Verify Email",
     "verificationFailedTitle": "Verification Failed",
     "verificationExpired": "The link may have expired. Request a new one from Settings.",
     "backToSmfi": "Back to SMFI",

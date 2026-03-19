@@ -38,7 +38,7 @@ app.use(helmet({
 // ── CORS — strict origin matching ────────────────────────────────────────
 const allowedOrigins = new Set(
   [
-    ...env.FRONTEND_URL.split(",").map(u => u.trim()),
+    ...env.CORS_ORIGINS.split(",").map(u => u.trim()),
     ...(env.NODE_ENV === "development" ? ["http://localhost:5173", "http://localhost:4173"] : []),
   ].filter(Boolean)
 );

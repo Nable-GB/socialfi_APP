@@ -10,11 +10,14 @@ function optional(key: string, fallback: string): string {
   return process.env[key] ?? fallback;
 }
 
+const rawFrontendUrl = optional("FRONTEND_URL", "http://localhost:5173");
+
 export const env = {
   // App
   PORT: parseInt(optional("PORT", "4000"), 10),
   NODE_ENV: optional("NODE_ENV", "development"),
-  FRONTEND_URL: optional("FRONTEND_URL", "http://localhost:5173"),
+  FRONTEND_URL: rawFrontendUrl.split(",")[0].trim(),
+  CORS_ORIGINS: optional("CORS_ORIGINS", rawFrontendUrl),
 
   // Auth
   JWT_SECRET: required("JWT_SECRET"),

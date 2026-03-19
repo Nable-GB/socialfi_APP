@@ -146,6 +146,8 @@
     "verifyingEmail": "이메일 확인 중...",
     "pleaseWait": "잠시만 기다려주세요.",
     "emailVerified": "이메일 확인됨! ✅",
+    "verifyEmailPrompt": "아래 버튼을 눌러 이메일 주소를 안전하게 확인하세요.",
+    "verifyEmailCta": "이메일 확인",
     "verificationFailedTitle": "확인 실패",
     "verificationExpired": "링크가 만료되었을 수 있습니다. 설정에서 새 링크를 요청하세요.",
     "backToSmfi": "SMFI로 돌아가기",
