@@ -839,24 +839,70 @@ export default function App() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { t } = useLang();
   const { balance, totalEarned, onRewardClaimed } = useRewards();
+  const appEnteredKey = "smfi_app_entered";
+  const defaultPage = "music";
+  const getPageFromHash = () => {
+    const raw = window.location.hash.replace(/^#/, "").trim();
+    return raw || null;
+  };
   
   // Persist navigation state
-  const [mobileTab, setMobileTab] = useState(() => localStorage.getItem("mobileTab") || "music");
-  const [activeNav, setActiveNav] = useState(() => localStorage.getItem("activeNav") || "music");
+  const [mobileTab, setMobileTab] = useState(() => getPageFromHash() || localStorage.getItem("mobileTab") || defaultPage);
+  const [activeNav, setActiveNav] = useState(() => getPageFromHash() || localStorage.getItem("activeNav") || defaultPage);
+
+  const navigateTo = (page: string) => {
+    setActiveNav(page);
+    setMobileTab(page);
+  };
 
   useEffect(() => { localStorage.setItem("mobileTab", mobileTab); }, [mobileTab]);
   useEffect(() => { localStorage.setItem("activeNav", activeNav); }, [activeNav]);
+  useEffect(() => {
+    const currentPage = activeNav || mobileTab || defaultPage;
+    if (window.location.hash !== `#${currentPage}`) {
+      window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${currentPage}`);
+    }
+  }, [activeNav, mobileTab, defaultPage]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const page = getPageFromHash();
+      if (!page) return;
+      setActiveNav(page);
+      setMobileTab(page);
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
 
   const [authOpen, setAuthOpen] = useState(false);
-  const [showLanding, setShowLanding] = useState(true); // Default true, update effect will handle it
+  const [showLanding, setShowLanding] = useState(() => {
+    try {
+      if (getPageFromHash()) return false;
+      return localStorage.getItem(appEnteredKey) !== "true";
+    } catch {
+      return true;
+    }
+  });
   
   // Sync showLanding with auth state once loading finishes
   useEffect(() => {
     if (!isLoading) {
-      if (isAuthenticated) setShowLanding(false);
-      else setShowLanding(true);
+      if (isAuthenticated) {
+        setShowLanding(false);
+        try { localStorage.setItem(appEnteredKey, "true"); } catch { }
+      } else if (getPageFromHash()) {
+        setShowLanding(false);
+      }
     }
   }, [isLoading, isAuthenticated]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(appEnteredKey, showLanding ? "false" : "true");
+    } catch { }
+  }, [showLanding, appEnteredKey]);
 
   const [verifyBannerDismissed, setVerifyBannerDismissed] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
@@ -912,7 +958,10 @@ export default function App() {
     return (
       <>
         <SocialMusicFiLanding
-          onLaunchApp={() => setShowLanding(false)}
+          onLaunchApp={() => {
+            setShowLanding(false);
+            navigateTo(activeNav || mobileTab || defaultPage);
+          }}
           onApplyArtist={() => setAuthOpen(true)}
         />
         <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
@@ -953,7 +1002,7 @@ export default function App() {
 
         {/* Desktop layout */}
         <div className="hidden lg:grid gap-6 py-6" style={{gridTemplateColumns:'220px 1fr 290px'}}>
-          <DesktopNav activeNav={activeNav} setActiveNav={setActiveNav} onOpenAuth={() => setAuthOpen(true)} />
+          <DesktopNav activeNav={activeNav} setActiveNav={navigateTo} onOpenAuth={() => setAuthOpen(true)} />
 
           <main className="min-w-0">
             {activeNav === "feed" && <RealFeed onClaimReward={handleClaimReward} />}
@@ -1036,7 +1085,7 @@ export default function App() {
       </div>
 
       <AudioPlayerBar />
-      <BottomNav mobileTab={mobileTab} setMobileTab={setMobileTab} />
+      <BottomNav mobileTab={mobileTab} setMobileTab={navigateTo} />
     </div>
   );
 }
