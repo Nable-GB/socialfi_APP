@@ -47,8 +47,8 @@ export const env = {
   S3_CDN_URL: optional("S3_CDN_URL", ""),    // Public URL prefix for served files
   MAX_FILE_SIZE: parseInt(optional("MAX_FILE_SIZE", "52428800"), 10), // 50MB default
 
-  // Email (SendGrid)
-  SENDGRID_API_KEY: optional("SENDGRID_API_KEY", ""),
-  FROM_EMAIL: optional("FROM_EMAIL", "noreply@socialfi.app"),
+  // Email (Resend)
+  RESEND_API_KEY: optional("RESEND_API_KEY", ""),
+  FROM_EMAIL: optional("FROM_EMAIL", "noreply@socialmusicfi.com"),
   FROM_NAME: optional("FROM_NAME", "SocialFi"),
 } as const;

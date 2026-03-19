@@ -1,9 +1,7 @@
-import sgMail from "@sendgrid/mail";
+import { Resend } from "resend";
 import { env } from "../config/env.js";
 
-if (env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(env.SENDGRID_API_KEY);
-}
+const resend = new Resend(env.RESEND_API_KEY);
 
 interface SendEmailOptions {
   to: string;
@@ -13,19 +11,23 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, html, text }: SendEmailOptions): Promise<void> {
-  if (!env.SENDGRID_API_KEY) {
+  if (!env.RESEND_API_KEY) {
     // Dev fallback: log to console instead of sending
     console.log(`\n📧 [DEV EMAIL] To: ${to}\nSubject: ${subject}\n${text ?? html}\n`);
     return;
   }
 
-  await sgMail.send({
-    to,
-    from: { email: env.FROM_EMAIL, name: env.FROM_NAME },
+  const { error } = await resend.emails.send({
+    from: env.FROM_NAME ? `${env.FROM_NAME} <${env.FROM_EMAIL}>` : env.FROM_EMAIL,
+    to: [to],
     subject,
     html,
     text: text ?? subject,
   });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 // ─── Email Templates ─────────────────────────────────────────────────────────
