@@ -349,7 +349,7 @@ function LangSwitcher() {
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
-function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
+function Header({ onOpenAuth, onOpenLanding }: { onOpenAuth: () => void; onOpenLanding: () => void }) {
   const { user, isAuthenticated, logout } = useAuth();
   const { t } = useLang();
   const tHeader = t.header;
@@ -382,7 +382,7 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
     <header className="sticky top-0 z-50 border-b border-white/[0.04]" style={{ background: 'rgba(3,7,17,0.92)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
       <div className="max-w-screen-xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
         {/* Logo */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
+        <button onClick={onOpenLanding} className="flex items-center gap-2.5 flex-shrink-0 text-left" type="button">
           <div className="w-7 h-7 rounded-lg overflow-hidden bg-slate-900" style={{ boxShadow: '0 0 12px rgba(34,211,238,0.4)' }}>
             <img src="/smfi-logo.jpeg" alt="SMFI logo" className="w-full h-full object-cover" />
           </div>
@@ -390,7 +390,7 @@ function Header({ onOpenAuth }: { onOpenAuth: () => void }) {
             <span className="font-extrabold text-sm tracking-tight shimmer-text">SMFI</span>
             <span className="text-[9px] text-slate-500 font-medium tracking-wide">Social Music Fi</span>
           </div>
-        </div>
+        </button>
 
         {/* Search */}
         <div className="hidden md:flex flex-1 max-w-sm items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
@@ -851,8 +851,17 @@ export default function App() {
   const [activeNav, setActiveNav] = useState(() => getPageFromHash() || localStorage.getItem("activeNav") || defaultPage);
 
   const navigateTo = (page: string) => {
+    setForceLanding(false);
     setActiveNav(page);
     setMobileTab(page);
+  };
+
+  const openLandingPage = () => {
+    setAuthOpen(false);
+    setForceLanding(true);
+    try {
+      window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
+    } catch { }
   };
 
   useEffect(() => { localStorage.setItem("mobileTab", mobileTab); }, [mobileTab]);
@@ -877,6 +886,7 @@ export default function App() {
   }, []);
 
   const [authOpen, setAuthOpen] = useState(false);
+  const [forceLanding, setForceLanding] = useState(false);
   const [showLanding, setShowLanding] = useState(() => {
     try {
       if (getPageFromHash()) return false;
@@ -954,11 +964,12 @@ export default function App() {
   const displayBalance = parseFloat(balance).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
   // Show landing page for first-time / unauthenticated visitors
-  if (!isAuthenticated && showLanding) {
+  if (forceLanding || (!isAuthenticated && showLanding)) {
     return (
       <>
         <SocialMusicFiLanding
           onLaunchApp={() => {
+            setForceLanding(false);
             setShowLanding(false);
             navigateTo(activeNav || mobileTab || defaultPage);
           }}
@@ -974,7 +985,7 @@ export default function App() {
 
   return (
     <div className="bg-mesh min-h-screen">
-      <Header onOpenAuth={() => setAuthOpen(true)} />
+      <Header onOpenAuth={() => setAuthOpen(true)} onOpenLanding={openLandingPage} />
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
 
       {/* Email Verification Banner */}
