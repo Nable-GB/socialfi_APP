@@ -849,11 +849,22 @@ export default function App() {
   // Persist navigation state
   const [mobileTab, setMobileTab] = useState(() => getPageFromHash() || localStorage.getItem("mobileTab") || defaultPage);
   const [activeNav, setActiveNav] = useState(() => getPageFromHash() || localStorage.getItem("activeNav") || defaultPage);
+  const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | undefined>(undefined);
 
   const navigateTo = (page: string) => {
     setForceLanding(false);
+    if (page !== "profile") {
+      setSelectedProfileUserId(undefined);
+    }
     setActiveNav(page);
     setMobileTab(page);
+  };
+
+  const openUserProfile = (userId: string) => {
+    setForceLanding(false);
+    setSelectedProfileUserId(userId);
+    setActiveNav("profile");
+    setMobileTab("profile");
   };
 
   const openLandingPage = () => {
@@ -901,6 +912,7 @@ export default function App() {
     if (!isLoading) {
       if (isAuthenticated) {
         setShowLanding(false);
+        setForceLanding(false);
         try { localStorage.setItem(appEnteredKey, "true"); } catch { }
       } else if (getPageFromHash()) {
         setShowLanding(false);
@@ -1025,8 +1037,8 @@ export default function App() {
             {activeNav === "distribution" && <DistributionSubmitPage />}
             {activeNav === "market" && <MarketplacePage />}
             {activeNav === "create" && <CreateAdPage />}
-            {activeNav === "profile" && <ProfilePage />}
-            {activeNav === "explore" && <ExplorePage />}
+            {activeNav === "profile" && <ProfilePage userId={selectedProfileUserId} />}
+            {activeNav === "explore" && <ExplorePage onOpenProfile={openUserProfile} />}
             {activeNav === "settings" && <SettingsPage />}
             {activeNav === "transactions" && <TransactionsPage />}
             {activeNav === "nft-market" && <NFTMarketplacePage />}
@@ -1070,7 +1082,7 @@ export default function App() {
         </div>
 
         {/* Mobile layout */}
-        <div className="lg:hidden pb-24 pt-4">
+        <div className="lg:hidden pb-36 pt-4">
           {mobileTab === "feed" && <RealFeed onClaimReward={handleClaimReward} />}
           {mobileTab === "music" && <MusicFeedPage />}
           {mobileTab === "upload-track" && <UploadTrackPage />}
@@ -1080,7 +1092,7 @@ export default function App() {
           {mobileTab === "distribution" && <DistributionSubmitPage />}
           {mobileTab === "market" && <MarketplacePage />}
           {mobileTab === "create" && <CreateAdPage />}
-          {mobileTab === "profile" && <ProfilePage />}
+          {mobileTab === "profile" && <ProfilePage userId={selectedProfileUserId} />}
           {mobileTab === "transactions" && <TransactionsPage />}
           {mobileTab === "settings" && <SettingsPage />}
           {mobileTab === "admin" && <AdminPage />}
@@ -1090,7 +1102,7 @@ export default function App() {
           {mobileTab === "analytics" && <AnalyticsPage />}
           {mobileTab === "subscription" && <SubscriptionPage />}
           {mobileTab === "services" && <PaidServicesPage />}
-          {mobileTab === "explore" && <ExplorePage />}
+          {mobileTab === "explore" && <ExplorePage onOpenProfile={openUserProfile} />}
           {mobileTab === "wallet" && <WalletPage />}
         </div>
       </div>

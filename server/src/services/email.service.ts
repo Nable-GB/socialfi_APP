@@ -12,9 +12,11 @@ interface SendEmailOptions {
 
 export async function sendEmail({ to, subject, html, text }: SendEmailOptions): Promise<void> {
   if (!env.RESEND_API_KEY) {
-    // Dev fallback: log to console instead of sending
-    console.log(`\n📧 [DEV EMAIL] To: ${to}\nSubject: ${subject}\n${text ?? html}\n`);
-    return;
+    if (env.NODE_ENV === "development") {
+      console.log(`\n📧 [DEV EMAIL] To: ${to}\nSubject: ${subject}\n${text ?? html}\n`);
+      return;
+    }
+    throw new Error("Email service is not configured");
   }
 
   const { error } = await resend.emails.send({

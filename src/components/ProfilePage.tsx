@@ -4,20 +4,24 @@ import { useLang } from "../contexts/LangContext";
 import { useRewards } from "../hooks/useRewards";
 import { Copy, Award, Wallet, TrendingUp, Clock, CheckCircle, ExternalLink, RefreshCw, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
-import type { ApiReward, ApiPost } from "../lib/api";
+import type { ApiReward, ApiPost, ApiUser } from "../lib/api";
 import { rewardsApi, usersApi, feedApi } from "../lib/api";
 import { FeedPost } from "./FeedPost";
 
-export function ProfilePage() {
+export function ProfilePage({ userId }: { userId?: string }) {
   const { user, logout } = useAuth();
   const { t } = useLang();
   const { balance, totalEarned } = useRewards();
   const [rewardHistory, setRewardHistory] = useState<ApiReward[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [profileUser, setProfileUser] = useState<ApiUser | null>(null);
   
   const [myPosts, setMyPosts] = useState<ApiPost[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
+
+  const isOwnProfile = !userId || userId === user?.id;
+  const currentProfile = isOwnProfile ? user : profileUser;
 
   const displayBalance = parseFloat(balance).toLocaleString(undefined, { maximumFractionDigits: 2 });
 
@@ -32,16 +36,26 @@ export function ProfilePage() {
   };
 
   useEffect(() => {
-    if (user?.id) {
-      loadMyPosts();
+    if (isOwnProfile) {
+      setProfileUser(null);
+      if (user?.id) {
+        loadProfile(user.id);
+      }
+      return;
     }
-  }, [user?.id]);
 
-  const loadMyPosts = async () => {
-    if (!user?.id) return;
+    if (userId) {
+      loadProfile(userId);
+    }
+  }, [user?.id, userId, isOwnProfile]);
+
+  const loadProfile = async (targetUserId: string) => {
     setLoadingPosts(true);
     try {
-      const res = await usersApi.getProfile(user.id);
+      const res = await usersApi.getProfile(targetUserId);
+      if (!isOwnProfile) {
+        setProfileUser(res.user);
+      }
       setMyPosts((res.user.posts || []).filter((post: ApiPost) => post?.id && post?.author?.id));
     } catch {
       toast.error(t.profile.failedToLoadPosts);
@@ -94,7 +108,7 @@ export function ProfilePage() {
     return feedApi.getComments(postId, { cursor });
   };
 
-  if (!user) return null;
+  if (!currentProfile) return null;
 
   return (
     <div className="space-y-5">
@@ -107,31 +121,31 @@ export function ProfilePage() {
         <div className="px-6 pb-6 -mt-12 relative z-10">
           <div className="flex items-end gap-4">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 to-indigo-500 flex items-center justify-center text-3xl font-bold text-white border-4 border-slate-900 shadow-lg">
-              {(user.displayName ?? user.username ?? "U")[0].toUpperCase()}
+              {(currentProfile.displayName ?? currentProfile.username ?? "U")[0].toUpperCase()}
             </div>
             <div className="flex-1 pb-1">
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-white">{user.displayName ?? user.username}</h1>
-                {user.role === "MERCHANT" && (
+                <h1 className="text-xl font-bold text-white">{currentProfile.displayName ?? currentProfile.username}</h1>
+                {currentProfile.role === "MERCHANT" && (
                   <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-mono">{t.profile.merchant}</span>
                 )}
-                {user.role === "ADMIN" && (
+                {currentProfile.role === "ADMIN" && (
                   <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono">{t.profile.admin}</span>
                 )}
               </div>
-              <p className="text-sm text-slate-500 font-mono">@{user.username}</p>
+              <p className="text-sm text-slate-500 font-mono">@{currentProfile.username}</p>
             </div>
           </div>
 
-          {user.bio && <p className="text-sm text-slate-300 mt-3">{user.bio}</p>}
+          {currentProfile.bio && <p className="text-sm text-slate-300 mt-3">{currentProfile.bio}</p>}
 
           {/* Stats row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
             {[
-              { label: t.profile.balance, value: `${displayBalance} 🪙`, color: "#22d3ee", icon: Wallet },
-              { label: t.profile.totalEarned, value: `${parseFloat(totalEarned).toFixed(2)}`, color: "#f59e0b", icon: TrendingUp },
-              { label: t.profile.posts, value: user._count?.posts?.toString() ?? "0", color: "#a855f7", icon: CheckCircle },
-              { label: t.profile.followers, value: user._count?.followers?.toString() ?? "0", color: "#10b981", icon: Award },
+              { label: t.profile.balance, value: isOwnProfile ? `${displayBalance} 🪙` : "-", color: "#22d3ee", icon: Wallet },
+              { label: t.profile.totalEarned, value: isOwnProfile ? `${parseFloat(totalEarned).toFixed(2)}` : "-", color: "#f59e0b", icon: TrendingUp },
+              { label: t.profile.posts, value: currentProfile._count?.posts?.toString() ?? "0", color: "#a855f7", icon: CheckCircle },
+              { label: t.profile.followers, value: currentProfile._count?.followers?.toString() ?? "0", color: "#10b981", icon: Award },
             ].map(stat => (
               <div key={stat.label} className="rounded-xl bg-slate-800/50 p-3 text-center border border-slate-700/10">
                 <stat.icon size={15} className="mx-auto mb-1" style={{ color: stat.color }} />
@@ -173,13 +187,14 @@ export function ProfilePage() {
       </div>
 
       {/* Referral */}
+      {isOwnProfile && (
       <div className="glass rounded-2xl p-5 border border-slate-700/10">
         <h3 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
           <Award size={15} className="text-amber-400" /> {t.profile.yourReferralCode}
         </h3>
         <div className="flex items-center gap-3">
           <div className="flex-1 bg-slate-800/60 rounded-xl px-4 py-3 border border-slate-700/30">
-            <span className="font-mono text-lg font-bold tracking-wider text-cyan-400">{user.referralCode}</span>
+            <span className="font-mono text-lg font-bold tracking-wider text-cyan-400">{currentProfile.referralCode}</span>
           </div>
           <button onClick={copyReferral}
             className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
@@ -188,18 +203,19 @@ export function ProfilePage() {
         </div>
         <p className="text-xs text-slate-500 mt-2">{t.profile.shareCode}</p>
       </div>
+      )}
 
       {/* Wallet */}
-      {user.walletAddress && (
+      {currentProfile.walletAddress && (
         <div className="glass rounded-2xl p-5 border border-slate-700/10">
           <h3 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
             <Wallet size={15} className="text-indigo-400" /> {t.profile.connectedWallet}
           </h3>
           <div className="flex items-center gap-3">
             <div className="flex-1 bg-slate-800/60 rounded-xl px-4 py-3 border border-slate-700/30">
-              <span className="font-mono text-sm text-slate-300">{user.walletAddress}</span>
+              <span className="font-mono text-sm text-slate-300">{currentProfile.walletAddress}</span>
             </div>
-            <a href={`https://etherscan.io/address/${user.walletAddress}`} target="_blank" rel="noopener noreferrer"
+            <a href={`https://etherscan.io/address/${currentProfile.walletAddress}`} target="_blank" rel="noopener noreferrer"
               className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/30 text-slate-400 hover:text-white transition-all">
               <ExternalLink size={16} />
             </a>
@@ -208,6 +224,7 @@ export function ProfilePage() {
       )}
 
       {/* Reward History */}
+      {isOwnProfile && (
       <div className="glass rounded-2xl p-5 border border-slate-700/10">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold text-slate-300 flex items-center gap-2">
@@ -245,12 +262,13 @@ export function ProfilePage() {
           </div>
         )}
       </div>
+      )}
 
       {/* Logout */}
-      <button onClick={logout}
+      {isOwnProfile && <button onClick={logout}
         className="w-full py-3 rounded-xl text-sm font-medium text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-all">
         {t.profile.signOut}
-      </button>
+      </button>}
     </div>
   );
 }

@@ -16,7 +16,7 @@ const TRENDING_TOPICS = [
 
 type SearchUser = ApiUser & { isFollowing: boolean };
 
-export function ExplorePage() {
+export function ExplorePage({ onOpenProfile }: { onOpenProfile?: (userId: string) => void }) {
   const { isAuthenticated } = useAuth();
   const { t } = useLang();
   const [search, setSearch] = useState("");
@@ -205,7 +205,19 @@ export function ExplorePage() {
             </div>
           )}
           {!searching && searchResults.map(user => (
-            <div key={user.id} className="glass rounded-2xl p-4 border border-slate-700/10 flex items-center gap-4">
+            <div
+              key={user.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpenProfile?.(user.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onOpenProfile?.(user.id);
+                }
+              }}
+              className="glass rounded-2xl p-4 border border-slate-700/10 flex items-center gap-4 w-full text-left hover:border-slate-600/30 hover:bg-slate-800/20 transition-all"
+            >
               <img
                 src={user.avatarUrl || avatarFallback(user.displayName ?? user.username)}
                 alt={user.displayName ?? user.username}
@@ -226,7 +238,11 @@ export function ExplorePage() {
                 </p>
                 {isAuthenticated && (
                   <button
-                    onClick={() => handleToggleFollow(user)}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleFollow(user);
+                    }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${followingSet.has(user.id)
                       ? "bg-slate-800 text-slate-400 border border-slate-700"
                       : "text-white border border-cyan-500/30"}`}

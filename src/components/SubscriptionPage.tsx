@@ -26,17 +26,38 @@ export function SubscriptionPage() {
     return fallback ?? tierId;
   };
 
-  const getFeatureLabel = (feature: string) => {
-    const featureMap: Record<string, string> = {
-      "Unlimited posts": t.subscription.featureUnlimitedPosts,
-      "Priority feed ranking": t.subscription.featurePriorityFeed,
-      "Advanced analytics": t.subscription.featureAdvancedAnalytics,
-      "Premium badge": t.subscription.featurePremiumBadge,
-      "Verified badge": t.subscription.featureVerifiedBadge,
-      "Dedicated support": t.subscription.featureDedicatedSupport,
-      "Custom profile themes": t.subscription.featureCustomThemes,
-    };
-    return featureMap[feature] ?? feature;
+  const getTierFeatures = (tierId: string, fallback?: string[]) => {
+    if (tierId === "FREE") {
+      return [
+        t.subscription.featureBasicFeedAccess,
+        t.subscription.featureEarnRewardsFromAds,
+        t.subscription.featureStandardAnalytics,
+      ];
+    }
+
+    if (tierId === "PRO") {
+      return [
+        t.subscription.featureAdvancedAnalyticsDashboard,
+        t.subscription.featurePriorityAdPlacement,
+        t.subscription.featureCustomProfileBadge,
+        t.subscription.feature5xDailyRewardCap,
+        t.subscription.featureAdFreeBrowsing,
+      ];
+    }
+
+    if (tierId === "PREMIUM") {
+      return [
+        t.subscription.featureEverythingInPro,
+        t.subscription.featureVerifiedBadge,
+        t.subscription.feature10xDailyRewardCap,
+        t.subscription.featureEarlyAccess,
+        t.subscription.featureDirectMerchantMessaging,
+        t.subscription.featurePrioritySupport,
+        t.subscription.featureCustomNftMinting,
+      ];
+    }
+
+    return fallback ?? [];
   };
 
   const getSubscriptionStatusLabel = (status?: string) => {
@@ -130,6 +151,7 @@ export function SubscriptionPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {tiers.map((tier: any) => {
           const colors = TIER_COLORS[tier.id] || TIER_COLORS.FREE;
+          const features = getTierFeatures(tier.id, tier.features);
           const isCurrent = currentTier === tier.id;
           const isUpgrade = tier.id !== "FREE" && currentTier === "FREE";
           const isPremiumUpgrade = tier.id === "PREMIUM" && currentTier === "PRO";
@@ -163,10 +185,10 @@ export function SubscriptionPage() {
 
               {/* Features */}
               <ul className="space-y-2 mb-6">
-                {tier.features.map((f: string, i: number) => (
+                {features.map((f: string, i: number) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-slate-300">
                     <Check size={12} className="mt-0.5 flex-shrink-0" style={{ color: colors.text }} />
-                    {getFeatureLabel(f)}
+                    {f}
                   </li>
                 ))}
               </ul>

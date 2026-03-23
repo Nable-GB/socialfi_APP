@@ -191,7 +191,7 @@ export function MarketplacePage() {
 
                   <div className="flex gap-2">
                     <button
-                      onClick={() => toast.success(`${t.createAd.collecting} ${nft.name}! ⛏️`)}
+                      onClick={() => toast.info(t.marketplace.comingSoon ?? "This NFT is not available for purchase yet.")}
                       className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90 flex items-center justify-center gap-2"
                       style={{ background: `linear-gradient(135deg, ${nft.accent}, ${nft.accent}aa)`, boxShadow: `0 2px 10px ${nft.accent}33` }}>
                       {t.marketplace.collectNow}

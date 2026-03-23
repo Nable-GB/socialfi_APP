@@ -114,7 +114,7 @@ export async function getTrack(req: Request, res: Response): Promise<void> {
 export async function createTrack(req: Request, res: Response): Promise<void> {
   try {
     const userId = req.user!.userId;
-    const { title, description, genre, tags, bpm, key, duration, isAiGenerated, aiModel, aiPrompt, audioUrl, coverUrl, albumId, status } = req.body;
+    const { title, description, genre, tags, moodTags, bpm, key, duration, isAiGenerated, aiModel, aiPrompt, audioUrl, coverUrl, albumId, status } = req.body;
 
     if (!title || !audioUrl) {
       res.status(400).json({ error: "title and audioUrl are required" });
@@ -127,6 +127,7 @@ export async function createTrack(req: Request, res: Response): Promise<void> {
         description,
         genre: genre || "OTHER",
         tags: tags || [],
+        moodTags: moodTags || [],
         bpm: bpm ? parseInt(bpm) : null,
         key: key || null,
         duration: duration ? parseInt(duration) : null,
@@ -168,6 +169,7 @@ export async function updateTrack(req: Request, res: Response): Promise<void> {
     if (b.description !== undefined) data.description = b.description;
     if (b.genre !== undefined) data.genre = b.genre;
     if (b.tags !== undefined) data.tags = b.tags;
+    if (b.moodTags !== undefined) data.moodTags = b.moodTags;
     if (b.bpm !== undefined) data.bpm = b.bpm ? parseInt(b.bpm) : null;
     if (b.key !== undefined) data.key = b.key;
     if (b.duration !== undefined) data.duration = b.duration ? parseInt(b.duration) : null;
