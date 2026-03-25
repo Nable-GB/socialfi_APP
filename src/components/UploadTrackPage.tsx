@@ -21,6 +21,7 @@ export function UploadTrackPage() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [lyrics, setLyrics] = useState("");
   const [genre, setGenre] = useState("OTHER");
   const [bpm, setBpm] = useState("");
   const [musicalKey, setMusicalKey] = useState("");
@@ -116,6 +117,7 @@ export function UploadTrackPage() {
       await musicApi.createTrack({
         title: title.trim(),
         description: description.trim() || undefined,
+        lyrics: lyrics.trim() || undefined,
         genre: genre as any,
         tags: tagsList,
         moodTags: moodList,
@@ -129,7 +131,7 @@ export function UploadTrackPage() {
       });
       toast.success(publishNow ? t.upload.trackPublished : t.upload.trackDraft);
       // Reset form
-      setTitle(""); setDescription(""); setGenre("OTHER"); 
+      setTitle(""); setDescription(""); setLyrics(""); setGenre("OTHER"); 
       setTagsList([]); setTagInput("");
       setMoodList([]); setMoodInput("");
       setBpm(""); setMusicalKey(""); 
@@ -256,6 +258,13 @@ export function UploadTrackPage() {
           <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.upload.descLabel}</label>
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder={t.upload.descPlaceholder}
             className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 resize-none" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-1.5">Lyrics</label>
+          <textarea value={lyrics} onChange={e => setLyrics(e.target.value)} rows={6} placeholder="Paste or write song lyrics here"
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 resize-none" />
+          <p className="text-[10px] text-slate-500 mt-1">Optional. Lyrics can be displayed in music discovery and exploration views.</p>
         </div>
 
         {/* Genre + BPM + Key */}

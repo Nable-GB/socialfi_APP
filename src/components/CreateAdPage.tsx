@@ -4,9 +4,11 @@ import { toast } from "sonner";
 import { adsApi } from "../lib/api";
 import { useLang } from "../contexts/LangContext";
 import type { ApiAdPackage } from "../lib/api";
+import { useRewards } from "../hooks/useRewards";
 
 export function CreateAdPage() {
   const { t } = useLang();
+  const { balance, fetchBalance } = useRewards();
   const [packages, setPackages] = useState<ApiAdPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPkg, setSelectedPkg] = useState<string | null>(null);
@@ -71,6 +73,11 @@ export function CreateAdPage() {
       return;
     }
 
+    if (selectedPackage && hasInsufficientFunds) {
+      toast.error(`Insufficient balance. Need ${selectedPackage.priceCrypto} SFT, have ${availableBalance.toFixed(2)} SFT`);
+      return;
+    }
+
     try {
       setSubmitting(true);
       const res = await adsApi.createCampaign({
@@ -87,6 +94,7 @@ export function CreateAdPage() {
       });
       toast.success(res.message);
       setCreated({ title: res.campaign.title, id: res.campaign.id });
+      await fetchBalance();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t.createAd.failed);
     } finally {
@@ -111,6 +119,9 @@ export function CreateAdPage() {
   };
 
   const selectedPackage = packages.find(p => p.id === selectedPkg);
+  const availableBalance = parseFloat(balance || "0");
+  const requiredBalance = selectedPackage ? parseFloat(selectedPackage.priceCrypto || "0") : 0;
+  const hasInsufficientFunds = selectedPackage ? availableBalance < requiredBalance : false;
 
   const tierColors: Record<string, { bg: string; border: string; accent: string; icon: string }> = {
     "Starter": { bg: "from-slate-800 to-slate-900", border: "border-cyan-500/30", accent: "#22d3ee", icon: "🚀" },
@@ -132,6 +143,11 @@ export function CreateAdPage() {
             <h1 className="text-xl font-bold text-white">{t.createAd.title}</h1>
             <p className="text-xs text-slate-400">{t.createAd.subtitle}</p>
           </div>
+        </div>
+
+        <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-slate-900/40 px-3 py-2">
+          <span className="text-xs text-slate-400">Available balance</span>
+          <span className="text-sm font-bold text-cyan-400 font-mono">{availableBalance.toFixed(2)} SFT</span>
         </div>
 
         {/* Steps */}
@@ -408,6 +424,14 @@ export function CreateAdPage() {
           </h2>
 
           <div className="glass rounded-2xl p-5 border border-slate-700/10 space-y-4">
+            {hasInsufficientFunds && (
+              <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3">
+                <p className="text-sm font-semibold text-red-300">Insufficient balance</p>
+                <p className="text-xs text-red-200/80 mt-1">
+                  You need {requiredBalance.toFixed(2)} SFT to launch this campaign, but only have {availableBalance.toFixed(2)} SFT.
+                </p>
+              </div>
+            )}
             <div className="flex items-center justify-between pb-3 border-b border-slate-700/20">
               <span className="text-sm text-slate-400">{t.createAd.package}</span>
               <span className="text-sm font-bold text-white flex items-center gap-1.5">
@@ -466,9 +490,12 @@ export function CreateAdPage() {
             )}
             <div className="flex items-center justify-between pt-2">
               <span className="text-base font-bold text-white">{t.createAd.total}</span>
-              <span className="text-xl font-bold font-mono text-indigo-400">
-                ${parseFloat(selectedPackage.priceFiat).toLocaleString()}
-              </span>
+              <div className="text-right">
+                <span className="block text-xl font-bold font-mono text-indigo-400">
+                  ${parseFloat(selectedPackage.priceFiat).toLocaleString()}
+                </span>
+                <span className="block text-xs font-mono text-cyan-400 mt-0.5">{requiredBalance.toFixed(2)} SFT</span>
+              </div>
             </div>
           </div>
 
@@ -478,10 +505,10 @@ export function CreateAdPage() {
             </button>
             <button
               onClick={handleCreateCampaign}
-              disabled={submitting}
+              disabled={submitting || hasInsufficientFunds}
               className="px-8 py-3 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
               style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)", boxShadow: "0 4px 20px rgba(99,102,241,0.35)" }}>
-              {submitting ? <><RefreshCw size={15} className="animate-spin" /> {t.createAd.creating}</> : <><Zap size={16} /> {t.createAd.launch}</>}
+              {submitting ? <><RefreshCw size={15} className="animate-spin" /> {t.createAd.creating}</> : hasInsufficientFunds ? <><Zap size={16} /> Insufficient Funds</> : <><Zap size={16} /> {t.createAd.launch}</>}
             </button>
           </div>
         </div>

@@ -76,6 +76,25 @@ function TrackCard({ track, onPlay, isCurrentTrack, isPlaying }: {
           {track.artist?.displayName || track.artist?.username}
           {track.aiModel && <span className="text-purple-400"> · {track.aiModel}</span>}
         </p>
+        {((track.tags?.length ?? 0) > 0 || (track.moodTags?.length ?? 0) > 0) && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {track.tags?.slice(0, 2).map((tag) => (
+              <span key={`tag-${tag}`} className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                #{tag}
+              </span>
+            ))}
+            {track.moodTags?.slice(0, 2).map((mood) => (
+              <span key={`mood-${mood}`} className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                {mood}
+              </span>
+            ))}
+          </div>
+        )}
+        {track.lyrics && (
+          <p className="text-[10px] text-slate-500 mt-2 line-clamp-2 leading-relaxed">
+            {track.lyrics}
+          </p>
+        )}
         <div className="flex items-center gap-2 mt-2 text-[10px] text-slate-500">
           <span className="flex items-center gap-1"><Play size={10} /> {track.playCount.toLocaleString()}</span>
           <button onClick={handleLike} className={`flex items-center gap-1 transition-colors ${liked ? "text-red-400" : "hover:text-red-400"}`}>

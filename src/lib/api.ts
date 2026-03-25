@@ -584,6 +584,7 @@ export interface ApiTrack {
   id: string;
   title: string;
   description?: string;
+  lyrics?: string;
   genre: string;
   tags: string[];
   bpm?: number;

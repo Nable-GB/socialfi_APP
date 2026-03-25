@@ -171,11 +171,17 @@ export function ExplorePage({ onOpenProfile }: { onOpenProfile?: (userId: string
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-sm text-white truncate">{track.title}</h3>
                 <p className="text-xs text-slate-400 truncate">{track.artist?.displayName || track.artist?.username}</p>
-                <div className="flex gap-2 mt-1">
+                <div className="flex flex-wrap gap-2 mt-1">
                   {track.tags?.slice(0, 3).map((tag: string) => (
                     <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-400">#{tag}</span>
                   ))}
+                  {track.moodTags?.slice(0, 2).map((mood: string) => (
+                    <span key={mood} className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">{mood}</span>
+                  ))}
                 </div>
+                {track.lyrics && (
+                  <p className="text-[10px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{track.lyrics}</p>
+                )}
               </div>
               <div className="text-right flex-shrink-0 text-[10px] text-slate-500 space-y-1">
                 <div className="flex items-center justify-end gap-1"><TrendingUp size={10} /> {track.playCount}</div>

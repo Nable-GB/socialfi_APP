@@ -139,6 +139,19 @@ export async function createCampaign(req: Request, res: Response): Promise<void>
     const data = createCampaignSchema.parse(req.body);
     const userId = req.user!.userId;
 
+    const merchant = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, offChainBalance: true },
+    });
+    if (!merchant) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    if (merchant.role !== "MERCHANT") {
+      res.status(403).json({ error: "Only merchants can create ad campaigns" });
+      return;
+    }
+
     // Fetch the ad package
     const adPackage = await prisma.adPackage.findUnique({
       where: { id: data.adPackageId },
@@ -148,34 +161,13 @@ export async function createCampaign(req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Create campaign (ACTIVE immediately for demo)
-    const campaign = await prisma.adCampaign.create({
-      data: {
-        merchantId: userId,
-        adPackageId: adPackage.id,
-        title: sanitizeText(data.campaignTitle),
-        description: data.campaignDescription ? sanitizeText(data.campaignDescription) : undefined,
-        targetUrl: data.targetUrl,
-        paymentMethod: "CRYPTO_USDT",
-        paymentStatus: "COMPLETED",
-        amountPaid: adPackage.priceFiat,
-        impressionsTotal: adPackage.impressions,
-        rewardPoolTotal: adPackage.totalRewardPool,
-        targetInterests: data.targetInterests ?? [],
-        targetLocation: data.targetLocation,
-        targetGender: data.targetGender,
-        targetAgeMin: data.targetAgeMin,
-        targetAgeMax: data.targetAgeMax,
-        status: "ACTIVE",
-        startsAt: new Date(),
-        endsAt: new Date(Date.now() + adPackage.durationDays * 24 * 60 * 60 * 1000),
-      },
-      include: {
-        adPackage: { select: { name: true, impressions: true, durationDays: true } },
-      },
-    });
+    if (merchant.offChainBalance.lessThan(adPackage.priceCrypto)) {
+      res.status(400).json({
+        error: `Insufficient balance. Need ${adPackage.priceCrypto} SFT, have ${merchant.offChainBalance} SFT`,
+      });
+      return;
+    }
 
-    // Always create a sponsored post for the campaign
     const pool = adPackage.totalRewardPool.toNumber();
     const impr = adPackage.impressions > 0 ? adPackage.impressions : 1;
     const perView = pool / impr;
@@ -183,15 +175,50 @@ export async function createCampaign(req: Request, res: Response): Promise<void>
     const rawContent = data.content || `🔥 SPONSORED | ${data.campaignTitle}\n\n${data.campaignDescription || "Check out this campaign!"}\n\n${data.targetUrl ? `👉 ${data.targetUrl}` : ""}`;
     const postContent = sanitizeText(rawContent);
 
-    await prisma.socialPost.create({
-      data: {
-        authorId: userId,
-        content: postContent,
-        type: "SPONSORED",
-        adCampaignId: campaign.id,
-        rewardPerView: perView,
-        rewardPerEngagement: perEngagement,
-      },
+    const campaign = await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { offChainBalance: { decrement: adPackage.priceCrypto } },
+      });
+
+      const createdCampaign = await tx.adCampaign.create({
+        data: {
+          merchantId: userId,
+          adPackageId: adPackage.id,
+          title: sanitizeText(data.campaignTitle),
+          description: data.campaignDescription ? sanitizeText(data.campaignDescription) : undefined,
+          targetUrl: data.targetUrl,
+          paymentMethod: "CRYPTO_USDT",
+          paymentStatus: "COMPLETED",
+          amountPaid: adPackage.priceCrypto,
+          impressionsTotal: adPackage.impressions,
+          rewardPoolTotal: adPackage.totalRewardPool,
+          targetInterests: data.targetInterests ?? [],
+          targetLocation: data.targetLocation,
+          targetGender: data.targetGender,
+          targetAgeMin: data.targetAgeMin,
+          targetAgeMax: data.targetAgeMax,
+          status: "ACTIVE",
+          startsAt: new Date(),
+          endsAt: new Date(Date.now() + adPackage.durationDays * 24 * 60 * 60 * 1000),
+        },
+        include: {
+          adPackage: { select: { name: true, impressions: true, durationDays: true } },
+        },
+      });
+
+      await tx.socialPost.create({
+        data: {
+          authorId: userId,
+          content: postContent,
+          type: "SPONSORED",
+          adCampaignId: createdCampaign.id,
+          rewardPerView: perView,
+          rewardPerEngagement: perEngagement,
+        },
+      });
+
+      return createdCampaign;
     });
 
     res.json({

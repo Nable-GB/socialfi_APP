@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Search, TrendingUp, ExternalLink, ShoppingBag, LayoutGrid, List } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, TrendingUp, ExternalLink, ShoppingBag, LayoutGrid, List, CheckCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useLang } from "../contexts/LangContext";
+import { useAuth } from "../contexts/AuthContext";
 
 interface NFTItem {
   id: string;
@@ -16,6 +17,27 @@ interface NFTItem {
   accent: string;
   creator: string;
   likes: number;
+}
+
+interface ClaimedNFT extends NFTItem {
+  claimedAt: string;
+}
+
+const CLAIMED_NFTS_KEY = "demo_claimed_nfts";
+
+function loadClaimedNFTs(): ClaimedNFT[] {
+  try {
+    const saved = localStorage.getItem(CLAIMED_NFTS_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveClaimedNFTs(nfts: ClaimedNFT[]) {
+  try {
+    localStorage.setItem(CLAIMED_NFTS_KEY, JSON.stringify(nfts));
+  } catch { /* ignore */ }
 }
 
 interface CollectionStat {
@@ -62,8 +84,15 @@ function getCategories(t: any) {
 export function MarketplacePage() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
-  const [view, setView] = useState<"nfts" | "collections">("nfts");
+  const [view, setView] = useState<"nfts" | "collections" | "my-collection">("nfts");
   const { t } = useLang();
+  const { isAuthenticated } = useAuth();
+  
+  const [claimedNFTs, setClaimedNFTs] = useState<ClaimedNFT[]>([]);
+  
+  useEffect(() => {
+    setClaimedNFTs(loadClaimedNFTs());
+  }, []);
 
   const filtered = MARKETPLACE_NFTS.filter(nft => {
     const matchesSearch = nft.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -71,6 +100,32 @@ export function MarketplacePage() {
     const matchesCategory = activeCategory === "All" || nft.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
+
+  const handleClaim = (nft: NFTItem) => {
+    if (!isAuthenticated) {
+      toast.error("Please sign in to collect NFTs");
+      return;
+    }
+    
+    const alreadyClaimed = claimedNFTs.some(c => c.id === nft.id);
+    if (alreadyClaimed) {
+      toast.info("You already collected this NFT");
+      return;
+    }
+    
+    const claimed: ClaimedNFT = {
+      ...nft,
+      claimedAt: new Date().toISOString(),
+    };
+    
+    const updated = [...claimedNFTs, claimed];
+    setClaimedNFTs(updated);
+    saveClaimedNFTs(updated);
+    
+    toast.success(`Collected "${nft.name}"! 🎉`);
+  };
+
+  const isClaimed = (nftId: string) => claimedNFTs.some(c => c.id === nftId);
 
   const handleCollectionClick = (collectionName: string) => {
     setSearch(collectionName);
@@ -129,6 +184,21 @@ export function MarketplacePage() {
           >
             <List size={14} /> {t.marketplace.collections}
           </button>
+          {isAuthenticated && (
+            <button
+              onClick={() => setView("my-collection")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                view === "my-collection" ? "bg-slate-700 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              <ShoppingBag size={14} /> My Collection
+              {claimedNFTs.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-cyan-500 text-white text-[9px]">
+                  {claimedNFTs.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -191,10 +261,20 @@ export function MarketplacePage() {
 
                   <div className="flex gap-2">
                     <button
-                      onClick={() => toast.info(t.marketplace.comingSoon ?? "This NFT is not available for purchase yet.")}
-                      className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90 flex items-center justify-center gap-2"
-                      style={{ background: `linear-gradient(135deg, ${nft.accent}, ${nft.accent}aa)`, boxShadow: `0 2px 10px ${nft.accent}33` }}>
-                      {t.marketplace.collectNow}
+                      onClick={() => isClaimed(nft.id) ? null : handleClaim(nft)}
+                      disabled={isClaimed(nft.id)}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                        isClaimed(nft.id)
+                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 cursor-default"
+                          : "text-white hover:opacity-90"
+                      }`}
+                      style={isClaimed(nft.id) ? {} : { background: `linear-gradient(135deg, ${nft.accent}, ${nft.accent}aa)`, boxShadow: `0 2px 10px ${nft.accent}33` }}
+                    >
+                      {isClaimed(nft.id) ? (
+                        <><CheckCircle size={14} /> Collected</>
+                      ) : (
+                        <>{t.marketplace.collectNow}</>
+                      )}
                     </button>
                     <a
                       href={`https://opensea.io/assets/ethereum/0x.../${nft.id}`}
@@ -217,7 +297,7 @@ export function MarketplacePage() {
             </div>
           )}
         </>
-      ) : (
+      ) : view === "collections" ? (
         <div className="space-y-3">
           <div className="glass rounded-2xl border border-slate-700/10 overflow-hidden">
             <div className="grid grid-cols-12 gap-4 p-4 border-b border-slate-700/10 bg-slate-800/30 text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -247,6 +327,60 @@ export function MarketplacePage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="glass rounded-2xl p-5 border border-slate-700/10">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Sparkles size={18} className="text-cyan-400" /> My Demo Collection
+                </h2>
+                <p className="text-sm text-slate-400 mt-1">
+                  NFTs you collected from the demo marketplace appear here.
+                </p>
+              </div>
+              <div className="px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-right">
+                <p className="text-[10px] uppercase tracking-wider text-slate-500">Collected</p>
+                <p className="text-lg font-bold text-cyan-400">{claimedNFTs.length}</p>
+              </div>
+            </div>
+
+            {claimedNFTs.length === 0 ? (
+              <div className="text-center py-12">
+                <ShoppingBag size={42} className="mx-auto text-slate-600 mb-3" />
+                <h3 className="text-base font-semibold text-slate-300">No NFTs collected yet</h3>
+                <p className="text-sm text-slate-500 mt-1">Use the Collect Now button on demo NFTs to add them here.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {claimedNFTs.map((nft) => (
+                  <div key={nft.id} className="rounded-2xl overflow-hidden border border-emerald-500/20 bg-slate-900/40">
+                    <div className="relative aspect-square bg-slate-800">
+                      <img src={nft.image} alt={nft.name} className="w-full h-full object-cover" />
+                      <div className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-bold text-emerald-300">
+                        Collected
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div>
+                          <h3 className="text-sm font-bold text-white">{nft.name}</h3>
+                          <p className="text-xs text-slate-400">{nft.collection}</p>
+                        </div>
+                        <span className="text-xs font-bold text-cyan-400">{nft.price_eth} ETH</span>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-3">Collected by you from the demo marketplace.</p>
+                      <div className="flex items-center justify-between text-[11px] text-slate-400">
+                        <span>Creator: <span className="text-slate-200">{nft.creator}</span></span>
+                        <span>{new Date(nft.claimedAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

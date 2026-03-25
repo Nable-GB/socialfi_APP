@@ -12,6 +12,9 @@ function NFTCard({ nft, onBuy }: { nft: ApiMusicNFT; onBuy: (nft: ApiMusicNFT) =
   const soldOut = nft.availableSupply <= 0;
   const soldCount = nft.totalSupply - nft.availableSupply;
   const soldPercent = (soldCount / nft.totalSupply) * 100;
+  const pricePerFraction = Number(nft.pricePerFraction || 0);
+  const totalMarketValue = pricePerFraction * nft.totalSupply;
+  const soldValue = pricePerFraction * soldCount;
 
   return (
     <div className="rounded-xl overflow-hidden transition-all hover:scale-[1.02]"
@@ -45,9 +48,30 @@ function NFTCard({ nft, onBuy }: { nft: ApiMusicNFT; onBuy: (nft: ApiMusicNFT) =
 
         {/* Stats row */}
         <div className="flex items-center gap-3 text-[10px] text-slate-500">
-          <span className="flex items-center gap-1"><Coins size={10} /> {Number(nft.pricePerFraction).toFixed(1)} {t.musicNFT.perFrac}</span>
+          <span className="flex items-center gap-1"><Coins size={10} /> {pricePerFraction.toFixed(2)} {t.musicNFT.perFrac}</span>
           <span className="flex items-center gap-1"><Users size={10} /> {nft._count?.holders || 0}</span>
           <span className="flex items-center gap-1"><TrendingUp size={10} /> {nft.royaltyPercent}%</span>
+        </div>
+
+        <div className="rounded-lg border border-purple-500/15 bg-slate-900/40 p-2.5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300">Market Price</span>
+            <span className="text-[10px] text-slate-500">Live pricing</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-[10px]">
+            <div className="rounded-md bg-slate-800/50 p-2 border border-slate-700/20">
+              <p className="text-slate-500 mb-1">Per fraction</p>
+              <p className="font-bold text-white">${pricePerFraction.toFixed(2)}</p>
+            </div>
+            <div className="rounded-md bg-slate-800/50 p-2 border border-slate-700/20">
+              <p className="text-slate-500 mb-1">Market cap</p>
+              <p className="font-bold text-cyan-400">${totalMarketValue.toFixed(2)}</p>
+            </div>
+            <div className="rounded-md bg-slate-800/50 p-2 border border-slate-700/20">
+              <p className="text-slate-500 mb-1">Sold value</p>
+              <p className="font-bold text-emerald-400">${soldValue.toFixed(2)}</p>
+            </div>
+          </div>
         </div>
 
         {/* Supply bar */}

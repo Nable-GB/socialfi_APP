@@ -114,33 +114,36 @@ export async function getTrack(req: Request, res: Response): Promise<void> {
 export async function createTrack(req: Request, res: Response): Promise<void> {
   try {
     const userId = req.user!.userId;
-    const { title, description, genre, tags, moodTags, bpm, key, duration, isAiGenerated, aiModel, aiPrompt, audioUrl, coverUrl, albumId, status } = req.body;
+    const { title, description, lyrics, genre, tags, moodTags, bpm, key, duration, isAiGenerated, aiModel, aiPrompt, audioUrl, coverUrl, albumId, status } = req.body;
 
     if (!title || !audioUrl) {
       res.status(400).json({ error: "title and audioUrl are required" });
       return;
     }
 
+    const trackData: any = {
+      title,
+      description,
+      lyrics,
+      genre: genre || "OTHER",
+      tags: tags || [],
+      moodTags: moodTags || [],
+      bpm: bpm ? parseInt(bpm) : null,
+      key: key || null,
+      duration: duration ? parseInt(duration) : null,
+      isAiGenerated: isAiGenerated ?? true,
+      aiModel,
+      aiPrompt,
+      audioUrl,
+      coverUrl,
+      albumId: albumId || null,
+      artistId: userId,
+      status: status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+      publishedAt: status === "PUBLISHED" ? new Date() : null,
+    };
+
     const track = await prisma.track.create({
-      data: {
-        title,
-        description,
-        genre: genre || "OTHER",
-        tags: tags || [],
-        moodTags: moodTags || [],
-        bpm: bpm ? parseInt(bpm) : null,
-        key: key || null,
-        duration: duration ? parseInt(duration) : null,
-        isAiGenerated: isAiGenerated ?? true,
-        aiModel,
-        aiPrompt,
-        audioUrl,
-        coverUrl,
-        albumId: albumId || null,
-        artistId: userId,
-        status: status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
-        publishedAt: status === "PUBLISHED" ? new Date() : null,
-      },
+      data: trackData,
       include: {
         artist: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
       },
@@ -167,6 +170,7 @@ export async function updateTrack(req: Request, res: Response): Promise<void> {
     const data: any = {};
     if (b.title !== undefined) data.title = b.title;
     if (b.description !== undefined) data.description = b.description;
+    if (b.lyrics !== undefined) data.lyrics = b.lyrics;
     if (b.genre !== undefined) data.genre = b.genre;
     if (b.tags !== undefined) data.tags = b.tags;
     if (b.moodTags !== undefined) data.moodTags = b.moodTags;
@@ -196,9 +200,34 @@ export async function deleteTrack(req: Request, res: Response): Promise<void> {
   try {
     const userId = req.user!.userId;
     const trackId = String(req.params.id);
-    const existing = await prisma.track.findUnique({ where: { id: trackId } });
+    const existing = await prisma.track.findUnique({
+      where: { id: trackId },
+      include: {
+        musicNfts: { select: { id: true } },
+        distributions: {
+          where: { status: { in: ["PENDING", "SUBMITTED", "LIVE"] } },
+          select: { id: true },
+        },
+        distSubmissions: {
+          where: { status: { in: ["PENDING", "SUBMITTED", "LIVE"] } },
+          select: { id: true },
+        },
+      },
+    });
     if (!existing) { res.status(404).json({ error: "Track not found" }); return; }
     if (existing.artistId !== userId) { res.status(403).json({ error: "Not your track" }); return; }
+    if (existing.status === "PUBLISHED") {
+      res.status(400).json({ error: "Published tracks cannot be deleted" });
+      return;
+    }
+    if (existing.musicNfts.length > 0) {
+      res.status(400).json({ error: "Tracks with minted NFTs cannot be deleted" });
+      return;
+    }
+    if (existing.distributions.length > 0 || existing.distSubmissions.length > 0) {
+      res.status(400).json({ error: "Tracks with active distribution records cannot be deleted" });
+      return;
+    }
 
     await prisma.track.delete({ where: { id: trackId } });
     res.json({ success: true });

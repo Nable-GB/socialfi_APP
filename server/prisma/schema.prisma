@@ -782,6 +782,7 @@ model Track {
   // --- Metadata ---
   title           String
   description     String?
+  lyrics          String?       @db.Text
   genre           MusicGenre    @default(OTHER)
   tags            String[]      @default([])
   bpm             Int?

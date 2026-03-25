@@ -56,6 +56,12 @@ export function WalletPage() {
   const [showDeposit, setShowDeposit] = useState(false);
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState<"overview" | "send" | "swap" | "history">("overview");
+  const [simulatedEthBalance, setSimulatedEthBalance] = useState<string | null>(null);
+  const [simulatedSmfiBalance, setSimulatedSmfiBalance] = useState<number | null>(null);
+
+  const actualSmfiBalance = parseFloat(smfiBalance ?? "0");
+  const displayedEthBalance = simulatedEthBalance ?? (ethBalance ?? "0");
+  const displayedSmfiBalance = simulatedSmfiBalance ?? actualSmfiBalance;
 
   const refreshEthBalance = useCallback(async () => {
     if (!wallet.address || !window.ethereum) return;
@@ -76,12 +82,17 @@ export function WalletPage() {
     if (isAuthenticated) refreshSmfi();
   }, [wallet.address, refreshEthBalance, isAuthenticated, refreshSmfi]);
 
+  useEffect(() => {
+    setSimulatedEthBalance(null);
+    setSimulatedSmfiBalance(null);
+  }, [wallet.address, smfiBalance, ethBalance]);
+
   const handleSend = async () => {
     if (!wallet.address || !window.ethereum) { toast.error(t.wallet.connectFirst); return; }
     if (!isAddress(sendTo)) { toast.error(t.wallet.invalidAddress); return; }
     const amt = parseFloat(sendAmount);
     if (isNaN(amt) || amt <= 0) { toast.error(t.wallet.validAmount); return; }
-    if (parseFloat(ethBalance ?? "0") < amt) { toast.error(t.wallet.insufficientEth); return; }
+    if (parseFloat(displayedEthBalance) < amt) { toast.error(t.wallet.insufficientEth); return; }
 
     setSending(true);
     try {
@@ -117,18 +128,27 @@ export function WalletPage() {
     if (isNaN(amt) || amt <= 0) { toast.error(t.wallet.validAmount); return; }
 
     if (swapDirection === "ETH_TO_SMFI") {
-      if (parseFloat(ethBalance ?? "0") < amt) { toast.error(t.wallet.insufficientEth); return; }
+      if (parseFloat(displayedEthBalance) < amt) { toast.error(t.wallet.insufficientEth); return; }
     } else {
-      if (parseFloat(smfiBalance ?? "0") < amt) { toast.error(t.wallet.insufficientSmfi); return; }
+      if (displayedSmfiBalance < amt) { toast.error(t.wallet.insufficientSmfi); return; }
     }
 
     setSwapping(true);
     try {
-      // Simulate swap delay
       await new Promise(r => setTimeout(r, 2000));
-      
-      // In a real app, this would call a smart contract or backend swap endpoint
-      toast.success(`${t.wallet.swapSuccess} ${amt} ${swapDirection === "ETH_TO_SMFI" ? "ETH" : "SMFI"}`);
+      const receivedAmount = swapDirection === "ETH_TO_SMFI"
+        ? amt * EXCHANGE_RATE
+        : amt / EXCHANGE_RATE;
+
+      if (swapDirection === "ETH_TO_SMFI") {
+        setSimulatedEthBalance((parseFloat(displayedEthBalance) - amt).toFixed(6));
+        setSimulatedSmfiBalance(displayedSmfiBalance + receivedAmount);
+      } else {
+        setSimulatedSmfiBalance(displayedSmfiBalance - amt);
+        setSimulatedEthBalance((parseFloat(displayedEthBalance) + receivedAmount).toFixed(6));
+      }
+
+      toast.info(`Demo swap simulated locally: ${amt} ${swapDirection === "ETH_TO_SMFI" ? "ETH" : "SMFI"} → ${receivedAmount.toFixed(swapDirection === "ETH_TO_SMFI" ? 2 : 6)} ${swapDirection === "ETH_TO_SMFI" ? "SMFI" : "ETH"}`);
       
       const record: TxRecord = {
         hash: `mock-swap-${Date.now()}`,
@@ -136,15 +156,11 @@ export function WalletPage() {
         amount: swapAmount,
         timestamp: Date.now(),
         status: "confirmed",
-        details: swapDirection === "ETH_TO_SMFI" 
-          ? t.wallet.swapHistoryEthToSmfi.replace("{0}", amt.toString()).replace("{1}", (amt * EXCHANGE_RATE).toString())
-          : t.wallet.swapHistorySmfiToEth.replace("{0}", amt.toString()).replace("{1}", (amt / EXCHANGE_RATE).toString())
+        details: `${swapDirection === "ETH_TO_SMFI" ? "Demo ETH → SMFI" : "Demo SMFI → ETH"} · ${amt} → ${receivedAmount.toFixed(swapDirection === "ETH_TO_SMFI" ? 2 : 6)} · No on-chain/backend execution`
       };
       setTxHistory(prev => [record, ...prev]);
       setSwapAmount("");
       setTab("history");
-      refreshEthBalance();
-      refreshSmfi();
     } catch (err) {
       toast.error(t.wallet.swapFailed);
     } finally {
@@ -221,7 +237,7 @@ export function WalletPage() {
             <div className="flex items-end gap-2">
               {loadingBal
                 ? <Loader2 size={20} className="text-indigo-400 animate-spin mt-2" />
-                : <span className="text-2xl font-black text-white font-mono">{ethBalance ?? "0.0000"}</span>
+                : <span className="text-2xl font-black text-white font-mono">{displayedEthBalance}</span>
               }
               <span className="text-xs text-indigo-400 font-bold mb-1.5">ETH</span>
             </div>
@@ -238,7 +254,7 @@ export function WalletPage() {
               <span className="text-xs font-bold text-cyan-300">{t.wallet.smfiToken}</span>
             </div>
             <div className="flex items-end gap-2">
-              <span className="text-2xl font-black text-white font-mono">{parseFloat(smfiBalance).toLocaleString()}</span>
+              <span className="text-2xl font-black text-white font-mono">{displayedSmfiBalance.toLocaleString()}</span>
               <span className="text-xs text-cyan-400 font-bold mb-1.5">SMFI</span>
             </div>
             <p className="text-[10px] text-slate-500 mt-1">{t.wallet.platformRewards}</p>
@@ -267,6 +283,9 @@ export function WalletPage() {
           <div className="p-5 rounded-2xl space-y-4" style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(100,116,139,0.15)" }}>
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-white text-sm">{t.wallet.quickActions}</h3>
+            </div>
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-200">
+              Token swap is currently a demo simulation. It updates balances only inside this page session and does not execute an on-chain or backend transaction.
             </div>
             <div className="grid grid-cols-3 gap-3">
               <button onClick={() => setShowDeposit(true)} className="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/30 flex flex-col items-center gap-2 transition-all">
@@ -356,7 +375,7 @@ export function WalletPage() {
               <div className="flex justify-between mb-2">
                 <span className="text-xs text-slate-400">{t.wallet.from}</span>
                 <span className="text-xs text-slate-500">
-                  {t.wallet.balance}: {swapDirection === "ETH_TO_SMFI" ? ethBalance : parseFloat(smfiBalance).toLocaleString()}
+                  {t.wallet.balance}: {swapDirection === "ETH_TO_SMFI" ? displayedEthBalance : displayedSmfiBalance.toLocaleString()}
                 </span>
               </div>
               <div className="flex items-center gap-3">
@@ -412,7 +431,7 @@ export function WalletPage() {
           <button onClick={handleSwap} disabled={swapping || !swapAmount}
             className="w-full py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             style={{ background: "linear-gradient(135deg, #a855f7, #6366f1)", color: "white" }}>
-            {swapping ? <Loader2 size={16} className="animate-spin" /> : <><Repeat size={14} /> {t.wallet.swapNow}</>}
+            {swapping ? <Loader2 size={16} className="animate-spin" /> : <><Repeat size={14} /> Simulate Swap</>}
           </button>
         </div>
       )}
