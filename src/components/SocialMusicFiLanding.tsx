@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { motion, useInView, useScroll, useTransform } from "framer-motion";
 import {
   Music, Zap, Shield, Star, Users, Target, Coins, ArrowRight,
-  Play, Headphones, Radio, Gem, Rocket, Globe,
+  Play, Headphones, Radio, Gem, Rocket, Globe, UserPlus, Share2, Crown,
 } from "lucide-react";
 import { useLang, type Lang } from "../contexts/LangContext";
 
@@ -342,6 +342,37 @@ export function SocialMusicFiLanding({ onLaunchApp, onApplyArtist }: { onLaunchA
     { phase: lp.phase2, title: lp.phase2Title, description: lp.phase2Desc, icon: Globe },
   ];
 
+  const incentivePlan = [
+    { icon: UserPlus, title: lp.planJoinTitle, description: lp.planJoinDesc },
+    { icon: Users, title: lp.planReferTitle, description: lp.planReferDesc },
+    { icon: Share2, title: lp.planShareTitle, description: lp.planShareDesc },
+    { icon: Crown, title: lp.planMemberTitle, description: lp.planMemberDesc },
+  ];
+
+  const policyRules = [
+    lp.planRule1,
+    lp.planRule2,
+    lp.planRule3,
+    lp.planRule4,
+  ];
+
+  const memberBenefits = [
+    {
+      label: lp.planProLabel,
+      description: lp.planProDesc,
+      border: "rgba(34,211,238,0.25)",
+      background: "rgba(34,211,238,0.08)",
+      color: "#22d3ee",
+    },
+    {
+      label: lp.planPremiumLabel,
+      description: lp.planPremiumDesc,
+      border: "rgba(168,85,247,0.28)",
+      background: "rgba(168,85,247,0.08)",
+      color: "#c084fc",
+    },
+  ];
+
   return (
     <div className="relative min-h-screen bg-[#0a0e1a] text-white overflow-hidden">
 
@@ -369,6 +400,7 @@ export function SocialMusicFiLanding({ onLaunchApp, onApplyArtist }: { onLaunchA
           {/* Nav links — hidden on mobile */}
           <div className="hidden sm:flex items-center gap-6 text-xs text-slate-400">
             <a href="#features" className="hover:text-white transition-colors">{lp.navFeatures}</a>
+            <a href="#incentives" className="hover:text-white transition-colors">{lp.navIncentives}</a>
             <a href="#ecosystem" className="hover:text-white transition-colors">{lp.navEcosystem}</a>
             <a href="#roadmap" className="hover:text-white transition-colors">{lp.navRoadmap}</a>
           </div>
@@ -576,6 +608,96 @@ export function SocialMusicFiLanding({ onLaunchApp, onApplyArtist }: { onLaunchA
             {features.map((f, i) => (
               <FeatureCard key={i} {...f} index={i} />
             ))}
+          </div>
+        </div>
+      </AnimatedSection>
+
+      <SectionConnector />
+
+      <AnimatedSection className="relative py-20 px-6" id="incentives">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <motion.div
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/20 bg-cyan-500/5 text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-6"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+            >
+              <Zap size={12} /> {lp.planLabel}
+            </motion.div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">
+              {lp.planTitle1}{" "}
+              <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                {lp.planTitle2}
+              </span>
+            </h2>
+            <p className="text-slate-400 max-w-3xl mx-auto leading-relaxed">
+              {lp.planSub}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-[1.45fr_0.95fr] gap-6 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {incentivePlan.map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.title}
+                    className="rounded-2xl p-6 border border-slate-700/30 backdrop-blur-sm"
+                    style={{ background: "rgba(15,23,42,0.65)" }}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.08 }}
+                    whileHover={{ y: -4, borderColor: "rgba(6,182,212,0.35)" }}
+                  >
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                      style={{ background: "linear-gradient(135deg, rgba(6,182,212,0.15), rgba(139,92,246,0.15))", border: "1px solid rgba(6,182,212,0.2)" }}>
+                      <Icon size={22} className="text-cyan-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">{item.description}</p>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            <motion.div
+              className="rounded-3xl p-6 border border-purple-500/20"
+              style={{ background: "linear-gradient(135deg, rgba(15,23,42,0.92), rgba(30,41,59,0.82))" }}
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/20 bg-purple-500/5 text-xs font-semibold text-purple-400 uppercase tracking-wider mb-4">
+                <Shield size={12} /> {lp.planPolicyLabel}
+              </div>
+              <h3 className="text-2xl font-extrabold text-white leading-tight mb-3">{lp.planPolicyTitle}</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">{lp.planPolicySub}</p>
+
+              <div className="space-y-3 mt-6">
+                {policyRules.map((rule, index) => (
+                  <div key={rule} className="flex items-start gap-3 rounded-2xl border border-slate-700/30 px-4 py-3"
+                    style={{ background: "rgba(15,23,42,0.5)" }}>
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-extrabold text-cyan-400 border border-cyan-500/30 bg-cyan-500/10 flex-shrink-0">
+                      {index + 1}
+                    </div>
+                    <p className="text-sm text-slate-300 leading-relaxed">{rule}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-3 mt-6">
+                {memberBenefits.map((benefit) => (
+                  <div key={benefit.label} className="rounded-2xl p-4 border"
+                    style={{ borderColor: benefit.border, background: benefit.background }}>
+                    <p className="text-sm font-bold mb-1" style={{ color: benefit.color }}>{benefit.label}</p>
+                    <p className="text-xs text-slate-300 leading-relaxed">{benefit.description}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
           </div>
         </div>
       </AnimatedSection>
