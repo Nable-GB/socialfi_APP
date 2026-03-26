@@ -13,6 +13,10 @@ const GENRES = [
 const CONTACT_EMAIL = "contact@musicfi.io";
 const SUNO_AFFILIATE = "https://suno.com/?ref=musicfi";
 
+function normalizeToken(value: string) {
+  return value.trim().normalize("NFC").toLocaleLowerCase();
+}
+
 export function UploadTrackPage() {
   const { isAuthenticated } = useAuth();
   const { t } = useLang();
@@ -32,6 +36,8 @@ export function UploadTrackPage() {
   
   const [moodInput, setMoodInput] = useState("");
   const [moodList, setMoodList] = useState<string[]>([]);
+  const [isTagComposing, setIsTagComposing] = useState(false);
+  const [isMoodComposing, setIsMoodComposing] = useState(false);
 
   const [publishNow, setPublishNow] = useState(true);
 
@@ -51,6 +57,22 @@ export function UploadTrackPage() {
   const [uploadingCover, setUploadingCover] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
+
+  const commitTag = () => {
+    const val = normalizeToken(tagInput);
+    if (val && !tagsList.includes(val)) {
+      setTagsList([...tagsList, val]);
+    }
+    setTagInput("");
+  };
+
+  const commitMood = () => {
+    const val = normalizeToken(moodInput);
+    if (val && !moodList.includes(val)) {
+      setMoodList([...moodList, val]);
+    }
+    setMoodInput("");
+  };
 
   if (!isAuthenticated) {
     return (
@@ -307,14 +329,13 @@ export function UploadTrackPage() {
               type="text"
               value={tagInput}
               onChange={e => setTagInput(e.target.value)}
+              onCompositionStart={() => setIsTagComposing(true)}
+              onCompositionEnd={() => setIsTagComposing(false)}
               onKeyDown={e => {
+                if (e.nativeEvent.isComposing || isTagComposing) return;
                 if (e.key === 'Enter' || e.key === ',') {
                   e.preventDefault();
-                  const val = tagInput.trim().toLowerCase();
-                  if (val && !tagsList.includes(val)) {
-                    setTagsList([...tagsList, val]);
-                    setTagInput("");
-                  }
+                  commitTag();
                 } else if (e.key === 'Backspace' && !tagInput && tagsList.length > 0) {
                   setTagsList(tagsList.slice(0, -1));
                 }
@@ -340,14 +361,13 @@ export function UploadTrackPage() {
               type="text"
               value={moodInput}
               onChange={e => setMoodInput(e.target.value)}
+              onCompositionStart={() => setIsMoodComposing(true)}
+              onCompositionEnd={() => setIsMoodComposing(false)}
               onKeyDown={e => {
+                if (e.nativeEvent.isComposing || isMoodComposing) return;
                 if (e.key === 'Enter' || e.key === ',') {
                   e.preventDefault();
-                  const val = moodInput.trim().toLowerCase();
-                  if (val && !moodList.includes(val)) {
-                    setMoodList([...moodList, val]);
-                    setMoodInput("");
-                  }
+                  commitMood();
                 } else if (e.key === 'Backspace' && !moodInput && moodList.length > 0) {
                   setMoodList(moodList.slice(0, -1));
                 }

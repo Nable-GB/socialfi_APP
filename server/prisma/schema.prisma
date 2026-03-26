@@ -974,7 +974,7 @@ model TrackRepost {
 
 model MusicNFT {
   id              String        @id @default(uuid())
-  track           Track         @relation(fields: [trackId], references: [id])
+  track           Track         @relation(fields: [trackId], references: [id], onDelete: Cascade)
   trackId         String
   artist          User          @relation("ArtistMusicNFTs", fields: [artistId], references: [id])
   artistId        String
@@ -1016,7 +1016,7 @@ model MusicNFT {
 
 model MusicNFTHolder {
   id              String        @id @default(uuid())
-  musicNft        MusicNFT      @relation(fields: [musicNftId], references: [id])
+  musicNft        MusicNFT      @relation(fields: [musicNftId], references: [id], onDelete: Cascade)
   musicNftId      String
   user            User          @relation("UserMusicNFTs", fields: [userId], references: [id])
   userId          String
@@ -1034,7 +1034,7 @@ model MusicNFTHolder {
 
 model RoyaltyPayout {
   id              String        @id @default(uuid())
-  musicNft        MusicNFT      @relation(fields: [musicNftId], references: [id])
+  musicNft        MusicNFT      @relation(fields: [musicNftId], references: [id], onDelete: Cascade)
   musicNftId      String
   recipient       User          @relation("UserRoyalties", fields: [recipientId], references: [id])
   recipientId     String

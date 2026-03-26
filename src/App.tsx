@@ -993,7 +993,7 @@ export default function App() {
   }
 
   // Email verification banner — show if user has email but not verified
-  const showVerifyBanner = user?.email && !(user as any).emailVerified && !verifyBannerDismissed;
+  const showVerifyBanner = user?.email && !user.emailVerified && !verifyBannerDismissed;
 
   return (
     <div className="bg-mesh min-h-screen">

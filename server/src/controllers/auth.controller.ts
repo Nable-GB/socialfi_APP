@@ -99,6 +99,7 @@ export async function register(req: Request, res: Response): Promise<void> {
         username: user.username,
         displayName: user.displayName,
         role: user.role,
+        emailVerified: user.emailVerified,
         referralCode: user.referralCode,
       },
     });
@@ -148,6 +149,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         displayName: user.displayName,
         role: user.role,
         walletAddress: user.walletAddress,
+        emailVerified: user.emailVerified,
         referralCode: user.referralCode,
       },
     });
@@ -234,10 +236,12 @@ export async function verifySiwe(req: Request, res: Response): Promise<void> {
       refreshToken: tokens.refreshToken,
       user: {
         id: user.id,
+        email: user.email,
         username: user.username,
         displayName: user.displayName,
         role: user.role,
         walletAddress: user.walletAddress,
+        emailVerified: user.emailVerified,
         referralCode: user.referralCode,
       },
     });
@@ -307,6 +311,7 @@ export async function getMe(req: Request, res: Response): Promise<void> {
       select: {
         id: true,
         email: true,
+        emailVerified: true,
         username: true,
         displayName: true,
         avatarUrl: true,

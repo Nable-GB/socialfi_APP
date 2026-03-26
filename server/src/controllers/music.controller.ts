@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 
+function normalizeSearchToken(value: string) {
+  return value.trim().normalize("NFC").toLocaleLowerCase();
+}
+
 // ─── GET /api/music/tracks — Discover / Feed ─────────────────────────────────
 
 export async function getTracks(req: Request, res: Response): Promise<void> {
@@ -14,15 +18,19 @@ export async function getTracks(req: Request, res: Response): Promise<void> {
 
     const take = Math.min(parseInt(limit) || 20, 50);
     const skip = (Math.max(parseInt(page) || 1, 1) - 1) * take;
+    const normalizedSearch = search ? normalizeSearchToken(search) : undefined;
 
     const where: any = { status: "PUBLISHED" };
     if (genre) where.genre = genre;
     if (artistId) where.artistId = artistId;
-    if (search) {
+    if (search && normalizedSearch) {
       where.OR = [
         { title: { contains: search, mode: "insensitive" } },
-        { tags: { hasSome: [search.toLowerCase()] } },
+        { lyrics: { contains: search, mode: "insensitive" } },
+        { tags: { hasSome: [normalizedSearch] } },
+        { moodTags: { hasSome: [normalizedSearch] } },
         { artist: { username: { contains: search, mode: "insensitive" } } },
+        { artist: { displayName: { contains: search, mode: "insensitive" } } },
       ];
     }
 
@@ -220,16 +228,29 @@ export async function deleteTrack(req: Request, res: Response): Promise<void> {
       res.status(400).json({ error: "Published tracks cannot be deleted" });
       return;
     }
-    if (existing.musicNfts.length > 0) {
-      res.status(400).json({ error: "Tracks with minted NFTs cannot be deleted" });
-      return;
-    }
     if (existing.distributions.length > 0 || existing.distSubmissions.length > 0) {
       res.status(400).json({ error: "Tracks with active distribution records cannot be deleted" });
       return;
     }
 
-    await prisma.track.delete({ where: { id: trackId } });
+    await prisma.$transaction(async (tx) => {
+      const nftIds = existing.musicNfts.map((nft) => nft.id);
+
+      if (nftIds.length > 0) {
+        await (tx as any).royaltyPayout.deleteMany({
+          where: { musicNftId: { in: nftIds } },
+        });
+        await (tx as any).musicNFTHolder.deleteMany({
+          where: { musicNftId: { in: nftIds } },
+        });
+        await (tx as any).musicNFT.deleteMany({
+          where: { id: { in: nftIds } },
+        });
+      }
+
+      await tx.track.delete({ where: { id: trackId } });
+    });
+
     res.json({ success: true });
   } catch (err) {
     console.error("deleteTrack error:", err);

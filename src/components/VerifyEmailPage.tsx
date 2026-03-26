@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { authApi } from "../lib/api";
 import { CheckCircle, XCircle, RefreshCw, Mail } from "lucide-react";
 import { useLang } from "../contexts/LangContext";
+import { useAuth } from "../contexts/AuthContext";
 
 interface VerifyEmailPageProps {
   token: string;
@@ -10,13 +11,15 @@ interface VerifyEmailPageProps {
 
 export function VerifyEmailPage({ token, onDone }: VerifyEmailPageProps) {
   const { t } = useLang();
+  const { refreshUser } = useAuth();
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
   const handleVerify = () => {
     setStatus("loading");
     authApi.verifyEmail(token)
-      .then(res => {
+      .then(async (res) => {
+        await refreshUser();
         setStatus("success");
         setMessage(res.message);
       })

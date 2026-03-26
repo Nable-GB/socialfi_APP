@@ -483,6 +483,7 @@ export interface ApiNotification {
 export interface ApiUser {
   id: string;
   email?: string;
+  emailVerified?: boolean;
   username: string;
   displayName?: string;
   avatarUrl?: string;
