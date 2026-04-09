@@ -110,8 +110,8 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           <div className="px-6 pb-6 pt-7 sm:px-8 sm:pb-8 sm:pt-8">
             <DialogHeader className="items-center text-center">
               <div className="mb-5 flex flex-col items-center gap-4">
-                <div className="flex h-28 w-28 items-center justify-center rounded-full border border-slate-200 bg-white p-4 shadow-[0_16px_36px_rgba(15,23,42,0.08)] sm:h-32 sm:w-32">
-                  <img src="/smfi-logo.jpeg" alt="SMFI" className="h-16 w-16 rounded-full object-contain sm:h-20 sm:w-20" />
+                <div className="flex h-20 w-20 items-center justify-center sm:h-24 sm:w-24">
+                  <img src="/logo-new.jpg" alt="SMFI" className="h-full w-full rounded-full object-cover" />
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700">
                   <ShieldCheck size={13} />
@@ -166,7 +166,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         onKeyDown={e => e.key === "Enter" && handleForgotPassword()}
-                        className="h-14 rounded-2xl border-slate-200 !bg-white pl-11 text-slate-900 placeholder:text-slate-400 focus-visible:border-cyan-400/40"
+                        className="h-14 rounded-2xl !border-slate-200 !bg-white !bg-none pl-11 !text-slate-900 placeholder:!text-slate-400 focus-visible:border-cyan-400/40"
                       />
                     </div>
                     <Button
@@ -194,7 +194,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && mode === "login" && handleLogin()}
-                    className="h-14 rounded-2xl border-slate-200 !bg-white pl-11 text-slate-900 placeholder:text-slate-400"
+                    className="h-14 rounded-2xl !border-slate-200 !bg-white !bg-none pl-11 !text-slate-900 placeholder:!text-slate-400"
                   />
                 </div>}
 
@@ -205,7 +205,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                       placeholder={t.auth.usernamePlaceholder}
                       value={username}
                       onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, "_"))}
-                      className="h-14 rounded-2xl border-slate-200 !bg-white pl-11 text-slate-900 placeholder:text-slate-400"
+                      className="h-14 rounded-2xl !border-slate-200 !bg-white !bg-none pl-11 !text-slate-900 placeholder:!text-slate-400"
                     />
                   </div>
                 )}
@@ -217,7 +217,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                       placeholder={t.auth.displayPlaceholder}
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      className="h-14 rounded-2xl border-slate-200 !bg-white pl-11 text-slate-900 placeholder:text-slate-400"
+                      className="h-14 rounded-2xl !border-slate-200 !bg-white !bg-none pl-11 !text-slate-900 placeholder:!text-slate-400"
                     />
                   </div>
                 )}
@@ -232,7 +232,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && mode === "login" && handleLogin()}
-                        className="h-14 rounded-2xl border-slate-200 !bg-white pl-11 text-slate-900 placeholder:text-slate-400"
+                        className="h-14 rounded-2xl !border-slate-200 !bg-white !bg-none pl-11 !text-slate-900 placeholder:!text-slate-400"
                       />
                     </div>
                     {mode === "login" && (
@@ -251,7 +251,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                     placeholder={t.auth.referralPlaceholder}
                     value={referralCode}
                     onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                    className="h-14 rounded-2xl border-slate-200 !bg-white font-mono text-sm text-slate-900 placeholder:text-slate-400"
+                    className="h-14 rounded-2xl !border-slate-200 !bg-white !bg-none font-mono text-sm !text-slate-900 placeholder:!text-slate-400"
                   />
                 )}
 
