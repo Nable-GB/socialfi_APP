@@ -426,35 +426,36 @@ async function seedBrochuresAndNfts(tracks: any[]) {
     if (!track) continue;
     const supply = [50, 200, 75, 120, 300, 100][index];
     const price = [25, 3, 15, 8, 2, 10][index];
-    await p.musicNFT.upsert({
+    const existingMusicNft = await prisma.musicNFT.findFirst({
       where: { trackId: track.id },
-      update: {
-        artistId: track.artistId,
-        name: `${track.title} Collector NFT`,
-        description: `Fractional ownership for ${track.title}.`,
-        coverUrl: track.coverUrl,
-        totalSupply: supply,
-        availableSupply: Math.max(1, Math.floor(supply * 0.45)),
-        pricePerFraction: price,
-        royaltyPercent: 10,
-        totalStreamingRevenue: track.totalRevenue ?? track.playCount * 0.004,
-        isMinted: true,
-        isListed: true,
-      },
-      create: {
-        trackId: track.id,
-        artistId: track.artistId,
-        name: `${track.title} Collector NFT`,
-        description: `Fractional ownership for ${track.title}.`,
-        coverUrl: track.coverUrl,
-        totalSupply: supply,
-        availableSupply: Math.max(1, Math.floor(supply * 0.45)),
-        pricePerFraction: price,
-        royaltyPercent: 10,
-        totalStreamingRevenue: track.totalRevenue ?? track.playCount * 0.004,
-        isMinted: true,
-        isListed: true,
-      },
+      select: { id: true },
+    });
+
+    const musicNftData = {
+      trackId: track.id,
+      artistId: track.artistId,
+      name: `${track.title} Collector NFT`,
+      description: `Fractional ownership for ${track.title}.`,
+      coverUrl: track.coverUrl,
+      totalSupply: supply,
+      availableSupply: Math.max(1, Math.floor(supply * 0.45)),
+      pricePerFraction: price,
+      royaltyPercent: 10,
+      totalStreamingRevenue: track.totalRevenue ?? track.playCount * 0.004,
+      isMinted: true,
+      isListed: true,
+    };
+
+    if (existingMusicNft) {
+      await prisma.musicNFT.update({
+        where: { id: existingMusicNft.id },
+        data: musicNftData,
+      });
+      continue;
+    }
+
+    await prisma.musicNFT.create({
+      data: musicNftData,
     });
   }
 }
