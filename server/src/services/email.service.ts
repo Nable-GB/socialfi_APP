@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 import { env } from "../config/env.js";
 
-const resend = new Resend(env.RESEND_API_KEY);
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
 interface SendEmailOptions {
   to: string;
@@ -19,7 +19,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions): 
     throw new Error("Email service is not configured");
   }
 
-  const { error } = await resend.emails.send({
+  const { error } = await resend!.emails.send({
     from: env.FROM_NAME ? `${env.FROM_NAME} <${env.FROM_EMAIL}>` : env.FROM_EMAIL,
     to: [to],
     subject,

@@ -3,33 +3,23 @@ import Stripe from "stripe";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
 
-const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+function getStripe(): Stripe {
+  if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
+  return new Stripe(env.STRIPE_SECRET_KEY);
+}
 
 // ─── Tier Config ─────────────────────────────────────────────────────────────
 
 export const SUBSCRIPTION_TIERS = {
-  PRO: {
-    name: "Pro",
-    monthlyPriceUsd: 9.99,
+  CREATOR: {
+    name: "Creator",
+    monthlyPriceUsd: 10,
     features: [
-      "Advanced analytics dashboard",
-      "Priority ad placement",
-      "Custom profile badge",
-      "5x higher daily reward cap",
-      "Ad-free browsing",
-    ],
-  },
-  PREMIUM: {
-    name: "Premium",
-    monthlyPriceUsd: 29.99,
-    features: [
-      "Everything in Pro",
-      "Verified badge",
-      "10x higher daily reward cap",
-      "Early access to features",
-      "Direct merchant messaging",
-      "Priority support",
-      "Custom NFT minting",
+      "Upload music to the platform",
+      "3,000 upload credits per month (3 tracks)",
+      "Create NFT Brochure for your tracks (promotional, sold once)",
+      "Enter monthly competition to become a Top Artist",
+      "Artist profile & branding tools",
     ],
   },
 };
@@ -39,10 +29,27 @@ export const SUBSCRIPTION_TIERS = {
 export async function getSubscriptionTiers(_req: Request, res: Response): Promise<void> {
   res.json({
     tiers: [
-      { id: "FREE", name: "Free", monthlyPriceUsd: 0, features: ["Basic feed access", "Earn rewards from ads", "Standard analytics"] },
-      { id: "PRO", ...SUBSCRIPTION_TIERS.PRO },
-      { id: "PREMIUM", ...SUBSCRIPTION_TIERS.PREMIUM },
+      {
+        id: "FREE",
+        name: "Listener",
+        monthlyPriceUsd: 0,
+        features: [
+          "Listen to all music on the platform",
+          "Like, comment, share, and vote",
+          "Follow artists and build your feed",
+        ],
+      },
+      { id: "CREATOR", ...SUBSCRIPTION_TIERS.CREATOR },
     ],
+    topArtistInfo: {
+      name: "Top Artist",
+      how: "Win Top 10 in the monthly competition",
+      privileges: [
+        "Mint full Copyright Song NFTs with revenue sharing",
+        "Platform publishes your track globally (Spotify, YouTube Music, etc.)",
+        "Per-song privilege — applies to the winning track only",
+      ],
+    },
   });
 }
 
@@ -86,8 +93,8 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
     const { tier } = req.body;
     const userId = req.user!.userId;
 
-    if (!tier || !["PRO", "PREMIUM"].includes(tier)) {
-      res.status(400).json({ error: "Invalid tier. Must be PRO or PREMIUM." });
+    if (!tier || !["CREATOR"].includes(tier)) {
+      res.status(400).json({ error: "Invalid tier. Must be CREATOR." });
       return;
     }
 
@@ -104,7 +111,6 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
     }
 
     const tierConfig = SUBSCRIPTION_TIERS[tier as keyof typeof SUBSCRIPTION_TIERS];
-
     // Find or create Stripe customer
     let stripeCustomerId: string;
     const existingSub = await prisma.subscription.findFirst({
@@ -116,7 +122,7 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
     if (existingSub?.stripeCustomerId) {
       stripeCustomerId = existingSub.stripeCustomerId;
     } else {
-      const customer = await stripe.customers.create({
+      const customer = await getStripe().customers.create({
         email: user.email ?? undefined,
         metadata: { userId: user.id, username: user.username },
       });
@@ -124,7 +130,7 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
     }
 
     // Create Stripe Checkout Session for subscription
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: stripeCustomerId,
       payment_method_types: ["card"],
       mode: "subscription",
@@ -174,7 +180,7 @@ export async function cancelSubscription(req: Request, res: Response): Promise<v
     }
 
     // Cancel at period end (user keeps access until billing cycle ends)
-    await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+    await getStripe().subscriptions.update(subscription.stripeSubscriptionId, {
       cancel_at_period_end: true,
     });
 
@@ -190,6 +196,52 @@ export async function cancelSubscription(req: Request, res: Response): Promise<v
     });
   } catch (err) {
     console.error("CancelSubscription error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// ─── POST /api/subscriptions/checkout-usdt — Activate via on-chain USDT ─────
+// Admin manually verifies the tx hash and activates CREATOR tier for the user.
+// Full on-chain verification is a future enhancement.
+
+export async function createUsdtCheckout(req: Request, res: Response): Promise<void> {
+  try {
+    const { txHash, walletAddress } = req.body;
+    const userId = req.user!.userId;
+
+    if (!txHash || typeof txHash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+      res.status(400).json({ error: "Invalid transaction hash. Must be a 66-character hex string starting with 0x." });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+    if (user.subscriptionTier === "CREATOR" as any) {
+      res.status(400).json({ error: "Already subscribed as Creator." });
+      return;
+    }
+
+    // Record the pending USDT payment for admin review
+    await prisma.subscription.create({
+      data: {
+        userId,
+        tier: "CREATOR" as any,
+        status: "INCOMPLETE", // Admin will change to ACTIVE after verification
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 days
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "USDT payment submitted for admin review. Your Creator subscription will be activated within 24 hours.",
+      txHash,
+      walletAddress: walletAddress || user.walletAddress,
+      status: "PENDING_REVIEW",
+    });
+  } catch (err) {
+    console.error("CreateUsdtCheckout error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }

@@ -3,7 +3,46 @@ const PROD_API = "https://socialfiapp-production.up.railway.app";
 const rawEnv = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
 const BASE_URL = rawEnv || (typeof window !== "undefined" && !window.location.hostname.includes("localhost") ? PROD_API : "http://localhost:4000");
 
-// ─── Token storage ──────────────────────────────────────────────────────────────
+// ─── Error translation utility ────────────────────────────────────────────────
+
+const ERROR_PATTERNS: Record<string, string> = {
+  "Insufficient balance": "insufficientBalance",
+  "Insufficient ETH balance": "insufficientEth",
+  "Insufficient SMFI balance": "insufficientSmfi",
+  "Insufficient permissions": "insufficientPermissions",
+  "Not your track": "notYourTrack",
+  "Track not found": "trackNotFound",
+  "Failed to mint Music NFT": "mintFailed",
+  "Failed to buy Music NFT": "purchaseFailed",
+  "NFT already exists for this track": "nftAlreadyExists",
+  "Invalid email address": "invalidEmail",
+  "Validation failed": "validationFailed",
+  "Internal server error": "serverError",
+  "Request failed": "requestFailed",
+};
+
+export function translateError(message: string | undefined, t: any): string {
+  if (!message) return t.errors?.unknown || "An error occurred";
+  
+  // Check for exact match
+  if (ERROR_PATTERNS[message]) {
+    const key = ERROR_PATTERNS[message];
+    return t.errors?.[key] || t.wallet?.[key] || t.musicNFT?.[key] || t.nftMarket?.[key] || message;
+  }
+  
+  // Check for partial matches (for dynamic messages like "Insufficient balance. Need X tokens.")
+  if (message.toLowerCase().includes("insufficient balance")) {
+    return t.wallet?.insufficientSmfi || t.withdraw?.errInsufficientBalance || message;
+  }
+  if (message.toLowerCase().includes("not your track")) {
+    return t.errors?.notYourTrack || message;
+  }
+  if (message.toLowerCase().includes("track not found")) {
+    return t.errors?.trackNotFound || message;
+  }
+  
+  return message;
+}
 export const tokenStorage = {
   get: () => localStorage.getItem("sf_token"),
   set: (token: string) => localStorage.setItem("sf_token", token),
@@ -218,6 +257,12 @@ export const rewardsApi = {
   withdraw: (body: { amount: number; walletAddress?: string }) =>
     request<{ success: boolean; status: string; txHash: string | null; explorerUrl: string | null; amount: number; walletAddress: string; message: string }>(
       "/api/rewards/withdraw",
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  swapSmfiToEth: (body: { amount: number }) =>
+    request<{ success: boolean; status: string; txHash: string | null; explorerUrl: string | null; amountSmfi: number; amountEth: number; walletAddress: string; rate: number; message: string }>(
+      "/api/rewards/swap/smfi-to-eth",
       { method: "POST", body: JSON.stringify(body) }
     ),
 
@@ -491,6 +536,8 @@ export interface ApiUser {
   role: "USER" | "MERCHANT" | "ADMIN";
   walletAddress?: string;
   referralCode: string;
+  subscriptionTier?: "FREE" | "CREATOR" | "PRO" | "PREMIUM";
+  uploadCredits?: number;
   offChainBalance?: string;
   totalEarned?: string;
   isVerified?: boolean;
@@ -622,6 +669,7 @@ export interface ApiTrack {
   };
   album?: { id: string; title: string; coverUrl?: string };
   distributions?: ApiDistribution[];
+  musicNFTs?: { id: string }[];
   comments?: ApiTrackComment[];
 }
 
@@ -813,4 +861,25 @@ export const musicApi = {
   // Revenue
   getArtistRevenue: () => request<{ summary: ApiRevenueSummary; tracks: any[]; nfts: any[]; distributions: any[] }>("/api/music/revenue/artist"),
   getFanRevenue: () => request<{ summary: ApiFanSummary; holdings: ApiNFTHolder[]; recentPayouts: any[] }>("/api/music/revenue/fan"),
+};
+
+// ─── Competition API ──────────────────────────────────────────────────────────
+export const competitionApi = {
+  getCurrent: () => request<any>("/api/competitions/current"),
+  getPast: () => request<any>("/api/competitions/past"),
+  getLeaderboard: (id: string, page?: number) =>
+    request<any>(`/api/competitions/${id}/leaderboard${page ? `?page=${page}` : ""}`),
+  enter: (trackId: string) =>
+    request<any>("/api/competitions/enter", { method: "POST", body: JSON.stringify({ trackId }) }),
+  getMyEntries: () => request<any>("/api/competitions/my-entries"),
+};
+
+// ─── NFT Brochure API ─────────────────────────────────────────────────────────
+export const brochureApi = {
+  list: (page?: number) => request<any>(`/api/brochures${page ? `?page=${page}` : ""}`),
+  mine: () => request<any>("/api/brochures/mine"),
+  create: (body: { trackId: string; name: string; price: number }) =>
+    request<any>("/api/brochures", { method: "POST", body: JSON.stringify(body) }),
+  buy: (id: string) =>
+    request<any>(`/api/brochures/${id}/buy`, { method: "POST" }),
 };

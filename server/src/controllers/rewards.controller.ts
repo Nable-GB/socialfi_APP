@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import prisma from "../lib/prisma.js";
 import { creditAdViewReward, creditAdEngagementReward } from "../services/reward.service.js";
-import { sendTokens, isOnChainEnabled } from "../services/onchain.service.js";
+import { sendTokens, isOnChainEnabled, isEthPayoutEnabled, sendEth } from "../services/onchain.service.js";
 import { env } from "../config/env.js";
 import { notifyWithdrawalDone } from "../services/notification.service.js";
 
@@ -284,35 +284,16 @@ const withdrawSchema = z.object({
   walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid Ethereum address").optional(),
 });
 
+const swapSmfiToEthSchema = z.object({
+  amount: z.coerce.number().positive(),
+});
+
 export async function requestWithdrawal(req: Request, res: Response): Promise<void> {
   try {
     const data = withdrawSchema.parse(req.body);
     const userId = req.user!.userId;
 
-    // Fetch user + wallet
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        username: true,
-        walletAddress: true,
-        offChainBalance: true,
-        totalWithdrawn: true,
-      },
-    });
-    if (!user) {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
-
-    // Resolve target wallet — request body > stored wallet
-    const targetWallet = data.walletAddress ?? user.walletAddress;
-    if (!targetWallet) {
-      res.status(400).json({ error: "No wallet address found. Please link your wallet first." });
-      return;
-    }
-
-    // Validate amount limits
+    // Validate amount limits early (no DB needed)
     if (data.amount < env.MIN_WITHDRAWAL) {
       res.status(400).json({ error: `Minimum withdrawal is ${env.MIN_WITHDRAWAL} tokens` });
       return;
@@ -322,33 +303,75 @@ export async function requestWithdrawal(req: Request, res: Response): Promise<vo
       return;
     }
 
-    const balance = user.offChainBalance.toNumber();
-    if (data.amount > balance) {
-      res.status(400).json({ error: `Insufficient balance. Available: ${balance.toFixed(4)} tokens` });
-      return;
-    }
-
     const amountDecimal = new Prisma.Decimal(data.amount);
 
-    // ── Atomic DB update: debit balance + create WITHDRAWAL record ──────────
-    const [withdrawalTx] = await prisma.$transaction([
-      prisma.rewardTransaction.create({
-        data: {
-          userId,
-          type: "WITHDRAWAL",
-          amount: amountDecimal.negated(), // Negative = outflow
-          description: `Withdrawal to ${targetWallet.slice(0, 6)}...${targetWallet.slice(-4)}`,
-          status: "PENDING",
-        },
-      }),
-      prisma.user.update({
-        where: { id: userId },
-        data: {
-          offChainBalance: { decrement: amountDecimal },
-          totalWithdrawn: { increment: amountDecimal },
-        },
-      }),
-    ]);
+    // ── Atomic balance check + debit inside a serializable transaction ───────
+    let withdrawalTx: { id: string };
+    let targetWallet: string;
+
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        // Lock the user row by reading inside the transaction
+        const user = await tx.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            walletAddress: true,
+            offChainBalance: true,
+          },
+        });
+        if (!user) throw Object.assign(new Error("User not found"), { status: 404 });
+
+        const wallet = data.walletAddress ?? user.walletAddress;
+        if (!wallet) {
+          throw Object.assign(new Error("No wallet address found. Please link your wallet first."), { status: 400 });
+        }
+
+        if (user.offChainBalance.lt(amountDecimal)) {
+          throw Object.assign(
+            new Error(`Insufficient balance. Available: ${user.offChainBalance.toFixed(4)} tokens`),
+            { status: 400 },
+          );
+        }
+
+        // Check for any PENDING withdrawal already in flight for this user
+        const pendingCount = await tx.rewardTransaction.count({
+          where: { userId, type: "WITHDRAWAL", status: "PENDING" },
+        });
+        if (pendingCount > 0) {
+          throw Object.assign(new Error("You already have a pending withdrawal. Please wait for it to complete."), { status: 409 });
+        }
+
+        const created = await tx.rewardTransaction.create({
+          data: {
+            userId,
+            type: "WITHDRAWAL",
+            amount: amountDecimal.negated(),
+            description: `Withdrawal to ${wallet.slice(0, 6)}...${wallet.slice(-4)}`,
+            status: "PENDING",
+          },
+        });
+
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            offChainBalance: { decrement: amountDecimal },
+            totalWithdrawn: { increment: amountDecimal },
+          },
+        });
+
+        return { withdrawalTx: created, targetWallet: wallet };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+      withdrawalTx = result.withdrawalTx;
+      targetWallet = result.targetWallet;
+    } catch (txErr: any) {
+      if (txErr.status) {
+        res.status(txErr.status).json({ error: txErr.message });
+        return;
+      }
+      throw txErr;
+    }
 
     // ── Attempt on-chain transfer ────────────────────────────────────────────
     if (isOnChainEnabled()) {
@@ -394,6 +417,10 @@ export async function requestWithdrawal(req: Request, res: Response): Promise<vo
       }
     } else {
       // On-chain not configured — mark as CONFIRMED (pending manual batch)
+      console.warn(
+        `[payout] On-chain not configured — withdrawal ${withdrawalTx.id} for user ${userId} queued for manual batch. ` +
+        `Set RPC_URL, TOKEN_CONTRACT_ADDRESS, and OPERATOR_PRIVATE_KEY to enable automatic payouts.`
+      );
       await prisma.rewardTransaction.update({
         where: { id: withdrawalTx.id },
         data: { status: "CONFIRMED" },
@@ -416,6 +443,129 @@ export async function requestWithdrawal(req: Request, res: Response): Promise<vo
       return;
     }
     console.error("RequestWithdrawal error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function swapSmfiToEth(req: Request, res: Response): Promise<void> {
+  try {
+    const data = swapSmfiToEthSchema.parse(req.body);
+    const userId = req.user!.userId;
+
+    if (!isEthPayoutEnabled()) {
+      res.status(400).json({ error: "ETH payout is not configured" });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        walletAddress: true,
+        offChainBalance: true,
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    if (!user.walletAddress) {
+      res.status(400).json({ error: "No wallet address found. Please link your wallet first." });
+      return;
+    }
+
+    const amountSmfi = data.amount;
+    const rate = env.SMFI_PER_ETH;
+
+    if (!Number.isFinite(rate) || rate <= 0) {
+      res.status(500).json({ error: "Invalid swap rate configuration" });
+      return;
+    }
+
+    const available = Number(user.offChainBalance);
+    if (amountSmfi > available) {
+      res.status(400).json({ error: `Insufficient balance. Available: ${available.toFixed(4)} tokens` });
+      return;
+    }
+
+    const ethAmount = amountSmfi / rate;
+    if (ethAmount <= 0) {
+      res.status(400).json({ error: "Swap amount too small" });
+      return;
+    }
+
+    const amountDecimal = new Prisma.Decimal(amountSmfi);
+    const swapTx = await prisma.$transaction(async (tx) => {
+      const createdTx = await tx.rewardTransaction.create({
+        data: {
+          userId,
+          type: "WITHDRAWAL",
+          amount: amountDecimal.negated(),
+          description: `SMFI→ETH swap to ${user.walletAddress!.slice(0, 6)}...${user.walletAddress!.slice(-4)} at ${rate} SMFI/ETH`,
+          status: "PENDING",
+        },
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          offChainBalance: { decrement: amountDecimal },
+        },
+      });
+
+      return createdTx;
+    });
+
+    try {
+      const result = await sendEth(user.walletAddress, ethAmount.toFixed(8));
+
+      await prisma.rewardTransaction.update({
+        where: { id: swapTx.id },
+        data: {
+          status: "DISTRIBUTED",
+          onChainTxHash: result.txHash,
+          description: `SMFI→ETH swap completed · ${amountSmfi.toFixed(4)} SMFI → ${ethAmount.toFixed(8)} ETH`,
+        },
+      });
+
+      res.json({
+        success: true,
+        status: "distributed",
+        txHash: result.txHash,
+        explorerUrl: result.explorerUrl,
+        amountSmfi,
+        amountEth: ethAmount,
+        walletAddress: user.walletAddress,
+        rate,
+        message: "Swap completed successfully",
+      });
+    } catch (chainErr: any) {
+      await prisma.$transaction([
+        prisma.rewardTransaction.update({
+          where: { id: swapTx.id },
+          data: {
+            status: "FAILED",
+            description: `SMFI→ETH swap failed: ${chainErr.message}`,
+          },
+        }),
+        prisma.user.update({
+          where: { id: userId },
+          data: {
+            offChainBalance: { increment: amountDecimal },
+          },
+        }),
+      ]);
+
+      res.status(502).json({ error: `ETH payout failed: ${chainErr.message}` });
+    }
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Validation failed", details: err.errors });
+      return;
+    }
+    console.error("swapSmfiToEth error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }

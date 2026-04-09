@@ -8,7 +8,7 @@ import { boostTrack, repostTrack, getBoostStats } from "../controllers/boost.con
 import { mintMusicNFT, getMusicNFTs, getMusicNFT, buyMusicNFT, toggleStake, getMyMusicNFTs } from "../controllers/musicNft.controller.js";
 import { submitDistribution, getDistributions, voteForRelease, getVotes } from "../controllers/distribution.controller.js";
 import { getArtistRevenue, getFanRevenue } from "../controllers/revenue.controller.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireTier } from "../middleware/auth.js";
 
 const router = Router();
 

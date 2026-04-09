@@ -41,14 +41,18 @@ function ArtistDashboard() {
     <div className="space-y-6">
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={DollarSign} label={t.revenue.totalRevenue} value={`$${s.totalRevenue}`} color="#22d3ee" />
+        <StatCard icon={DollarSign} label={t.revenue.artistEarningsUsd ?? t.revenue.totalRevenue} value={`$${s.totalRevenue}`} color="#22d3ee" />
         <StatCard icon={Play} label={t.revenue.totalPlays} value={s.totalPlays.toLocaleString()} color="#a855f7" sub={`${s.totalTracks} ${t.revenue.tracks}`} />
         <StatCard icon={Music} label={t.revenue.streamingRevenue} value={`$${s.streamingRevenue}`} color="#10b981" sub={t.revenue.perPlay} />
         <StatCard icon={Gem} label={t.revenue.nftSales} value={`$${s.nftSalesRevenue}`} color="#f59e0b" />
-        <StatCard icon={Zap} label={t.revenue.boostRevenue} value={`${s.boostRevenue} tokens`} color="#06b6d4" />
-        <StatCard icon={Share2} label={t.revenue.repostRewards} value={`${s.repostRewards} tokens`} color="#8b5cf6" />
-        <StatCard icon={Users} label={t.revenue.royaltyPaid} value={`${s.totalRoyaltyPaid} tokens`} color="#ec4899" sub={t.revenue.toNFTHolders} />
+        <StatCard icon={Zap} label={t.revenue.boostRevenue} value={`${s.boostRevenue} ${t.revenue.rewardUnit ?? "SFT rewards"}`} color="#06b6d4" />
+        <StatCard icon={Share2} label={t.revenue.repostRewards} value={`${s.repostRewards} ${t.revenue.rewardUnit ?? "SFT rewards"}`} color="#8b5cf6" />
+        <StatCard icon={Users} label={t.revenue.royaltyPaid} value={`${s.totalRoyaltyPaid} ${t.revenue.payoutUnit ?? "SFT paid out"}`} color="#ec4899" sub={t.revenue.toNFTHolders} />
         <StatCard icon={TrendingUp} label={t.revenue.tracks} value={String(s.totalTracks)} color="#64748b" />
+      </div>
+
+      <div className="rounded-xl px-4 py-3 text-xs text-slate-400 border border-slate-700/20" style={{ background: "rgba(15,23,42,0.35)" }}>
+        {t.revenue.payoutNote}
       </div>
 
       {/* Top tracks */}
@@ -144,11 +148,15 @@ function FanDashboard() {
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard icon={Gem} label={t.revenue.nftsHeld} value={String(s.totalNFTsHeld)} color="#a855f7" sub={`${s.totalFractionsOwned} ${t.revenue.fractions}`} />
-        <StatCard icon={DollarSign} label={t.revenue.royaltiesReceived} value={`${s.totalRoyaltiesReceived} tokens`} color="#22d3ee" />
-        <StatCard icon={Share2} label={t.revenue.repostRewards} value={`${s.repostRewards} tokens`} color="#10b981" />
-        <StatCard icon={Zap} label={t.revenue.boostSpent} value={`${s.boostSpent} tokens`} color="#f59e0b" />
+        <StatCard icon={DollarSign} label={t.revenue.fanRewardsSft ?? t.revenue.royaltiesReceived} value={`${s.totalRoyaltiesReceived} SFT`} color="#22d3ee" />
+        <StatCard icon={Share2} label={t.revenue.repostRewards} value={`${s.repostRewards} SFT`} color="#10b981" />
+        <StatCard icon={Zap} label={t.revenue.boostSpent} value={`${s.boostSpent} SFT`} color="#f59e0b" />
         <StatCard icon={BarChart3} label={t.revenue.engagementScore} value={String(s.engagementScore.toFixed(0))} color="#8b5cf6" sub="/100" />
         <StatCard icon={Users} label={t.revenue.stakedNFTs} value={String(s.stakedNFTs)} color="#ec4899" />
+      </div>
+
+      <div className="rounded-xl px-4 py-3 text-xs text-slate-400 border border-slate-700/20" style={{ background: "rgba(15,23,42,0.35)" }}>
+        {t.revenue.payoutNote}
       </div>
 
       {/* Holdings */}
@@ -168,7 +176,7 @@ function FanDashboard() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-white truncate">{h.musicNft?.name}</p>
                   <p className="text-[10px] text-slate-500">{h.fractions} {t.revenue.fractions} · {h.musicNft?.artist?.displayName || h.musicNft?.artist?.username}</p>
-                  <p className="text-[10px] text-cyan-400">{t.revenue.royalties} {Number(h.totalRoyaltyReceived).toFixed(2)} tokens</p>
+                  <p className="text-[10px] text-cyan-400">{t.revenue.royalties} {Number(h.totalRoyaltyReceived).toFixed(2)} SFT</p>
                 </div>
                 <button onClick={() => handleStake(h.musicNftId)} disabled={staking === h.musicNftId}
                   className={`px-2.5 py-1.5 rounded-lg text-[10px] font-medium transition-colors flex items-center gap-1 ${
@@ -190,7 +198,7 @@ function FanDashboard() {
             {data.recentPayouts.map((p: any) => (
               <div key={p.id} className="flex items-center justify-between p-2 rounded-lg" style={{ background: "rgba(30,41,59,0.2)" }}>
                 <span className="text-xs text-slate-400">{p.musicNft?.track?.title || p.musicNft?.name}</span>
-                <span className="text-xs font-bold text-cyan-400">+{Number(p.amount).toFixed(2)} tokens</span>
+                <span className="text-xs font-bold text-cyan-400">+{Number(p.amount).toFixed(2)} SFT</span>
               </div>
             ))}
           </div>

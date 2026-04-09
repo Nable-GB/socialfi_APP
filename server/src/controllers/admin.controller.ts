@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import prisma from "../lib/prisma.js";
-import { sendTokens, isOnChainEnabled } from "../services/onchain.service.js";
+import { sendTokens, isOnChainEnabled, getOperatorBalance } from "../services/onchain.service.js";
+import { env } from "../config/env.js";
 
 // ─── GET /api/admin/stats ─────────────────────────────────────────────────────
 
@@ -383,6 +384,194 @@ export async function airdropTokens(req: Request, res: Response): Promise<void> 
       return;
     }
     console.error("AdminAirdrop error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// ─── GET /api/admin/payout-health — Operator wallet & payout status ──────────
+
+export async function getPayoutHealth(req: Request, res: Response): Promise<void> {
+  try {
+    const onChainEnabled = isOnChainEnabled();
+
+    // Count queued + failed withdrawals
+    const [queuedCount, failedCount, pendingCount] = await Promise.all([
+      prisma.rewardTransaction.count({ where: { type: "WITHDRAWAL", status: "CONFIRMED" } }),
+      prisma.rewardTransaction.count({ where: { type: "WITHDRAWAL", status: "FAILED" } }),
+      prisma.rewardTransaction.count({ where: { type: "WITHDRAWAL", status: "PENDING" } }),
+    ]);
+
+    let operatorBalance: { balance: string; symbol: string } = { balance: "0", symbol: "N/A" };
+    if (onChainEnabled) {
+      try {
+        operatorBalance = await getOperatorBalance();
+      } catch (err: any) {
+        operatorBalance = { balance: `error: ${err.message}`, symbol: "N/A" };
+      }
+    }
+
+    res.json({
+      onChainEnabled,
+      chainId: env.CHAIN_ID,
+      operatorBalance: operatorBalance.balance,
+      tokenSymbol: operatorBalance.symbol,
+      withdrawals: {
+        queued: queuedCount,
+        pending: pendingCount,
+        failed: failedCount,
+      },
+      config: {
+        minWithdrawal: env.MIN_WITHDRAWAL,
+        maxWithdrawal: env.MAX_WITHDRAWAL,
+        smfiPerEth: env.SMFI_PER_ETH,
+      },
+    });
+  } catch (err) {
+    console.error("PayoutHealth error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// ─── GET /api/admin/payout-queue — List tracks pending payout release ─────────
+
+export async function getPayoutQueue(req: Request, res: Response): Promise<void> {
+  try {
+    const status = (req.query.status as string) || "PENDING";
+    const page   = Math.max(parseInt(String(req.query.page || "1")), 1);
+    const limit  = Math.min(parseInt(String(req.query.limit || "20")), 100);
+
+    const [releases, total] = await Promise.all([
+      (prisma as any).payoutRelease.findMany({
+        where: { status },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          track: { select: { id: true, title: true, coverUrl: true, genre: true } },
+          artist: { select: { id: true, username: true, displayName: true, walletAddress: true } },
+        },
+      }),
+      (prisma as any).payoutRelease.count({ where: { status } }),
+    ]);
+
+    res.json({ releases, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+  } catch (err) {
+    console.error("getPayoutQueue error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// ─── POST /api/admin/payout-releases — Create a payout to be released ─────────
+
+export async function createPayoutRelease(req: Request, res: Response): Promise<void> {
+  try {
+    const adminId = req.user!.userId;
+    const { trackId, totalRevenue } = req.body;
+
+    if (!trackId || totalRevenue === undefined) {
+      res.status(400).json({ error: "trackId and totalRevenue are required" });
+      return;
+    }
+
+    const revenue = Number(totalRevenue);
+    if (!Number.isFinite(revenue) || revenue <= 0) {
+      res.status(400).json({ error: "totalRevenue must be a positive number" });
+      return;
+    }
+
+    const track = await prisma.track.findUnique({ where: { id: trackId } });
+    if (!track) { res.status(404).json({ error: "Track not found" }); return; }
+
+    const artistAmount   = revenue * 0.5;
+    const platformAmount = revenue * 0.5;
+
+    const release = await (prisma as any).payoutRelease.create({
+      data: {
+        trackId,
+        artistId: track.artistId,
+        totalRevenue: revenue,
+        artistAmount,
+        platformAmount,
+        status: "PENDING",
+      },
+    });
+
+    res.status(201).json({ success: true, release });
+  } catch (err) {
+    console.error("createPayoutRelease error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// ─── POST /api/admin/payout-releases/:id/release — Distribute payout ─────────
+
+export async function releasePayout(req: Request, res: Response): Promise<void> {
+  try {
+    const adminId   = req.user!.userId;
+    const releaseId = req.params.id;
+    const { notes } = req.body;
+
+    const release = await (prisma as any).payoutRelease.findUnique({
+      where: { id: releaseId },
+      include: {
+        track: true,
+        artist: { select: { id: true, username: true } },
+      },
+    });
+
+    if (!release) { res.status(404).json({ error: "Payout release not found" }); return; }
+    if (release.status !== "PENDING") {
+      res.status(400).json({ error: `Payout is already ${release.status}` }); return;
+    }
+
+    const artistAmount = Number(release.artistAmount);
+
+    // Distribute to artist + proportional dividends to NFT shareholders
+    const musicNft = await (prisma as any).musicNFT.findFirst({ where: { trackId: release.trackId } });
+
+    await prisma.$transaction(async (tx: any) => {
+      // Credit artist
+      await tx.user.update({
+        where: { id: release.artistId },
+        data: { offChainBalance: { increment: artistAmount }, totalEarned: { increment: artistAmount } },
+      });
+
+      // Distribute to NFT shareholders if NFT exists
+      if (musicNft) {
+        const holders = await (tx as any).musicNFTHolder.findMany({
+          where: { musicNftId: musicNft.id },
+        });
+        const totalSupply = musicNft.totalSupply;
+        for (const holder of holders) {
+          const share = (holder.fractions / totalSupply) * artistAmount * 0.5; // 50% of artist share
+          if (share > 0) {
+            await tx.user.update({
+              where: { id: holder.userId },
+              data: { offChainBalance: { increment: share }, totalEarned: { increment: share } },
+            });
+            await (tx as any).royaltyPayout.create({
+              data: {
+                musicNftId: musicNft.id,
+                userId: holder.userId,
+                amount: share,
+                payoutType: "STREAMING",
+                note: `Streaming dividend from track "${release.track.title}"`,
+              },
+            });
+          }
+        }
+      }
+
+      // Mark release as paid
+      await (tx as any).payoutRelease.update({
+        where: { id: releaseId },
+        data: { status: "PAID", releasedAt: new Date(), releasedBy: adminId, notes },
+      });
+    });
+
+    res.json({ success: true, message: "Payout distributed successfully", releaseId });
+  } catch (err) {
+    console.error("releasePayout error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }

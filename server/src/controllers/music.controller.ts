@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { updateEntryScore } from "./competition.controller.js";
 import prisma from "../lib/prisma.js";
 
 function normalizeSearchToken(value: string) {
@@ -123,9 +123,29 @@ export async function createTrack(req: Request, res: Response): Promise<void> {
   try {
     const userId = req.user!.userId;
     const { title, description, lyrics, genre, tags, moodTags, bpm, key, duration, isAiGenerated, aiModel, aiPrompt, audioUrl, coverUrl, albumId, status } = req.body;
+    const uploadCreditCost = 1000;
 
     if (!title || !audioUrl) {
       res.status(400).json({ error: "title and audioUrl are required" });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { uploadCredits: true },
+    } as any) as any;
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    if ((user.uploadCredits ?? 0) < uploadCreditCost) {
+      res.status(403).json({
+        error: "Not enough upload credits",
+        requiredCredits: uploadCreditCost,
+        remainingCredits: user.uploadCredits ?? 0,
+      });
       return;
     }
 
@@ -150,14 +170,20 @@ export async function createTrack(req: Request, res: Response): Promise<void> {
       publishedAt: status === "PUBLISHED" ? new Date() : null,
     };
 
-    const track = await prisma.track.create({
-      data: trackData,
-      include: {
-        artist: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
-      },
-    });
+    const [, track] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: { uploadCredits: { decrement: uploadCreditCost } as any },
+      } as any),
+      prisma.track.create({
+        data: trackData,
+        include: {
+          artist: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+        },
+      }),
+    ]);
 
-    res.status(201).json({ success: true, track });
+    res.status(201).json({ success: true, track, uploadCreditsRemaining: (user.uploadCredits ?? 0) - uploadCreditCost, uploadCreditCost });
   } catch (err) {
     console.error("createTrack error:", err);
     res.status(500).json({ error: "Failed to create track" });
@@ -224,8 +250,8 @@ export async function deleteTrack(req: Request, res: Response): Promise<void> {
     });
     if (!existing) { res.status(404).json({ error: "Track not found" }); return; }
     if (existing.artistId !== userId) { res.status(403).json({ error: "Not your track" }); return; }
-    if (existing.status === "PUBLISHED") {
-      res.status(400).json({ error: "Published tracks cannot be deleted" });
+    if (existing.musicNfts.length > 0) {
+      res.status(400).json({ error: "Tracks with minted NFTs cannot be deleted" });
       return;
     }
     if (existing.distributions.length > 0 || existing.distSubmissions.length > 0) {
@@ -280,6 +306,8 @@ export async function recordPlay(req: Request, res: Response): Promise<void> {
     ]);
 
     res.json({ success: true });
+    // Update competition score asynchronously (non-blocking)
+    updateEntryScore(String(req.params.id)).catch(() => {});
   } catch (err) {
     console.error("recordPlay error:", err);
     res.status(500).json({ error: "Failed to record play" });
@@ -303,12 +331,14 @@ export async function toggleLike(req: Request, res: Response): Promise<void> {
         prisma.track.update({ where: { id: trackId }, data: { likeCount: { decrement: 1 } } }),
       ]);
       res.json({ liked: false });
+      updateEntryScore(trackId).catch(() => {});
     } else {
       await prisma.$transaction([
         prisma.trackLike.create({ data: { trackId, userId } }),
         prisma.track.update({ where: { id: trackId }, data: { likeCount: { increment: 1 } } }),
       ]);
       res.json({ liked: true });
+      updateEntryScore(trackId).catch(() => {});
     }
   } catch (err) {
     console.error("toggleLike error:", err);
@@ -356,6 +386,7 @@ export async function getMyTracks(req: Request, res: Response): Promise<void> {
         album: { select: { id: true, title: true } },
         _count: { select: { plays: true, likes: true, comments: true } },
         distributions: { select: { id: true, status: true, youtubeUrl: true } },
+        musicNfts: { select: { id: true } },
       },
     });
 
@@ -365,7 +396,9 @@ export async function getMyTracks(req: Request, res: Response): Promise<void> {
         plays: t._count.plays,
         likesCount: t._count.likes,
         commentsCount: t._count.comments,
+        musicNFTs: t.musicNfts,
         _count: undefined,
+        musicNfts: undefined,
       })),
     });
   } catch (err) {

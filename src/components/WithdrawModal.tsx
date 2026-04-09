@@ -97,6 +97,7 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
                 {availableBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                 <span className="text-sm text-slate-400 ml-1">SFT</span>
               </p>
+              <p className="text-[11px] text-slate-500 mt-2">{t.withdraw.walletHelp}</p>
             </div>
 
             {/* Wallet display */}

@@ -6,6 +6,7 @@ import {
   Loader2, Repeat
 } from "lucide-react";
 import { toast } from "sonner";
+import { rewardsApi } from "../lib/api";
 import { useWallet } from "../hooks/useWallet";
 import { useAuth } from "../contexts/AuthContext";
 import { useLang } from "../contexts/LangContext";
@@ -34,7 +35,7 @@ function shortAddr(addr: string) {
 }
 
 export function WalletPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { t } = useLang();
   const wallet = useWallet();
   const { balance: smfiBalance, fetchBalance: refreshSmfi } = useRewards();
@@ -56,12 +57,10 @@ export function WalletPage() {
   const [showDeposit, setShowDeposit] = useState(false);
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState<"overview" | "send" | "swap" | "history">("overview");
-  const [simulatedEthBalance, setSimulatedEthBalance] = useState<string | null>(null);
-  const [simulatedSmfiBalance, setSimulatedSmfiBalance] = useState<number | null>(null);
 
   const actualSmfiBalance = parseFloat(smfiBalance ?? "0");
-  const displayedEthBalance = simulatedEthBalance ?? (ethBalance ?? "0");
-  const displayedSmfiBalance = simulatedSmfiBalance ?? actualSmfiBalance;
+  const displayedEthBalance = ethBalance ?? "0";
+  const displayedSmfiBalance = actualSmfiBalance;
 
   const refreshEthBalance = useCallback(async () => {
     if (!wallet.address || !window.ethereum) return;
@@ -81,11 +80,6 @@ export function WalletPage() {
     if (wallet.address) refreshEthBalance();
     if (isAuthenticated) refreshSmfi();
   }, [wallet.address, refreshEthBalance, isAuthenticated, refreshSmfi]);
-
-  useEffect(() => {
-    setSimulatedEthBalance(null);
-    setSimulatedSmfiBalance(null);
-  }, [wallet.address, smfiBalance, ethBalance]);
 
   const handleSend = async () => {
     if (!wallet.address || !window.ethereum) { toast.error(t.wallet.connectFirst); return; }
@@ -128,41 +122,35 @@ export function WalletPage() {
     if (isNaN(amt) || amt <= 0) { toast.error(t.wallet.validAmount); return; }
 
     if (swapDirection === "ETH_TO_SMFI") {
-      if (parseFloat(displayedEthBalance) < amt) { toast.error(t.wallet.insufficientEth); return; }
+      toast.error("ETH → SMFI is not available yet");
+      return;
     } else {
       if (displayedSmfiBalance < amt) { toast.error(t.wallet.insufficientSmfi); return; }
+      if (!user?.walletAddress) {
+        toast.error("Link a wallet in Settings before swapping to ETH");
+        return;
+      }
     }
 
     setSwapping(true);
     try {
-      await new Promise(r => setTimeout(r, 2000));
-      const receivedAmount = swapDirection === "ETH_TO_SMFI"
-        ? amt * EXCHANGE_RATE
-        : amt / EXCHANGE_RATE;
+      const result = await rewardsApi.swapSmfiToEth({ amount: amt });
+      await Promise.all([refreshSmfi(), refreshEthBalance()]);
+      toast.success(result.message || t.wallet.swapSuccess);
 
-      if (swapDirection === "ETH_TO_SMFI") {
-        setSimulatedEthBalance((parseFloat(displayedEthBalance) - amt).toFixed(6));
-        setSimulatedSmfiBalance(displayedSmfiBalance + receivedAmount);
-      } else {
-        setSimulatedSmfiBalance(displayedSmfiBalance - amt);
-        setSimulatedEthBalance((parseFloat(displayedEthBalance) + receivedAmount).toFixed(6));
-      }
-
-      toast.info(`Demo swap simulated locally: ${amt} ${swapDirection === "ETH_TO_SMFI" ? "ETH" : "SMFI"} → ${receivedAmount.toFixed(swapDirection === "ETH_TO_SMFI" ? 2 : 6)} ${swapDirection === "ETH_TO_SMFI" ? "SMFI" : "ETH"}`);
-      
       const record: TxRecord = {
-        hash: `mock-swap-${Date.now()}`,
+        hash: result.txHash || `swap-${Date.now()}`,
         type: "swap",
         amount: swapAmount,
         timestamp: Date.now(),
         status: "confirmed",
-        details: `${swapDirection === "ETH_TO_SMFI" ? "Demo ETH → SMFI" : "Demo SMFI → ETH"} · ${amt} → ${receivedAmount.toFixed(swapDirection === "ETH_TO_SMFI" ? 2 : 6)} · No on-chain/backend execution`
+        details: `SMFI → ETH · ${result.amountSmfi.toFixed(4)} → ${result.amountEth.toFixed(8)}${result.txHash ? ` · ${result.txHash.slice(0, 10)}...` : ""}`
       };
       setTxHistory(prev => [record, ...prev]);
       setSwapAmount("");
       setTab("history");
-    } catch (err) {
-      toast.error(t.wallet.swapFailed);
+    } catch (err: any) {
+      toast.error(err?.message || t.wallet.swapFailed);
     } finally {
       setSwapping(false);
     }

@@ -3,7 +3,10 @@ import Stripe from "stripe";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
 
-const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+function getStripe(): Stripe {
+  if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
+  return new Stripe(env.STRIPE_SECRET_KEY);
+}
 
 // ─── GET /api/services — List available paid services ────────────────────────
 
@@ -55,7 +58,7 @@ export async function createServiceCheckout(req: Request, res: Response): Promis
     });
 
     // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
       customer_email: user.email ?? undefined,

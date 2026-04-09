@@ -76,7 +76,7 @@ export async function register(req: Request, res: Response): Promise<void> {
 
     const passwordHash = await bcrypt.hash(data.password, 12);
 
-    const user = await prisma.user.create({
+    const user: any = await prisma.user.create({
       data: {
         email: data.email,
         passwordHash,
@@ -99,6 +99,8 @@ export async function register(req: Request, res: Response): Promise<void> {
         username: user.username,
         displayName: user.displayName,
         role: user.role,
+        subscriptionTier: user.subscriptionTier,
+        uploadCredits: user.uploadCredits,
         emailVerified: user.emailVerified,
         referralCode: user.referralCode,
       },
@@ -119,7 +121,7 @@ export async function login(req: Request, res: Response): Promise<void> {
   try {
     const data = loginSchema.parse(req.body);
 
-    const user = await prisma.user.findUnique({ where: { email: data.email } });
+    const user: any = await prisma.user.findUnique({ where: { email: data.email } });
     if (!user || !user.passwordHash) {
       res.status(401).json({ error: "Invalid email or password" });
       return;
@@ -149,6 +151,8 @@ export async function login(req: Request, res: Response): Promise<void> {
         displayName: user.displayName,
         role: user.role,
         walletAddress: user.walletAddress,
+        subscriptionTier: user.subscriptionTier,
+        uploadCredits: user.uploadCredits,
         emailVerified: user.emailVerified,
         referralCode: user.referralCode,
       },
@@ -205,7 +209,7 @@ export async function verifySiwe(req: Request, res: Response): Promise<void> {
     const siweMessage = new SiweMessage(message);
     const { data: fields } = await siweMessage.verify({ signature });
 
-    const user = await prisma.user.findUnique({
+    const user: any = await prisma.user.findUnique({
       where: { walletAddress: fields.address.toLowerCase() },
     });
 
@@ -241,6 +245,8 @@ export async function verifySiwe(req: Request, res: Response): Promise<void> {
         displayName: user.displayName,
         role: user.role,
         walletAddress: user.walletAddress,
+        subscriptionTier: user.subscriptionTier,
+        uploadCredits: user.uploadCredits,
         emailVerified: user.emailVerified,
         referralCode: user.referralCode,
       },
@@ -306,26 +312,30 @@ export async function refreshTokenHandler(req: Request, res: Response): Promise<
 
 export async function getMe(req: Request, res: Response): Promise<void> {
   try {
+    const userSelect: any = {
+      id: true,
+      email: true,
+      emailVerified: true,
+      username: true,
+      displayName: true,
+      avatarUrl: true,
+      bio: true,
+      role: true,
+      walletAddress: true,
+      referralCode: true,
+      subscriptionTier: true,
+      uploadCredits: true,
+      offChainBalance: true,
+      totalEarned: true,
+      totalWithdrawn: true,
+      createdAt: true,
+      _count: { select: { followers: true, following: true, posts: true } },
+    };
+
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: {
-        id: true,
-        email: true,
-        emailVerified: true,
-        username: true,
-        displayName: true,
-        avatarUrl: true,
-        bio: true,
-        role: true,
-        walletAddress: true,
-        referralCode: true,
-        offChainBalance: true,
-        totalEarned: true,
-        totalWithdrawn: true,
-        createdAt: true,
-        _count: { select: { followers: true, following: true, posts: true } },
-      },
-    });
+      select: userSelect,
+    }) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });

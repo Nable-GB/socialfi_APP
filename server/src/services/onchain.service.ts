@@ -32,6 +32,16 @@ export function isOnChainEnabled(): boolean {
   return !!(env.RPC_URL && env.TOKEN_CONTRACT_ADDRESS && env.OPERATOR_PRIVATE_KEY);
 }
 
+export function isEthPayoutEnabled(): boolean {
+  return !!(env.RPC_URL && env.OPERATOR_PRIVATE_KEY);
+}
+
+function getOperatorWallet() {
+  const provider = new ethers.JsonRpcProvider(env.RPC_URL);
+  const wallet = new ethers.Wallet(env.OPERATOR_PRIVATE_KEY, provider);
+  return { provider, wallet };
+}
+
 /**
  * Send ERC-20 tokens from the operator wallet to a recipient.
  * @param toAddress  Recipient Ethereum address
@@ -43,8 +53,7 @@ export async function sendTokens(toAddress: string, amount: string): Promise<Tra
     throw new Error("On-chain transfer not configured. Set RPC_URL, TOKEN_CONTRACT_ADDRESS, and OPERATOR_PRIVATE_KEY.");
   }
 
-  const provider = new ethers.JsonRpcProvider(env.RPC_URL);
-  const wallet = new ethers.Wallet(env.OPERATOR_PRIVATE_KEY, provider);
+  const { wallet } = getOperatorWallet();
   const token = new ethers.Contract(env.TOKEN_CONTRACT_ADDRESS, ERC20_ABI, wallet);
 
   // Get decimals dynamically
@@ -73,8 +82,7 @@ export async function sendTokens(toAddress: string, amount: string): Promise<Tra
 export async function getOperatorBalance(): Promise<{ balance: string; symbol: string }> {
   if (!isOnChainEnabled()) return { balance: "0", symbol: "SFT" };
 
-  const provider = new ethers.JsonRpcProvider(env.RPC_URL);
-  const wallet = new ethers.Wallet(env.OPERATOR_PRIVATE_KEY, provider);
+  const { provider, wallet } = getOperatorWallet();
   const token = new ethers.Contract(env.TOKEN_CONTRACT_ADDRESS, ERC20_ABI, provider);
 
   const [balance, decimals, symbol]: [bigint, number, string] = await Promise.all([
@@ -86,5 +94,28 @@ export async function getOperatorBalance(): Promise<{ balance: string; symbol: s
   return {
     balance: ethers.formatUnits(balance, decimals),
     symbol,
+  };
+}
+
+export async function sendEth(toAddress: string, amountEth: string): Promise<TransferResult> {
+  if (!isEthPayoutEnabled()) {
+    throw new Error("ETH payout not configured. Set RPC_URL and OPERATOR_PRIVATE_KEY.");
+  }
+
+  const { provider, wallet } = getOperatorWallet();
+  const value = ethers.parseEther(amountEth);
+  const operatorBalance = await provider.getBalance(wallet.address);
+
+  if (operatorBalance < value) {
+    throw new Error("Operator wallet has insufficient ETH balance");
+  }
+
+  const tx = await wallet.sendTransaction({ to: toAddress, value });
+  const receipt = await tx.wait();
+
+  return {
+    txHash: receipt!.hash,
+    blockNumber: receipt!.blockNumber,
+    explorerUrl: getExplorerUrl(receipt!.hash),
   };
 }

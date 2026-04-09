@@ -25,6 +25,8 @@ import analyticsRoutes from "./routes/analytics.routes.js";
 import subscriptionRoutes from "./routes/subscription.routes.js";
 import serviceRoutes from "./routes/service.routes.js";
 import musicRoutes from "./routes/music.routes.js";
+import competitionRoutes from "./routes/competition.routes.js";
+import nftBrochureRoutes from "./routes/nftBrochure.routes.js";
 import { handleStripeWebhook } from "./webhooks/stripe.webhook.js";
 
 const app = express();
@@ -107,6 +109,8 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/music", musicRoutes);
+app.use("/api/competitions", competitionRoutes);
+app.use("/api/brochures", nftBrochureRoutes);
 
 // ── Health Check ────────────────────────────────────────────────────────────
 const serverStartTime = Date.now();

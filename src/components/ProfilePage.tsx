@@ -16,6 +16,7 @@ export function ProfilePage({ userId }: { userId?: string }) {
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [profileUser, setProfileUser] = useState<ApiUser | null>(null);
+  const [profileLoadFailed, setProfileLoadFailed] = useState(false);
   
   const [myPosts, setMyPosts] = useState<ApiPost[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
@@ -38,6 +39,7 @@ export function ProfilePage({ userId }: { userId?: string }) {
   useEffect(() => {
     if (isOwnProfile) {
       setProfileUser(null);
+      setProfileLoadFailed(false);
       if (user?.id) {
         loadProfile(user.id);
       }
@@ -45,6 +47,9 @@ export function ProfilePage({ userId }: { userId?: string }) {
     }
 
     if (userId) {
+      setProfileUser(null);
+      setMyPosts([]);
+      setProfileLoadFailed(false);
       loadProfile(userId);
     }
   }, [user?.id, userId, isOwnProfile]);
@@ -53,11 +58,13 @@ export function ProfilePage({ userId }: { userId?: string }) {
     setLoadingPosts(true);
     try {
       const res = await usersApi.getProfile(targetUserId);
+      setProfileLoadFailed(false);
       if (!isOwnProfile) {
         setProfileUser(res.user);
       }
       setMyPosts((res.user.posts || []).filter((post: ApiPost) => post?.id && post?.author?.id));
     } catch {
+      setProfileLoadFailed(true);
       toast.error(t.profile.failedToLoadPosts);
     } finally {
       setLoadingPosts(false);
@@ -108,7 +115,25 @@ export function ProfilePage({ userId }: { userId?: string }) {
     return feedApi.getComments(postId, { cursor });
   };
 
-  if (!currentProfile) return null;
+  if (!currentProfile) {
+    if (loadingPosts) {
+      return (
+        <div className="glass rounded-2xl p-8 border border-slate-700/10 flex justify-center">
+          <RefreshCw className="animate-spin text-slate-500" />
+        </div>
+      );
+    }
+
+    if (profileLoadFailed) {
+      return (
+        <div className="glass rounded-2xl p-8 border border-slate-700/10 text-center">
+          <p className="text-sm text-slate-400">{t.profile.failedToLoadPosts}</p>
+        </div>
+      );
+    }
+
+    return null;
+  }
 
   return (
     <div className="space-y-5">

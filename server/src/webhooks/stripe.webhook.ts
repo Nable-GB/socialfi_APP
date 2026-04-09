@@ -5,7 +5,16 @@ import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
 import { calculateRewardSplit } from "../services/reward.service.js";
 
-const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+function getStripe(): Stripe {
+  if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
+  return new Stripe(env.STRIPE_SECRET_KEY);
+}
+
+// Simple in-memory idempotency guard — prevents duplicate event processing
+// within the same server lifetime. The DB unique constraints on stripePaymentId
+// provide a durable secondary guard.
+const processedEvents = new Set<string>();
+const MAX_EVENT_CACHE = 5000;
 
 /**
  * POST /webhooks/stripe
@@ -28,7 +37,7 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
 
   try {
     const sig = req.headers["stripe-signature"] as string;
-    event = stripe.webhooks.constructEvent(rawBody, sig, env.STRIPE_WEBHOOK_SECRET);
+    event = getStripe().webhooks.constructEvent(rawBody, sig, env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error("Stripe webhook signature verification failed:", err);
     res.status(400).json({ error: "Invalid signature" });
@@ -36,6 +45,18 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
   }
 
   const eventType = event.type;
+
+  // ── Idempotency: skip already-processed events ────────────────────────────
+  if (processedEvents.has(event.id)) {
+    res.json({ received: true, duplicate: true });
+    return;
+  }
+  processedEvents.add(event.id);
+  if (processedEvents.size > MAX_EVENT_CACHE) {
+    // Evict oldest half (Set preserves insertion order)
+    const toDelete = [...processedEvents].slice(0, MAX_EVENT_CACHE / 2);
+    for (const id of toDelete) processedEvents.delete(id);
+  }
 
   // ── Handle checkout.session.completed ─────────────────────────────────────
 
@@ -153,9 +174,11 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
   if (eventType === "customer.subscription.created" || eventType === "customer.subscription.updated") {
     const subscription = event.data.object as Stripe.Subscription;
     const userId = subscription.metadata?.userId;
-    const tier = subscription.metadata?.tier as "PRO" | "PREMIUM" | undefined;
+    const tier = subscription.metadata?.tier as "PRO" | "PREMIUM" | "CREATOR" | undefined;
+    // Normalize legacy PRO/PREMIUM to CREATOR
+    const normalizedTier = tier === "PRO" || tier === "PREMIUM" ? "CREATOR" : tier;
 
-    if (userId && tier) {
+    if (userId && normalizedTier) {
       try {
         const status = subscription.status === "active" ? "ACTIVE"
           : subscription.status === "past_due" ? "PAST_DUE"
@@ -166,7 +189,7 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
           where: { stripeSubscriptionId: subscription.id },
           create: {
             userId,
-            tier,
+            tier: normalizedTier as any,
             stripeCustomerId: subscription.customer as string,
             stripeSubscriptionId: subscription.id,
             stripePriceId: subscription.items.data[0]?.price?.id,
@@ -186,11 +209,11 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
         if (status === "ACTIVE") {
           await prisma.user.update({
             where: { id: userId },
-            data: { subscriptionTier: tier },
+            data: { subscriptionTier: normalizedTier as any },
           });
         }
 
-        console.log(`Subscription ${subscription.id} ${eventType}: user=${userId} tier=${tier} status=${status}`);
+        console.log(`Subscription ${subscription.id} ${eventType}: user=${userId} tier=${normalizedTier} status=${status}`);
       } catch (err) {
         console.error("Subscription webhook error:", err);
       }

@@ -7,6 +7,10 @@ import {
   updateCampaignStatus,
   distributeRewards,
   airdropTokens,
+  getPayoutHealth,
+  getPayoutQueue,
+  createPayoutRelease,
+  releasePayout,
 } from "../controllers/admin.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
@@ -30,5 +34,13 @@ router.patch("/campaigns/:id/status", updateCampaignStatus);
 // Rewards
 router.post("/rewards/distribute", distributeRewards);
 router.post("/rewards/airdrop", airdropTokens);
+
+// Payout health
+router.get("/payout-health", getPayoutHealth);
+
+// Payout releases (50/50 streaming revenue distribution)
+router.get("/payout-queue", getPayoutQueue);
+router.post("/payout-releases", createPayoutRelease);
+router.post("/payout-releases/:id/release", releasePayout);
 
 export default router;

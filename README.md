@@ -1,127 +1,109 @@
-# 🚀 SocialFi dApp
+# SocialMusicFi
 
-A modern Web3 social platform with NFT showcase, token rewards, and real-time social feed.
+Full-stack social music platform with token rewards, NFT music ownership, Stripe subscriptions, and automatic on-chain payouts.
 
-![SocialFi Preview](https://socialfi-demo.vercel.app/preview.png)
+## Architecture
 
-## ✨ Features
+| Layer | Stack |
+|-------|-------|
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui |
+| Backend | Express 4, Prisma (PostgreSQL), Stripe, ethers.js |
+| Storage | S3 / Cloudflare R2 for media uploads |
+| Blockchain | Polygon (or Sepolia testnet) — ERC-20 payouts |
+| Email | Resend transactional emails |
 
-### 🎨 **Modern UI/UX**
-- Glassmorphism design with gradient effects
-- Dark theme optimized for Web3 aesthetic
-- Fully responsive (Desktop & Mobile)
-- Smooth animations and transitions
-
-### 💎 **NFT Showcase**
-- Real 3D NFT artwork display
-- Interactive NFT cards with rarity badges
-- Make offers and collect NFTs
-- Trending collectibles widget
-
-### 🪙 **Token Rewards**
-- Earn tokens by watching sponsored content
-- Real-time balance updates
-- Wallet connection simulation
-
-### 📱 **Social Features**
-- Create and publish posts
-- Like, comment, and share
-- Bookmark favorite posts
-- Follow users
-
-### 📊 **Interactive Widgets**
-- Trending NFTs with price tracking
-- Top sponsors leaderboard
-- User stats dashboard
-
-## 🛠️ Tech Stack
-
-- **Framework:** React 18 + TypeScript
-- **Build Tool:** Vite
-- **Styling:** Tailwind CSS
-- **UI Components:** shadcn/ui
-- **Icons:** Lucide React
-- **Notifications:** Sonner
-
-## 🚀 Getting Started
+## Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
-- npm or yarn
 
-### Installation
+- Node.js 20+
+- PostgreSQL database
+- Stripe account (test mode is fine for dev)
+
+### 1. Backend
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/socialfi-dapp.git
-cd socialfi-dapp
-
-# Install dependencies
+cd server
+cp .env.example .env          # fill in DATABASE_URL, JWT_SECRET, STRIPE keys
 npm install
-
-# Start development server
-npm run dev
+npx prisma migrate deploy     # run database migrations
+npx prisma db seed             # seed demo data (optional)
+npm run dev                    # starts on http://localhost:4000
 ```
 
-### Build for Production
+### 2. Frontend
 
 ```bash
-npm run build
+# from the app root
+cp .env.example .env.local     # set VITE_API_URL if needed
+npm install
+npm run dev                    # starts on http://localhost:5173
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-socialfi-dapp/
-├── public/
-│   └── images/          # Avatar & NFT images
-├── src/
-│   ├── components/      # UI components
-│   ├── App.tsx          # Main application
-│   ├── index.css        # Global styles
-│   └── main.tsx         # Entry point
-├── index.html
-├── package.json
-├── tailwind.config.js
-├── tsconfig.json
-└── vite.config.ts
+app/
+├── server/                    # Express API
+│   ├── prisma/                # Schema, migrations, seeds
+│   └── src/
+│       ├── config/env.ts      # All env variables
+│       ├── controllers/       # Route handlers
+│       ├── services/          # Business logic (onchain, upload, reward, email)
+│       ├── webhooks/          # Stripe webhook handler
+│       ├── middleware/        # Auth, rate-limit, sanitize, rawBody
+│       └── routes/            # Express routers
+├── src/                       # React frontend
+│   ├── components/            # Pages & UI
+│   ├── contexts/              # Auth, Player, Language
+│   ├── hooks/                 # useFeed, useRewards, useWallet, etc.
+│   ├── lib/api.ts             # API client with auto-refresh
+│   └── locales/               # i18n (en, ko)
+├── contracts/                 # Hardhat / Solidity (SocialFiTreasury)
+└── public/                    # Static assets
 ```
 
-## 🎮 Interactive Features
+## Key Flows
 
-| Feature | Description |
-|---------|-------------|
-| 🔗 Connect Wallet | Toggle wallet connection |
-| 🔔 Notifications | Clear notifications |
-| ❤️ Like Posts | Like/unlike with counter |
-| 💬 Comments | Add comments via dialog |
-| 🔖 Bookmark | Save posts |
-| 🪙 Earn Tokens | Watch ads to earn |
-| 🎨 Collect NFT | Add NFTs to collection |
-| 💰 Make Offer | Bid on NFTs |
+### Authentication
+- Email/password registration + login
+- SIWE (Sign-In With Ethereum) wallet login
+- JWT access + refresh token rotation
+- Email verification & password reset (via Resend)
 
-## 🖼️ Screenshots
+### Music & Uploads
+- Track upload (MP3/WAV/FLAC, up to 50 MB) → S3/R2
+- Avatar, post media, NFT image uploads
+- Music NFT minting (fractional ownership, royalties)
+- Streaming with play-count tracking
 
-### Desktop View
-- 3-column layout (Navigation | Feed | Widgets)
-- Full sidebar navigation
-- Interactive widgets
+### Monetisation
+- **Ad campaigns** — merchants pay via Stripe; viewers earn token rewards
+- **Subscriptions** — PRO / PREMIUM tiers via Stripe recurring checkout
+- **Paid services** — verified badge, post boost (one-time Stripe checkout)
+- **Withdrawals** — automatic ERC-20 payout when on-chain is configured, otherwise queued for admin batch
+- **SMFI → ETH swap** — instant swap at configured rate
 
-### Mobile View
-- Bottom tab navigation
-- Responsive cards
-- Touch-optimized buttons
+### Referrals
+- Each user has a unique referral code
+- 5 % commission on referred-user earnings (configurable via `REFERRAL_RATE`)
 
-## 📝 License
+## Environment Variables
 
-MIT License - feel free to use for personal or commercial projects!
+See **`server/.env.example`** for the full list.  
+Key groups: Database · JWT · Stripe · Blockchain / Payouts · S3/R2 · Email · App.
 
-## 🙏 Credits
+The frontend only needs `VITE_API_URL` (see `.env.example` in the app root).
 
-- Images generated with AI
-- Icons by [Lucide](https://lucide.dev)
-- UI Components by [shadcn/ui](https://ui.shadcn.com)
+## Deployment
 
----
+- **Frontend** — Vercel is the active production host for `https://socialmusicfi.com`. Set `VITE_API_URL` in the Vercel project. `vercel.json` is included for SPA routing.
+- **Backend** — Railway is the active production host for `https://socialfiapp-production.up.railway.app`. Set all `server/.env.example` variables as Railway secrets.
+- **Database** — Any PostgreSQL provider. Run `npx prisma migrate deploy` on first deploy.
+- **Stripe webhook** — Point `https://<backend>/webhooks/stripe` and set `STRIPE_WEBHOOK_SECRET`.
+- **Netlify** — `netlify.toml` is kept as an optional alternative frontend target, but it is not the current production path.
+- **GitHub Pages** — Removed from this repo to avoid conflicting frontend deployment paths.
 
-Built with ❤️ for the Web3 community
+## License
+
+MIT

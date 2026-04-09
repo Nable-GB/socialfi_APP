@@ -21,7 +21,17 @@ export async function submitDistribution(req: Request, res: Response): Promise<v
       return;
     }
 
-    // Check existing submission for this platform
+    // Check Top Artist grant for DISTRIBUTION privilege
+    const grant = await (prisma as any).topArtistGrant.findUnique({
+      where: { userId_trackId_privilege: { userId, trackId, privilege: "DISTRIBUTION" } },
+    });
+    if (!grant) {
+      res.status(403).json({
+        error: "Only Top 10 monthly competition winners can submit for global distribution",
+        hint: "Enter the monthly competition and rank in the Top 10 to unlock this privilege",
+      });
+      return;
+    }
     const existing = await p.distributionSubmission.findUnique({
       where: { trackId_platform: { trackId, platform } },
     });

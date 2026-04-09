@@ -106,6 +106,8 @@ export function MusicNFTPage() {
   const [loading, setLoading] = useState(true);
   const [, setBuying] = useState<string | null>(null);
 
+  const composerNfts = nfts.filter(nft => nft.track && nft.artist);
+
   useEffect(() => {
     musicApi.getMusicNFTs({ limit: 20 })
       .then(res => setNfts(res.nfts))
@@ -145,7 +147,7 @@ export function MusicNFTPage() {
             </div>
           ))}
         </div>
-      ) : nfts.length === 0 ? (
+      ) : composerNfts.length === 0 ? (
         <div className="text-center py-16">
           <Gem size={48} className="mx-auto text-slate-600 mb-4" />
           <h3 className="text-lg font-semibold text-slate-400">{t.musicNFT.noNfts}</h3>
@@ -153,7 +155,7 @@ export function MusicNFTPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {nfts.map(nft => (
+          {composerNfts.map(nft => (
             <NFTCard key={nft.id} nft={nft} onBuy={handleBuy} />
           ))}
         </div>

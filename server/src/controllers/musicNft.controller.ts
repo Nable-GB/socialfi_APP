@@ -21,14 +21,37 @@ export async function mintMusicNFT(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Check if already minted
+    // Must have Top Artist grant (MINT_NFT) for this specific track
+    const grant = await (prisma as any).topArtistGrant.findUnique({
+      where: { userId_trackId_privilege: { userId, trackId, privilege: "MINT_NFT" } },
+    });
+    if (!grant) {
+      res.status(403).json({
+        error: "Only Top 10 monthly competition winners can mint full Copyright Song NFTs",
+        hint: "Enter the monthly competition and rank in the Top 10 to unlock NFT minting for this track",
+      });
+      return;
+    }
     const existing = await (prisma as any).musicNFT.findFirst({ where: { trackId } });
     if (existing) {
       res.status(409).json({ error: "NFT already exists for this track" });
       return;
     }
 
-    const supply = Math.min(Math.max(totalSupply || 100, 1), 10000);
+    const parsedSupply = Number(totalSupply);
+    const parsedPricePerFraction = Number(pricePerFraction);
+    const parsedRoyaltyPercent = Number(royaltyPercent);
+
+    const supply = Number.isFinite(parsedSupply)
+      ? Math.min(Math.max(Math.floor(parsedSupply), 1), 10000)
+      : 100;
+    const price = Number.isFinite(parsedPricePerFraction)
+      ? Math.max(parsedPricePerFraction, 0.01)
+      : 5;
+    const royalty = Number.isFinite(parsedRoyaltyPercent)
+      ? Math.min(Math.max(parsedRoyaltyPercent, 0), 50)
+      : 10;
+
     const nft = await (prisma as any).musicNFT.create({
       data: {
         trackId,
@@ -38,8 +61,8 @@ export async function mintMusicNFT(req: Request, res: Response): Promise<void> {
         coverUrl: coverUrl || track.coverUrl,
         totalSupply: supply,
         availableSupply: supply,
-        pricePerFraction: pricePerFraction || 0,
-        royaltyPercent: Math.min(royaltyPercent || 10, 50),
+        pricePerFraction: price,
+        royaltyPercent: royalty,
         isMinted: true,
       },
     });

@@ -141,6 +141,8 @@ export function MyMusicPage() {
         pricePerFraction,
         royaltyPercent,
       });
+      const updated = await musicApi.getMyTracks();
+      setTracks(updated.tracks);
       toast.success(t.myMusic.mintSuccess);
       setMintModalTrack(null);
     } catch (err: any) {
@@ -162,12 +164,15 @@ export function MyMusicPage() {
   })();
 
   const cannotDeleteTrack = (track: ApiTrack) => {
+    // Block deletion if track has active distributions (PENDING/SUBMITTED/LIVE)
     const hasActiveDistribution = Boolean(track.distributions?.some((dist: any) => ["PENDING", "SUBMITTED", "LIVE"].includes(dist.status)));
-    return track.status === "PUBLISHED" || hasActiveDistribution;
+    // Block deletion if track has been minted as NFT
+    const hasMintedNFT = Boolean(track.musicNFTs && track.musicNFTs.length > 0);
+    return hasActiveDistribution || hasMintedNFT;
   };
 
   const deleteTitle = (track: ApiTrack) => {
-    if (track.status === "PUBLISHED") return "Published tracks cannot be deleted";
+    if (track.musicNFTs && track.musicNFTs.length > 0) return "Tracks with minted NFTs cannot be deleted";
     if (track.distributions?.some((dist: any) => ["PENDING", "SUBMITTED", "LIVE"].includes(dist.status))) {
       return "Tracks with active distribution records cannot be deleted";
     }

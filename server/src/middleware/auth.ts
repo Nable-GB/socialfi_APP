@@ -62,9 +62,10 @@ export function requireRole(...roles: string[]) {
 
 /**
  * Middleware: Require a minimum subscription tier.
- * Tier hierarchy: FREE < PRO < PREMIUM
+ * Tier hierarchy: FREE < CREATOR
+ * Legacy: PRO maps to CREATOR, PREMIUM maps to CREATOR for backward compat.
  */
-const TIER_RANK: Record<string, number> = { FREE: 0, PRO: 1, PREMIUM: 2 };
+const TIER_RANK: Record<string, number> = { FREE: 0, CREATOR: 1, PRO: 1, PREMIUM: 1 };
 
 export function requireTier(...allowedTiers: string[]) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {

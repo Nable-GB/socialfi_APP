@@ -165,6 +165,11 @@ export function NowPlayingModal({ open, onClose }: { open: boolean; onClose: () 
                   {currentTrack.genre}
                 </span>
               )}
+              {currentTrack.lyrics && (
+                <div className="mt-3 px-4 py-3 rounded-xl bg-slate-800/30 border border-slate-700/20 max-h-24 overflow-y-auto">
+                  <p className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">{currentTrack.lyrics}</p>
+                </div>
+              )}
             </div>
 
             {/* Waveform */}

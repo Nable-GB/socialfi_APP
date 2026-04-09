@@ -18,10 +18,13 @@ function normalizeToken(value: string) {
 }
 
 export function UploadTrackPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, refreshUser } = useAuth();
   const { t } = useLang();
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const uploadCreditCost = 1000;
+  const uploadCredits = user?.uploadCredits ?? 0;
+  const hasEnoughUploadCredits = uploadCredits >= uploadCreditCost;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -131,6 +134,7 @@ export function UploadTrackPage() {
   const handleSubmit = async () => {
     if (!title.trim()) { toast.error(t.upload.titleRequired); return; }
     if (!audioUrl) { toast.error(t.upload.uploadAudioFirst); return; }
+    if (!hasEnoughUploadCredits) { toast.error(t.upload.notEnoughCredits); return; }
 
     if (!allCopyrightSigned) { toast.error(t.copyright.required); return; }
 
@@ -151,6 +155,7 @@ export function UploadTrackPage() {
         coverUrl: coverUrl || undefined,
         status: publishNow ? "PUBLISHED" : "DRAFT",
       });
+      await refreshUser();
       toast.success(publishNow ? t.upload.trackPublished : t.upload.trackDraft);
       // Reset form
       setTitle(""); setDescription(""); setLyrics(""); setGenre("OTHER"); 
@@ -200,6 +205,17 @@ export function UploadTrackPage() {
           </a>
         </div>
         <p className="text-[10px] text-purple-400/70 italic">{t.aiConsult.sunoNote}</p>
+      </div>
+
+      <div className="mb-6 p-4 rounded-2xl flex items-center justify-between gap-4" style={{ background: "rgba(6,182,212,0.08)", border: "1px solid rgba(6,182,212,0.2)" }}>
+        <div>
+          <p className="text-xs font-semibold text-cyan-300">{t.upload.creditBalance}</p>
+          <p className="text-sm text-slate-300">{uploadCredits} {t.upload.creditUnits}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-slate-500">{t.upload.creditCostLabel}</p>
+          <p className={`text-sm font-semibold ${hasEnoughUploadCredits ? "text-white" : "text-amber-400"}`}>{uploadCreditCost} {t.upload.creditUnits}</p>
+        </div>
       </div>
 
       <div className="space-y-5">
@@ -414,7 +430,7 @@ export function UploadTrackPage() {
         {/* Submit */}
         <button
           onClick={handleSubmit}
-          disabled={submitting || uploadingAudio || !audioUrl || !title.trim() || !allCopyrightSigned}
+          disabled={submitting || uploadingAudio || !audioUrl || !title.trim() || !allCopyrightSigned || !hasEnoughUploadCredits}
           className="w-full py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ background: "linear-gradient(135deg, #06b6d4, #8b5cf6)", color: "white" }}
         >
@@ -424,6 +440,9 @@ export function UploadTrackPage() {
             publishNow ? t.upload.publishBtn : t.upload.draftBtn
           )}
         </button>
+        {!hasEnoughUploadCredits && (
+          <p className="text-xs text-amber-400 text-center">{t.upload.creditWarning}</p>
+        )}
       </div>
     </div>
   );

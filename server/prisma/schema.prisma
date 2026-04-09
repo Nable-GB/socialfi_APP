@@ -110,8 +110,10 @@ enum ListingStatus {
 
 enum SubscriptionTier {
   FREE
-  PRO
-  PREMIUM
+  CREATOR   // $10/month — can upload music & create NFT Brochures
+  // PRO and PREMIUM kept as aliases during migration window
+  PRO       // @deprecated — maps to CREATOR
+  PREMIUM   // @deprecated — maps to FREE (no longer a paid tier)
 }
 
 enum SubscriptionStatus {
@@ -185,6 +187,12 @@ model User {
   // --- Subscription ---
   subscriptionTier SubscriptionTier @default(FREE)
 
+  uploadCredits    Int      @default(3000)
+
+  // --- Top Artist Status (earned via competition, not subscription) ---
+  isTopArtist      Boolean   @default(false)
+  topArtistSince   DateTime?
+
   // --- Off-chain Token Balance ---
   offChainBalance Decimal   @default(0) @db.Decimal(20, 8) // Accumulated but undistributed tokens
   totalEarned     Decimal   @default(0) @db.Decimal(20, 8) // Lifetime earnings
@@ -236,6 +244,13 @@ model User {
   distSubmissions DistributionSubmission[] @relation("UserDistSubmissions")
   engagementScore EngagementScore? @relation("UserEngagement")
   releaseVotes    ReleaseVote[]   @relation("UserVotes")
+
+  // --- Competition & Top Artist ---
+  competitionEntries CompetitionEntry[] @relation("UserCompetitionEntries")
+  topArtistGrants    TopArtistGrant[]   @relation("UserTopArtistGrants")
+  nftBrochures       NFTBrochure[]      @relation("ArtistNFTBrochures")
+  boughtBrochures    NFTBrochure[]      @relation("BrochureBuyers")
+  payoutReleases     PayoutRelease[]    @relation("ArtistPayouts")
 
   @@index([walletAddress])
   @@index([referralCode])
@@ -827,9 +842,13 @@ model Track {
   distributions   YouTubeDistribution[]
   boosts          MusicBoost[]
   reposts         TrackRepost[]
-  musicNfts       MusicNFT[]
-  distSubmissions DistributionSubmission[]
-  releaseVotes    ReleaseVote[]
+  musicNfts          MusicNFT[]
+  distSubmissions    DistributionSubmission[]
+  releaseVotes       ReleaseVote[]
+  competitionEntries CompetitionEntry[]  @relation("TrackCompetitionEntries")
+  topArtistGrants    TopArtistGrant[]    @relation("TrackTopArtistGrants")
+  nftBrochure        NFTBrochure?        @relation("TrackNFTBrochure")
+  payoutReleases     PayoutRelease[]     @relation("TrackPayouts")
 
   // --- Timestamps ---
   createdAt       DateTime      @default(now())
@@ -1123,4 +1142,153 @@ model ReleaseVote {
   @@unique([trackId, voterId])
   @@index([trackId])
   @@map("release_votes")
+}
+
+// ============================================================================
+// MONTHLY COMPETITION — Platform audition/ranking each calendar month
+// ============================================================================
+
+enum CompetitionStatus {
+  OPEN       // Accepting entries (1st to ~28th of month)
+  VOTING     // Final voting window (last 3 days)
+  FINALIZED  // Admin has run finalization, Top 10 granted
+}
+
+model MonthlyCompetition {
+  id          String             @id @default(uuid())
+  year        Int
+  month       Int                // 1–12
+  status      CompetitionStatus  @default(OPEN)
+  startDate   DateTime
+  endDate     DateTime
+  finalizedAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  entries     CompetitionEntry[]
+  grants      TopArtistGrant[]
+
+  @@unique([year, month])
+  @@index([status])
+  @@map("monthly_competitions")
+}
+
+// ============================================================================
+// COMPETITION ENTRY — A track entered into a monthly competition
+// ============================================================================
+
+model CompetitionEntry {
+  id              String             @id @default(uuid())
+  competition     MonthlyCompetition @relation(fields: [competitionId], references: [id])
+  competitionId   String
+  track           Track              @relation("TrackCompetitionEntries", fields: [trackId], references: [id])
+  trackId         String
+  user            User               @relation("UserCompetitionEntries", fields: [userId], references: [id])
+  userId          String
+
+  // Weighted score components
+  voteScore       Float              @default(0)   // 40% weight
+  listenScore     Float              @default(0)   // 35% weight
+  likeScore       Float              @default(0)   // 25% weight
+  totalScore      Float              @default(0)   // Computed final score
+
+  rank            Int?               // Final rank (set during finalization)
+  isWinner        Boolean            @default(false) // True for Top 10
+
+  enteredAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@unique([competitionId, trackId])
+  @@index([competitionId, totalScore])
+  @@index([userId])
+  @@map("competition_entries")
+}
+
+// ============================================================================
+// TOP ARTIST GRANT — Per-song privilege granted to Top 10 winners
+// ============================================================================
+
+enum TopArtistPrivilege {
+  MINT_NFT      // Can mint a full Copyright Song NFT for this track
+  DISTRIBUTION  // Platform publishes track to Spotify, YouTube Music, etc.
+}
+
+model TopArtistGrant {
+  id              String             @id @default(uuid())
+  user            User               @relation("UserTopArtistGrants", fields: [userId], references: [id])
+  userId          String
+  track           Track              @relation("TrackTopArtistGrants", fields: [trackId], references: [id])
+  trackId         String
+  competition     MonthlyCompetition @relation(fields: [competitionId], references: [id])
+  competitionId   String
+  privilege       TopArtistPrivilege
+  grantedAt       DateTime           @default(now())
+  usedAt          DateTime?          // When the privilege was exercised
+
+  @@unique([userId, trackId, privilege])
+  @@index([userId, trackId])
+  @@map("top_artist_grants")
+}
+
+// ============================================================================
+// NFT BROCHURE — Tier 2 promotional NFT (sold once, no dividends)
+// ============================================================================
+
+model NFTBrochure {
+  id          String    @id @default(uuid())
+  track       Track     @relation("TrackNFTBrochure", fields: [trackId], references: [id])
+  trackId     String    @unique  // One brochure per track
+  artist      User      @relation("ArtistNFTBrochures", fields: [artistId], references: [id])
+  artistId    String
+  name        String
+  description String?
+  coverUrl    String?
+  price       Decimal   @db.Decimal(20, 8) // Price in SMFI tokens
+
+  isSold      Boolean   @default(false)
+  buyer       User?     @relation("BrochureBuyers", fields: [buyerId], references: [id])
+  buyerId     String?
+  soldAt      DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([artistId])
+  @@index([isSold])
+  @@map("nft_brochures")
+}
+
+// ============================================================================
+// PAYOUT RELEASE — Admin-triggered 50/50 streaming revenue distribution
+// ============================================================================
+
+enum PayoutStatus {
+  PENDING    // Awaiting admin release
+  RELEASED   // Admin released, being processed
+  PAID       // All distributions completed
+}
+
+model PayoutRelease {
+  id              String       @id @default(uuid())
+  track           Track        @relation("TrackPayouts", fields: [trackId], references: [id])
+  trackId         String
+  artist          User         @relation("ArtistPayouts", fields: [artistId], references: [id])
+  artistId        String
+
+  totalRevenue    Decimal      @db.Decimal(20, 8) // Gross streaming revenue
+  artistAmount    Decimal      @db.Decimal(20, 8) // 50% to artist
+  platformAmount  Decimal      @db.Decimal(20, 8) // 50% to platform
+
+  status          PayoutStatus @default(PENDING)
+  releasedAt      DateTime?
+  releasedBy      String?      // Admin user ID
+  notes           String?
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([trackId])
+  @@index([artistId])
+  @@index([status])
+  @@map("payout_releases")
 }

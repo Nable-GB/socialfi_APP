@@ -25,9 +25,9 @@ export const env = {
   JWT_REFRESH_SECRET: optional("JWT_REFRESH_SECRET", required("JWT_SECRET") + "_refresh"),
   JWT_REFRESH_EXPIRES_IN: optional("JWT_REFRESH_EXPIRES_IN", "7d"),
 
-  // Stripe
-  STRIPE_SECRET_KEY: required("STRIPE_SECRET_KEY"),
-  STRIPE_WEBHOOK_SECRET: required("STRIPE_WEBHOOK_SECRET"),
+  // Stripe (optional — required only for checkout / subscription / webhook flows)
+  STRIPE_SECRET_KEY: optional("STRIPE_SECRET_KEY", ""),
+  STRIPE_WEBHOOK_SECRET: optional("STRIPE_WEBHOOK_SECRET", ""),
 
   // Blockchain
   RPC_URL: optional("RPC_URL", ""),
@@ -35,6 +35,7 @@ export const env = {
   TOKEN_CONTRACT_ADDRESS: optional("TOKEN_CONTRACT_ADDRESS", ""),
   OPERATOR_PRIVATE_KEY: optional("OPERATOR_PRIVATE_KEY", ""),
   CHAIN_ID: parseInt(optional("CHAIN_ID", "137"), 10),
+  SMFI_PER_ETH: parseFloat(optional("SMFI_PER_ETH", "1000")),
   MIN_WITHDRAWAL: parseFloat(optional("MIN_WITHDRAWAL", "10")),
   MAX_WITHDRAWAL: parseFloat(optional("MAX_WITHDRAWAL", "10000")),
 

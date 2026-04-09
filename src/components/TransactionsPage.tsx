@@ -24,6 +24,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 function TxRow({ tx, typeConfig }: { tx: ApiTransaction; typeConfig: ReturnType<typeof getTypeConfig> }) {
+  const { t } = useLang();
   const cfg = typeConfig[tx.type] ?? { label: tx.type, icon: <Zap size={13} />, color: "#64748b", sign: "+" };
   const absAmount = Math.abs(parseFloat(tx.amount));
   const isWithdrawal = tx.type === "WITHDRAWAL";
@@ -56,7 +57,7 @@ function TxRow({ tx, typeConfig }: { tx: ApiTransaction; typeConfig: ReturnType<
       <div className="text-right flex-shrink-0">
         <p className={`text-sm font-bold font-mono ${isWithdrawal ? "text-red-400" : "text-emerald-400"}`}>
           {isWithdrawal ? "-" : "+"}{absAmount.toFixed(4)}
-          <span className="text-xs text-slate-500 ml-0.5">SFT</span>
+          <span className="text-xs text-slate-500 ml-0.5">{t.transactions.ledgerUnit ?? "SFT"}</span>
         </p>
         {tx.onChainTxHash && (
           <a href={`https://etherscan.io/tx/${tx.onChainTxHash}`} target="_blank" rel="noopener noreferrer"
@@ -164,6 +165,8 @@ export function TransactionsPage() {
             </div>
           ))}
         </div>
+
+        <p className="text-[11px] text-slate-500 mt-3">{t.transactions.creditNote}</p>
       </div>
 
       {/* Filter tabs */}

@@ -186,10 +186,16 @@ export function MarketplacePage() {
           </button>
           {isAuthenticated && (
             <button
-              onClick={() => setView("my-collection")}
+              onClick={() => claimedNFTs.length > 0 && setView("my-collection")}
+              disabled={claimedNFTs.length === 0}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                view === "my-collection" ? "bg-slate-700 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"
+                view === "my-collection"
+                  ? "bg-slate-700 text-white shadow-lg"
+                  : claimedNFTs.length === 0
+                    ? "text-slate-600 cursor-not-allowed opacity-50"
+                    : "text-slate-500 hover:text-slate-300"
               }`}
+              title={claimedNFTs.length === 0 ? "No NFTs collected yet" : undefined}
             >
               <ShoppingBag size={14} /> My Collection
               {claimedNFTs.length > 0 && (
