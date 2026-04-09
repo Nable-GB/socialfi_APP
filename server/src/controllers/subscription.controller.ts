@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
 import { rejectInDemoMode } from "../lib/demo.js";
-import { applyActiveSubscriptionEntitlements } from "../services/subscription.service.js";
+import { applyActiveSubscriptionEntitlements, getEffectiveSubscriptionTier, isCreatorAccessForced } from "../services/subscription.service.js";
 
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
@@ -78,7 +78,7 @@ export async function getMySubscription(req: Request, res: Response): Promise<vo
     ]);
 
     res.json({
-      tier: user?.subscriptionTier || "FREE",
+      tier: getEffectiveSubscriptionTier(user?.subscriptionTier),
       subscription: subscription ? {
         id: subscription.id,
         tier: subscription.tier,
@@ -109,6 +109,11 @@ export async function getMySubscription(req: Request, res: Response): Promise<vo
 export async function createSubscriptionCheckout(req: Request, res: Response): Promise<void> {
   try {
     if (rejectInDemoMode(res, "Live subscription checkout is disabled in demo mode. Use seeded demo accounts instead.")) {
+      return;
+    }
+
+    if (isCreatorAccessForced()) {
+      res.status(400).json({ error: "Creator access is already enabled for all users during testing." });
       return;
     }
 
@@ -233,6 +238,11 @@ export async function cancelSubscription(req: Request, res: Response): Promise<v
 export async function createUsdtCheckout(req: Request, res: Response): Promise<void> {
   try {
     if (rejectInDemoMode(res, "USDT subscription checkout is disabled in demo mode.")) {
+      return;
+    }
+
+    if (isCreatorAccessForced()) {
+      res.status(400).json({ error: "Creator access is already enabled for all users during testing." });
       return;
     }
 

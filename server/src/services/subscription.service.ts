@@ -1,6 +1,8 @@
 import type { Prisma } from "@prisma/client";
+import { env } from "../config/env.js";
 
 export const CREATOR_MONTHLY_UPLOAD_CREDITS = 3000;
+export const TEST_CREATOR_UPLOAD_CREDITS = 9000;
 
 type SubscriptionTx = Prisma.TransactionClient;
 
@@ -15,6 +17,27 @@ type SubscriptionEntitlementRecord = {
 };
 
 const LEGACY_CREATOR_TIERS = new Set(["CREATOR", "PRO", "PREMIUM"]);
+
+export function isCreatorAccessForced(): boolean {
+  return env.FORCE_CREATOR_ACCESS || env.DEMO_MODE;
+}
+
+export function getEffectiveSubscriptionTier(tier: string | null | undefined): "CREATOR" | "FREE" {
+  if (isCreatorAccessForced()) return "CREATOR";
+  return normalizeCreatorTier(tier);
+}
+
+export function getEffectiveUploadCredits(uploadCredits: number | null | undefined): number {
+  const currentCredits = Number(uploadCredits ?? 0);
+  if (isCreatorAccessForced()) {
+    return Math.max(currentCredits, TEST_CREATOR_UPLOAD_CREDITS);
+  }
+  return currentCredits;
+}
+
+export function hasCreatorTier(tier: string | null | undefined): boolean {
+  return getEffectiveSubscriptionTier(tier) === "CREATOR";
+}
 
 export function normalizeCreatorTier(tier: string | null | undefined): "CREATOR" | "FREE" {
   return tier && LEGACY_CREATOR_TIERS.has(tier) ? "CREATOR" : "FREE";
@@ -61,6 +84,17 @@ export async function applyActiveSubscriptionEntitlements(
 }
 
 export async function syncUserSubscriptionTier(tx: SubscriptionTx, userId: string): Promise<"CREATOR" | "FREE"> {
+  if (isCreatorAccessForced()) {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        subscriptionTier: "CREATOR",
+        uploadCredits: { set: TEST_CREATOR_UPLOAD_CREDITS },
+      },
+    });
+    return "CREATOR";
+  }
+
   const activeCreatorSubscription = await tx.subscription.findFirst({
     where: {
       userId,

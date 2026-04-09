@@ -23,6 +23,7 @@ export const env = {
   PORT: parseInt(optional("PORT", "4000"), 10),
   NODE_ENV: optional("NODE_ENV", "development"),
   DEMO_MODE: optionalBoolean("DEMO_MODE", false),
+  FORCE_CREATOR_ACCESS: optionalBoolean("FORCE_CREATOR_ACCESS", false),
   FRONTEND_URL: rawFrontendUrl.split(",")[0].trim(),
   CORS_ORIGINS: optional("CORS_ORIGINS", rawFrontendUrl),
   DEMO_PATH_PREFIX: optional("DEMO_PATH_PREFIX", "/demo"),

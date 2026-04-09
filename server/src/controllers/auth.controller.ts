@@ -8,6 +8,12 @@ import { env } from "../config/env.js";
 import type { JwtPayload } from "../middleware/auth.js";
 import crypto from "node:crypto";
 import { sendEmail, emailVerificationTemplate, passwordResetTemplate, welcomeEmailTemplate } from "../services/email.service.js";
+import {
+  TEST_CREATOR_UPLOAD_CREDITS,
+  getEffectiveSubscriptionTier,
+  getEffectiveUploadCredits,
+  isCreatorAccessForced,
+} from "../services/subscription.service.js";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -28,6 +34,46 @@ function issueTokens(payload: JwtPayload) {
 
 function generateReferralCode(): string {
   return crypto.randomBytes(4).toString("hex").toUpperCase(); // 8-char code
+}
+
+async function ensureTestingCreatorAccess<T extends { id: string; subscriptionTier?: string | null; uploadCredits?: number | null }>(user: T) {
+  const nextTier = getEffectiveSubscriptionTier(user.subscriptionTier);
+  const nextCredits = getEffectiveUploadCredits(user.uploadCredits);
+
+  if (
+    isCreatorAccessForced()
+    && (user.subscriptionTier !== nextTier || Number(user.uploadCredits ?? 0) < nextCredits)
+  ) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        subscriptionTier: nextTier,
+        uploadCredits: nextCredits,
+      },
+    });
+  }
+
+  return {
+    ...user,
+    subscriptionTier: nextTier,
+    uploadCredits: nextCredits,
+  };
+}
+
+function buildAuthUserPayload(user: any) {
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    displayName: user.displayName,
+    role: user.role,
+    walletAddress: user.walletAddress,
+    subscriptionTier: getEffectiveSubscriptionTier(user.subscriptionTier),
+    uploadCredits: getEffectiveUploadCredits(user.uploadCredits),
+    creatorAccessForced: isCreatorAccessForced(),
+    emailVerified: user.emailVerified,
+    referralCode: user.referralCode,
+  };
 }
 
 // ─── Validation Schemas ─────────────────────────────────────────────────────
@@ -85,25 +131,21 @@ export async function register(req: Request, res: Response): Promise<void> {
         authProvider: "EMAIL",
         referralCode: generateReferralCode(),
         referredById,
+        ...(isCreatorAccessForced() ? {
+          subscriptionTier: "CREATOR",
+          uploadCredits: TEST_CREATOR_UPLOAD_CREDITS,
+        } : {}),
       },
     });
 
-    const tokens = issueTokens({ userId: user.id, role: user.role });
+    const effectiveUser = await ensureTestingCreatorAccess(user);
+
+    const tokens = issueTokens({ userId: effectiveUser.id, role: effectiveUser.role });
 
     res.status(201).json({
       token: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        displayName: user.displayName,
-        role: user.role,
-        subscriptionTier: user.subscriptionTier,
-        uploadCredits: user.uploadCredits,
-        emailVerified: user.emailVerified,
-        referralCode: user.referralCode,
-      },
+      user: buildAuthUserPayload(effectiveUser),
     });
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -139,23 +181,14 @@ export async function login(req: Request, res: Response): Promise<void> {
       data: { lastLoginAt: new Date() },
     });
 
-    const tokens = issueTokens({ userId: user.id, role: user.role, walletAddress: user.walletAddress ?? undefined });
+    const effectiveUser = await ensureTestingCreatorAccess(user);
+
+    const tokens = issueTokens({ userId: effectiveUser.id, role: effectiveUser.role, walletAddress: effectiveUser.walletAddress ?? undefined });
 
     res.json({
       token: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        displayName: user.displayName,
-        role: user.role,
-        walletAddress: user.walletAddress,
-        subscriptionTier: user.subscriptionTier,
-        uploadCredits: user.uploadCredits,
-        emailVerified: user.emailVerified,
-        referralCode: user.referralCode,
-      },
+      user: buildAuthUserPayload(effectiveUser),
     });
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -183,13 +216,23 @@ export async function getNonce(req: Request, res: Response): Promise<void> {
     // Upsert: create wallet-based user if new, or update nonce
     await prisma.user.upsert({
       where: { walletAddress: address.toLowerCase() },
-      update: { nonce },
+      update: {
+        nonce,
+        ...(isCreatorAccessForced() ? {
+          subscriptionTier: "CREATOR",
+          uploadCredits: TEST_CREATOR_UPLOAD_CREDITS,
+        } : {}),
+      },
       create: {
         walletAddress: address.toLowerCase(),
         nonce,
         username: `user_${address.slice(2, 8).toLowerCase()}`,
         authProvider: "WALLET",
         referralCode: generateReferralCode(),
+        ...(isCreatorAccessForced() ? {
+          subscriptionTier: "CREATOR",
+          uploadCredits: TEST_CREATOR_UPLOAD_CREDITS,
+        } : {}),
       },
     });
 
@@ -233,23 +276,14 @@ export async function verifySiwe(req: Request, res: Response): Promise<void> {
       },
     });
 
-    const tokens = issueTokens({ userId: user.id, role: user.role, walletAddress: user.walletAddress ?? undefined });
+    const effectiveUser = await ensureTestingCreatorAccess(user);
+
+    const tokens = issueTokens({ userId: effectiveUser.id, role: effectiveUser.role, walletAddress: effectiveUser.walletAddress ?? undefined });
 
     res.json({
       token: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        displayName: user.displayName,
-        role: user.role,
-        walletAddress: user.walletAddress,
-        subscriptionTier: user.subscriptionTier,
-        uploadCredits: user.uploadCredits,
-        emailVerified: user.emailVerified,
-        referralCode: user.referralCode,
-      },
+      user: buildAuthUserPayload(effectiveUser),
     });
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -287,11 +321,13 @@ export async function refreshTokenHandler(req: Request, res: Response): Promise<
       return;
     }
 
+    const effectiveUser = await ensureTestingCreatorAccess(user as any);
+
     // Issue new token pair
     const tokens = issueTokens({
-      userId: user.id,
-      role: user.role,
-      walletAddress: user.walletAddress ?? undefined,
+      userId: effectiveUser.id,
+      role: effectiveUser.role,
+      walletAddress: effectiveUser.walletAddress ?? undefined,
     });
 
     res.json({
@@ -342,7 +378,16 @@ export async function getMe(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    res.json({ user });
+    const effectiveUser = await ensureTestingCreatorAccess(user);
+
+    res.json({
+      user: {
+        ...effectiveUser,
+        subscriptionTier: getEffectiveSubscriptionTier(effectiveUser.subscriptionTier),
+        uploadCredits: getEffectiveUploadCredits(effectiveUser.uploadCredits),
+        creatorAccessForced: isCreatorAccessForced(),
+      },
+    });
   } catch (err) {
     console.error("GetMe error:", err);
     res.status(500).json({ error: "Internal server error" });

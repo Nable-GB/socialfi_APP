@@ -560,6 +560,7 @@ export interface ApiUser {
   referralCode: string;
   subscriptionTier?: "FREE" | "CREATOR" | "PRO" | "PREMIUM";
   uploadCredits?: number;
+  creatorAccessForced?: boolean;
   offChainBalance?: string;
   totalEarned?: string;
   isVerified?: boolean;

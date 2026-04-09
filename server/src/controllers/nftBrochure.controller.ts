@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
+import { hasCreatorTier } from "../services/subscription.service.js";
 
 // ─── POST /api/brochures — Create NFT Brochure (CREATOR tier, 1 per track) ───
 
@@ -26,8 +27,7 @@ export async function createBrochure(req: Request, res: Response): Promise<void>
 
     // Check CREATOR tier
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { subscriptionTier: true } });
-    const validTiers = ["CREATOR", "PRO", "PREMIUM"];
-    if (!user || !validTiers.includes(user.subscriptionTier as string)) {
+    if (!user || !hasCreatorTier(user.subscriptionTier)) {
       res.status(403).json({ error: "Creator subscription required to create NFT Brochures" });
       return;
     }

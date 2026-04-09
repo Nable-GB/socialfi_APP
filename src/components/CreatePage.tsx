@@ -10,7 +10,10 @@ export function CreatePage({ onOpenAuth, onNavigate }: { onOpenAuth?: () => void
   const { t } = useLang();
   const [tab, setTab] = useState<"upload" | "my-music">("upload");
 
-  const isCreator = ["CREATOR", "PRO", "PREMIUM"].includes((user?.subscriptionTier as string | undefined) ?? "");
+  const isCreator = Boolean(
+    user?.creatorAccessForced
+    || ["CREATOR", "PRO", "PREMIUM"].includes((user?.subscriptionTier as string | undefined) ?? "")
+  );
 
   const tabs = [
     { id: "upload" as const, label: t.createHub.upload, icon: Upload },

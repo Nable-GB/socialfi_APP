@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
+import { getEffectiveSubscriptionTier, hasCreatorTier } from "../services/subscription.service.js";
 
 const db = prisma as any;
 
@@ -142,12 +143,11 @@ export async function enterCompetition(req: Request, res: Response): Promise<voi
 
     // Validate user is CREATOR tier
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { subscriptionTier: true } });
-    const validTiers = ["CREATOR", "PRO", "PREMIUM"]; // PRO/PREMIUM legacy support
-    if (!user || !validTiers.includes(user.subscriptionTier as string)) {
+    if (!user || !hasCreatorTier(user.subscriptionTier)) {
       res.status(403).json({
         error: "Creator subscription required to enter competitions",
         requiredTier: "CREATOR",
-        currentTier: user?.subscriptionTier ?? "FREE",
+        currentTier: getEffectiveSubscriptionTier(user?.subscriptionTier),
       });
       return;
     }

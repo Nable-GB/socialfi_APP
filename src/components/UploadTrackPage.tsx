@@ -23,7 +23,7 @@ export function UploadTrackPage() {
   const audioInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const uploadCreditCost = 1000;
-  const uploadCredits = user?.uploadCredits ?? 0;
+  const uploadCredits = user?.creatorAccessForced ? Math.max(user?.uploadCredits ?? 0, 9000) : (user?.uploadCredits ?? 0);
   const hasEnoughUploadCredits = uploadCredits >= uploadCreditCost;
 
   const [title, setTitle] = useState("");

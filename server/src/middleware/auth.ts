@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
+import { getEffectiveSubscriptionTier, isCreatorAccessForced } from "../services/subscription.service.js";
 
 export interface JwtPayload {
   userId: string;
@@ -74,6 +75,11 @@ export function requireTier(...allowedTiers: string[]) {
       return;
     }
 
+    if (isCreatorAccessForced()) {
+      next();
+      return;
+    }
+
     try {
       const { default: prisma } = await import("../lib/prisma.js");
       const user = await prisma.user.findUnique({
@@ -81,7 +87,7 @@ export function requireTier(...allowedTiers: string[]) {
         select: { subscriptionTier: true },
       });
 
-      const userTier = user?.subscriptionTier ?? "FREE";
+  const userTier = getEffectiveSubscriptionTier(user?.subscriptionTier);
 
       if (allowedTiers.includes(userTier)) {
         next();

@@ -1,6 +1,13 @@
 import { Request, Response } from "express";
 import { updateEntryScore } from "./competition.controller.js";
 import prisma from "../lib/prisma.js";
+import {
+  TEST_CREATOR_UPLOAD_CREDITS,
+  getEffectiveSubscriptionTier,
+  getEffectiveUploadCredits,
+  hasCreatorTier,
+  isCreatorAccessForced,
+} from "../services/subscription.service.js";
 
 function normalizeSearchToken(value: string) {
   return value.trim().normalize("NFC").toLocaleLowerCase();
@@ -141,20 +148,30 @@ export async function createTrack(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    if (!["CREATOR", "PRO", "PREMIUM"].includes(user.subscriptionTier ?? "FREE")) {
+    if (!hasCreatorTier(user.subscriptionTier)) {
       res.status(403).json({
         error: "Upgrade required",
         message: "Uploading music requires an active Creator subscription",
-        currentTier: user.subscriptionTier ?? "FREE",
+        currentTier: getEffectiveSubscriptionTier(user.subscriptionTier),
       });
       return;
     }
 
-    if ((user.uploadCredits ?? 0) < uploadCreditCost) {
+    const effectiveUploadCredits = getEffectiveUploadCredits(user.uploadCredits);
+
+    if (isCreatorAccessForced() && (user.uploadCredits ?? 0) < effectiveUploadCredits) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { uploadCredits: TEST_CREATOR_UPLOAD_CREDITS },
+      });
+      user.uploadCredits = TEST_CREATOR_UPLOAD_CREDITS;
+    }
+
+    if (effectiveUploadCredits < uploadCreditCost) {
       res.status(403).json({
         error: "Not enough upload credits",
         requiredCredits: uploadCreditCost,
-        remainingCredits: user.uploadCredits ?? 0,
+        remainingCredits: effectiveUploadCredits,
       });
       return;
     }
@@ -193,7 +210,7 @@ export async function createTrack(req: Request, res: Response): Promise<void> {
       }),
     ]);
 
-    res.status(201).json({ success: true, track, uploadCreditsRemaining: (user.uploadCredits ?? 0) - uploadCreditCost, uploadCreditCost });
+    res.status(201).json({ success: true, track, uploadCreditsRemaining: effectiveUploadCredits - uploadCreditCost, uploadCreditCost });
   } catch (err) {
     console.error("createTrack error:", err);
     res.status(500).json({ error: "Failed to create track" });
