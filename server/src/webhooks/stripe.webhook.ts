@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
 import { calculateRewardSplit } from "../services/reward.service.js";
+import { isDemoMode } from "../lib/demo.js";
 
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
@@ -26,6 +27,11 @@ const MAX_EVENT_CACHE = 5000;
  *   3. Sets per-view and per-engagement reward amounts on the sponsored post
  */
 export async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
+  if (isDemoMode()) {
+    res.json({ received: true, demoMode: true, ignored: true });
+    return;
+  }
+
   const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
 
   if (!rawBody) {

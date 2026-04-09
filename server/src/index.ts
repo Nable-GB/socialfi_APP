@@ -126,6 +126,7 @@ app.get("/api/health", async (_req, res) => {
     status: dbStatus === "ok" ? "ok" : "degraded",
     timestamp: new Date().toISOString(),
     env: env.NODE_ENV,
+    demoMode: env.DEMO_MODE,
     uptime: Math.floor((Date.now() - serverStartTime) / 1000),
     db: dbStatus,
     memory: {
@@ -201,6 +202,7 @@ async function autoSeed() {
 app.listen(env.PORT, async () => {
   console.log(`🚀 SocialFi API server running on http://localhost:${env.PORT}`);
   console.log(`   Environment: ${env.NODE_ENV}`);
+  console.log(`   Demo mode:   ${env.DEMO_MODE ? "enabled" : "disabled"}`);
   console.log(`   Frontend:    ${env.FRONTEND_URL}`);
   await autoSeed();
 });

@@ -85,9 +85,22 @@ Set these in the hosting dashboard (Railway, Render, etc.):
 
 - [ ] Confirm the frontend project is deployed from Vercel for `https://socialmusicfi.com`
 - [ ] Set `VITE_API_URL=https://socialfiapp-production.up.railway.app` in Vercel
+- [ ] Set `VITE_DEMO_API_URL=<demo backend url>` in Vercel for the `/demo` showcase path
 - [ ] Deploy frontend from the repo root on Vercel (`vercel.json` handles SPA routing)
 - [ ] Verify SPA routing works (refresh on any page should not 404)
 - [ ] Netlify is optional only; do not enable multiple live frontend hosts for the same domain
+
+## 5A. Demo Backend Deploy
+
+- [ ] Create a separate demo backend service (do not reuse production)
+- [ ] Attach a separate Postgres database for demo only
+- [ ] Set `DEMO_MODE=true` on the demo backend
+- [ ] Set `FRONTEND_URL=https://socialmusicfi.com`
+- [ ] Set `CORS_ORIGINS=https://socialmusicfi.com`
+- [ ] Run `npx prisma migrate deploy` against the demo database
+- [ ] Run `npm run db:seed` and `npm run db:seed:demo` against the demo database
+- [ ] Verify `<demo backend>/api/health` returns `demoMode: true`
+- [ ] Verify `https://socialmusicfi.com/demo` shows seeded showcase content
 
 ## 6. Smoke Tests
 

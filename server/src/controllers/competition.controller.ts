@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 
+const db = prisma as any;
+
 // ─── Scoring weights ──────────────────────────────────────────────────────────
 const VOTE_WEIGHT   = 0.40;
 const LISTEN_WEIGHT = 0.35;
@@ -16,7 +18,7 @@ async function getOrCreateCurrentCompetition() {
   const startDate = new Date(Date.UTC(year, month - 1, 1));
   const endDate   = new Date(Date.UTC(year, month, 0, 23, 59, 59)); // last day of month
 
-  return prisma.monthlyCompetition.upsert({
+  return db.monthlyCompetition.upsert({
     where: { year_month: { year, month } },
     create: { year, month, startDate, endDate, status: "OPEN" },
     update: {},
@@ -29,7 +31,7 @@ export async function getCurrentCompetition(req: Request, res: Response): Promis
   try {
     const competition = await getOrCreateCurrentCompetition();
 
-    const entries = await prisma.competitionEntry.findMany({
+    const entries = await db.competitionEntry.findMany({
       where: { competitionId: competition.id },
       orderBy: { totalScore: "desc" },
       take: 50,
@@ -60,7 +62,7 @@ export async function getCurrentCompetition(req: Request, res: Response): Promis
 
 export async function getPastCompetitions(_req: Request, res: Response): Promise<void> {
   try {
-    const competitions = await prisma.monthlyCompetition.findMany({
+    const competitions = await db.monthlyCompetition.findMany({
       where: { status: "FINALIZED" },
       orderBy: [{ year: "desc" }, { month: "desc" }],
       take: 12,
@@ -95,10 +97,10 @@ export async function getCompetitionLeaderboard(req: Request, res: Response): Pr
     const { id } = req.params;
     const limit = Math.min(parseInt(String(req.query.limit || "50")), 100);
 
-    const competition = await prisma.monthlyCompetition.findUnique({ where: { id } });
+    const competition = await db.monthlyCompetition.findUnique({ where: { id } });
     if (!competition) { res.status(404).json({ error: "Competition not found" }); return; }
 
-    const entries = await prisma.competitionEntry.findMany({
+    const entries = await db.competitionEntry.findMany({
       where: { competitionId: id },
       orderBy: { totalScore: "desc" },
       take: limit,
@@ -158,7 +160,7 @@ export async function enterCompetition(req: Request, res: Response): Promise<voi
     }
 
     // Check if already entered
-    const existing = await prisma.competitionEntry.findUnique({
+    const existing = await db.competitionEntry.findUnique({
       where: { competitionId_trackId: { competitionId: competition.id, trackId } },
     });
     if (existing) {
@@ -175,7 +177,7 @@ export async function enterCompetition(req: Request, res: Response): Promise<voi
     const voteScore = voteCount * VOTE_WEIGHT;
     const totalScore = voteScore + listenScore + likeScore;
 
-    const entry = await prisma.competitionEntry.create({
+    const entry = await db.competitionEntry.create({
       data: {
         competitionId: competition.id,
         trackId,
@@ -204,20 +206,20 @@ export async function finalizeCompetition(req: Request, res: Response): Promise<
   try {
     const { id } = req.params;
 
-    const competition = await prisma.monthlyCompetition.findUnique({ where: { id } });
+    const competition = await db.monthlyCompetition.findUnique({ where: { id } });
     if (!competition) { res.status(404).json({ error: "Competition not found" }); return; }
     if (competition.status === "FINALIZED") {
       res.status(400).json({ error: "Competition is already finalized" }); return;
     }
 
     // Recompute all scores from live data
-    const entries = await prisma.competitionEntry.findMany({
+    const entries = await db.competitionEntry.findMany({
       where: { competitionId: id },
       include: { track: { select: { playCount: true, likeCount: true } } },
     });
 
     // Get vote counts for all entered tracks
-    const trackIds = entries.map(e => e.trackId);
+    const trackIds = entries.map((entry: any) => entry.trackId);
     const voteCounts = await prisma.releaseVote.groupBy({
       by: ["trackId"],
       where: { trackId: { in: trackIds } },
@@ -226,19 +228,19 @@ export async function finalizeCompetition(req: Request, res: Response): Promise<
     const voteMap = new Map(voteCounts.map(v => [v.trackId, v._count]));
 
     // Compute final scores in memory, then sort
-    const scored = entries.map(entry => {
+    const scored = entries.map((entry: any) => {
       const votes   = voteMap.get(entry.trackId) ?? 0;
       const voteScore   = votes * VOTE_WEIGHT;
       const listenScore = entry.track.playCount * LISTEN_WEIGHT;
       const likeScore   = entry.track.likeCount * LIKE_WEIGHT;
       const totalScore  = voteScore + listenScore + likeScore;
       return { ...entry, voteScore, listenScore, likeScore, totalScore };
-    }).sort((a, b) => b.totalScore - a.totalScore);
+    }).sort((left: any, right: any) => right.totalScore - left.totalScore);
 
     const winners = scored.slice(0, 10);
 
     // Update all entries with final scores/ranks in a transaction
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // Update scores and ranks
       for (let i = 0; i < scored.length; i++) {
         const e = scored[i];
@@ -267,7 +269,7 @@ export async function finalizeCompetition(req: Request, res: Response): Promise<
         // Mark user as top artist
         await tx.user.update({
           where: { id: winner.userId },
-          data: { isTopArtist: true, topArtistSince: new Date() },
+          data: { isTopArtist: true, topArtistSince: new Date() } as any,
         });
       }
 
@@ -281,11 +283,11 @@ export async function finalizeCompetition(req: Request, res: Response): Promise<
     res.json({
       success: true,
       message: `Competition finalized. ${winners.length} winners granted Top Artist privileges.`,
-      winners: winners.map((w, i) => ({
-        rank: i + 1,
-        userId: w.userId,
-        trackId: w.trackId,
-        totalScore: w.totalScore,
+      winners: winners.map((winner: any, index: number) => ({
+        rank: index + 1,
+        userId: winner.userId,
+        trackId: winner.trackId,
+        totalScore: winner.totalScore,
       })),
     });
   } catch (err) {
@@ -300,7 +302,7 @@ export async function getMyEntries(req: Request, res: Response): Promise<void> {
   try {
     const userId = req.user!.userId;
 
-    const entries = await prisma.competitionEntry.findMany({
+    const entries = await db.competitionEntry.findMany({
       where: { userId },
       orderBy: { enteredAt: "desc" },
       include: {
@@ -328,7 +330,7 @@ export async function updateEntryScore(trackId: string): Promise<void> {
     const competition = await getOrCreateCurrentCompetition();
     if (competition.status === "FINALIZED") return;
 
-    const entry = await prisma.competitionEntry.findUnique({
+    const entry = await db.competitionEntry.findUnique({
       where: { competitionId_trackId: { competitionId: competition.id, trackId } },
       include: { track: { select: { playCount: true, likeCount: true } } },
     });
@@ -340,7 +342,7 @@ export async function updateEntryScore(trackId: string): Promise<void> {
     const likeScore   = entry.track.likeCount * LIKE_WEIGHT;
     const totalScore  = voteScore + listenScore + likeScore;
 
-    await prisma.competitionEntry.update({
+    await db.competitionEntry.update({
       where: { id: entry.id },
       data: { voteScore, listenScore, likeScore, totalScore },
     });

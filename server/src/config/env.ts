@@ -10,14 +10,22 @@ function optional(key: string, fallback: string): string {
   return process.env[key] ?? fallback;
 }
 
+function optionalBoolean(key: string, fallback: boolean): boolean {
+  const value = process.env[key];
+  if (value === undefined) return fallback;
+  return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
+}
+
 const rawFrontendUrl = optional("FRONTEND_URL", "http://localhost:5173");
 
 export const env = {
   // App
   PORT: parseInt(optional("PORT", "4000"), 10),
   NODE_ENV: optional("NODE_ENV", "development"),
+  DEMO_MODE: optionalBoolean("DEMO_MODE", false),
   FRONTEND_URL: rawFrontendUrl.split(",")[0].trim(),
   CORS_ORIGINS: optional("CORS_ORIGINS", rawFrontendUrl),
+  DEMO_PATH_PREFIX: optional("DEMO_PATH_PREFIX", "/demo"),
 
   // Auth
   JWT_SECRET: required("JWT_SECRET"),

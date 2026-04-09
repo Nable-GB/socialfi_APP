@@ -4,6 +4,7 @@ import { z } from "zod";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
 import { sanitizeText } from "../middleware/sanitize.js";
+import { rejectInDemoMode } from "../lib/demo.js";
 
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
@@ -52,6 +53,10 @@ export async function getAdPackages(req: Request, res: Response): Promise<void> 
 
 export async function createCheckout(req: Request, res: Response): Promise<void> {
   try {
+    if (rejectInDemoMode(res, "Ad package checkout is disabled in demo mode.")) {
+      return;
+    }
+
     const data = checkoutSchema.parse(req.body);
     const merchantId = req.user!.userId;
 

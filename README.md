@@ -104,6 +104,32 @@ The frontend only needs `VITE_API_URL` (see `.env.example` in the app root).
 - **Netlify** — `netlify.toml` is kept as an optional alternative frontend target, but it is not the current production path.
 - **GitHub Pages** — Removed from this repo to avoid conflicting frontend deployment paths.
 
+## Demo Deployment
+
+The repo now supports a separate showcase experience at `/demo` on the same frontend host.
+
+- **Frontend behavior** — `/` continues using the main API. `/demo` switches to `VITE_DEMO_API_URL` at runtime.
+- **Demo backend** — Deploy a second backend service with a separate `DATABASE_URL` and `DEMO_MODE=true`.
+- **Demo database** — Use a different Postgres instance or database from production.
+- **Demo seeding** — After `npx prisma migrate deploy`, run:
+
+```bash
+cd server
+npm run db:seed
+npm run db:seed:demo
+```
+
+- **Demo reset** — To clear and rebuild the showcase dataset:
+
+```bash
+cd server
+npm run db:clear:demo
+npm run db:seed:demo
+```
+
+- **Demo safety** — Stripe checkout, service checkout, ad checkout, withdrawals, swaps, and Stripe webhooks are blocked or ignored when `DEMO_MODE=true`.
+- **Env examples** — Use `.env.example` for the frontend plus `server/.env.example` for the backend. Copy the new demo-focused examples as a starting point when provisioning the demo services.
+
 ## License
 
 MIT

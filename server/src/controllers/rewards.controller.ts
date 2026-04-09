@@ -6,6 +6,7 @@ import { creditAdViewReward, creditAdEngagementReward } from "../services/reward
 import { sendTokens, isOnChainEnabled, isEthPayoutEnabled, sendEth } from "../services/onchain.service.js";
 import { env } from "../config/env.js";
 import { notifyWithdrawalDone } from "../services/notification.service.js";
+import { rejectInDemoMode } from "../lib/demo.js";
 
 // ─── Validation ─────────────────────────────────────────────────────────────
 
@@ -290,6 +291,10 @@ const swapSmfiToEthSchema = z.object({
 
 export async function requestWithdrawal(req: Request, res: Response): Promise<void> {
   try {
+    if (rejectInDemoMode(res, "Withdrawals are disabled in demo mode.")) {
+      return;
+    }
+
     const data = withdrawSchema.parse(req.body);
     const userId = req.user!.userId;
 
@@ -449,6 +454,10 @@ export async function requestWithdrawal(req: Request, res: Response): Promise<vo
 
 export async function swapSmfiToEth(req: Request, res: Response): Promise<void> {
   try {
+    if (rejectInDemoMode(res, "SMFI to ETH swaps are disabled in demo mode.")) {
+      return;
+    }
+
     const data = swapSmfiToEthSchema.parse(req.body);
     const userId = req.user!.userId;
 

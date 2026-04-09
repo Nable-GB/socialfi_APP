@@ -11,7 +11,10 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed:music": "tsx prisma/seed-music.ts",
+    "db:seed:demo": "tsx prisma/seed-demo-showcase.ts",
+    "db:clear:demo": "tsx prisma/clear-demo-showcase.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.997.0",

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import Stripe from "stripe";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
+import { rejectInDemoMode } from "../lib/demo.js";
 
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
@@ -28,6 +29,10 @@ export async function getPaidServices(_req: Request, res: Response): Promise<voi
 
 export async function createServiceCheckout(req: Request, res: Response): Promise<void> {
   try {
+    if (rejectInDemoMode(res, "Paid service checkout is disabled in demo mode.")) {
+      return;
+    }
+
     const serviceId = req.params.id as string;
     const userId = req.user!.userId;
     const { metadata } = req.body; // e.g. { postId } for BOOST_POST

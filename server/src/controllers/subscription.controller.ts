@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import Stripe from "stripe";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
+import { rejectInDemoMode } from "../lib/demo.js";
 
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
@@ -90,6 +91,10 @@ export async function getMySubscription(req: Request, res: Response): Promise<vo
 
 export async function createSubscriptionCheckout(req: Request, res: Response): Promise<void> {
   try {
+    if (rejectInDemoMode(res, "Live subscription checkout is disabled in demo mode. Use seeded demo accounts instead.")) {
+      return;
+    }
+
     const { tier } = req.body;
     const userId = req.user!.userId;
 
@@ -167,6 +172,10 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
 
 export async function cancelSubscription(req: Request, res: Response): Promise<void> {
   try {
+    if (rejectInDemoMode(res, "Live subscription changes are disabled in demo mode.")) {
+      return;
+    }
+
     const userId = req.user!.userId;
 
     const subscription = await prisma.subscription.findFirst({
@@ -206,6 +215,10 @@ export async function cancelSubscription(req: Request, res: Response): Promise<v
 
 export async function createUsdtCheckout(req: Request, res: Response): Promise<void> {
   try {
+    if (rejectInDemoMode(res, "USDT subscription checkout is disabled in demo mode.")) {
+      return;
+    }
+
     const { txHash, walletAddress } = req.body;
     const userId = req.user!.userId;
 

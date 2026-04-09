@@ -1,3 +1,4 @@
+import { Request, Response } from "express";
 import { updateEntryScore } from "./competition.controller.js";
 import prisma from "../lib/prisma.js";
 
@@ -200,7 +201,7 @@ export async function updateTrack(req: Request, res: Response): Promise<void> {
     if (!existing) { res.status(404).json({ error: "Track not found" }); return; }
     if (existing.artistId !== userId) { res.status(403).json({ error: "Not your track" }); return; }
 
-    const b = req.body;
+    const b = (req.body ?? {}) as Record<string, any>;
     const data: any = {};
     if (b.title !== undefined) data.title = b.title;
     if (b.description !== undefined) data.description = b.description;

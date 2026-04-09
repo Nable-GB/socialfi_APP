@@ -1,7 +1,29 @@
-// Base URL: อ่านจาก .env หรือ detect production/dev automatically
+// Base URL: resolves production vs demo backend at runtime based on pathname.
 const PROD_API = "https://socialfiapp-production.up.railway.app";
 const rawEnv = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
-const BASE_URL = rawEnv || (typeof window !== "undefined" && !window.location.hostname.includes("localhost") ? PROD_API : "http://localhost:4000");
+const rawDemoEnv = (import.meta.env.VITE_DEMO_API_URL as string | undefined)?.trim();
+const DEMO_PATH_PREFIX = "/demo";
+
+function resolveBaseUrl(): string {
+  if (typeof window === "undefined") {
+    return rawEnv || PROD_API;
+  }
+
+  const isLocalhost = window.location.hostname.includes("localhost");
+  const isDemoPath = window.location.pathname === DEMO_PATH_PREFIX || window.location.pathname.startsWith(`${DEMO_PATH_PREFIX}/`);
+
+  if (isDemoPath && rawDemoEnv) {
+    return rawDemoEnv;
+  }
+
+  if (rawEnv) {
+    return rawEnv;
+  }
+
+  return isLocalhost ? "http://localhost:4000" : PROD_API;
+}
+
+const BASE_URL = resolveBaseUrl();
 
 // ─── Error translation utility ────────────────────────────────────────────────
 

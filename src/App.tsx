@@ -291,22 +291,27 @@ function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTa
 }
 
 export default function App() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, login } = useAuth();
   const { t } = useLang();
   const { currentTrack } = usePlayer();
-  const appEnteredKey = "smfi_app_entered";
-  const defaultPage = "listen";
-  const onboardingKey = "smfi_onboarding_done";
+  const isDemoPath = typeof window !== "undefined"
+    && (window.location.pathname === "/demo" || window.location.pathname.startsWith("/demo/"));
+  const appEnteredKey = isDemoPath ? "smfi_demo_app_entered" : "smfi_app_entered";
+  const defaultPage = isDemoPath ? "compete" : "listen";
+  const onboardingKey = isDemoPath ? "smfi_demo_onboarding_done" : "smfi_onboarding_done";
+  const navStorageKey = isDemoPath ? "demoActiveNav" : "activeNav";
+  const mobileStorageKey = isDemoPath ? "demoMobileTab" : "mobileTab";
 
   const getPageFromHash = () => {
     const raw = window.location.hash.replace(/^#/, "").trim();
     return raw || null;
   };
 
-  const [mobileTab, setMobileTab] = useState(() => getPageFromHash() || localStorage.getItem("mobileTab") || defaultPage);
-  const [activeNav, setActiveNav] = useState(() => getPageFromHash() || localStorage.getItem("activeNav") || defaultPage);
+  const [mobileTab, setMobileTab] = useState(() => getPageFromHash() || localStorage.getItem(mobileStorageKey) || defaultPage);
+  const [activeNav, setActiveNav] = useState(() => getPageFromHash() || localStorage.getItem(navStorageKey) || defaultPage);
   const [authOpen, setAuthOpen] = useState(false);
   const [forceLanding, setForceLanding] = useState(false);
+  const [demoLoginLoading, setDemoLoginLoading] = useState<string | null>(null);
   const [showLanding, setShowLanding] = useState(() => {
     try {
       if (getPageFromHash()) return false;
@@ -340,12 +345,12 @@ export default function App() {
   };
 
   useEffect(() => {
-    localStorage.setItem("mobileTab", mobileTab);
-  }, [mobileTab]);
+    localStorage.setItem(mobileStorageKey, mobileTab);
+  }, [mobileTab, mobileStorageKey]);
 
   useEffect(() => {
-    localStorage.setItem("activeNav", activeNav);
-  }, [activeNav]);
+    localStorage.setItem(navStorageKey, activeNav);
+  }, [activeNav, navStorageKey]);
 
   useEffect(() => {
     const currentPage = activeNav || mobileTab || defaultPage;
@@ -435,6 +440,23 @@ export default function App() {
     }
   };
 
+  const handleDemoLogin = async (account: "listener" | "creator") => {
+    const credentials = account === "creator"
+      ? { email: "luna@musicfi.io", password: "Password123!", success: "Demo creator login successful" }
+      : { email: "alice@example.com", password: "Password123!", success: "Demo listener login successful" };
+
+    setDemoLoginLoading(account);
+    try {
+      await login(credentials.email, credentials.password);
+      toast.success(credentials.success);
+      navigateTo(account === "creator" ? "create" : "compete");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Demo login failed. Seed the demo database first.");
+    } finally {
+      setDemoLoginLoading(null);
+    }
+  };
+
   if (forceLanding || (!isAuthenticated && showLanding)) {
     return (
       <>
@@ -469,9 +491,47 @@ export default function App() {
       <Header onOpenAuth={() => setAuthOpen(true)} onOpenLanding={openLandingPage} />
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
 
-      {showVerifyBanner && (
+      {isDemoPath && (
         <div
           className="sticky top-14 z-40 w-full"
+          style={{
+            background: "linear-gradient(135deg, rgba(34,211,238,0.16), rgba(99,102,241,0.14))",
+            borderBottom: "1px solid rgba(34,211,238,0.22)",
+          }}
+        >
+          <div className="max-w-screen-xl mx-auto px-4 py-2.5 flex items-center gap-3 text-xs">
+            <div className="px-2 py-0.5 rounded-full font-bold text-cyan-200 border border-cyan-400/30 bg-cyan-500/10">
+              DEMO
+            </div>
+            <p className="text-slate-300 flex-1">
+              Showcase environment with seeded music, competitions, brochures, and NFTs. Billing, payouts, and on-chain actions are disabled here.
+            </p>
+            {!isAuthenticated && (
+              <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => handleDemoLogin("listener")}
+                  disabled={demoLoginLoading !== null}
+                  className="px-3 py-1 rounded-lg font-semibold text-cyan-200 border border-cyan-400/25 bg-cyan-500/10 disabled:opacity-50"
+                >
+                  {demoLoginLoading === "listener" ? "Signing in..." : "Demo Listener"}
+                </button>
+                <button
+                  onClick={() => handleDemoLogin("creator")}
+                  disabled={demoLoginLoading !== null}
+                  className="px-3 py-1 rounded-lg font-semibold text-indigo-200 border border-indigo-400/25 bg-indigo-500/10 disabled:opacity-50"
+                >
+                  {demoLoginLoading === "creator" ? "Signing in..." : "Demo Creator"}
+                </button>
+              </div>
+            )}
+            <span className="hidden md:block text-slate-500 font-mono">/demo</span>
+          </div>
+        </div>
+      )}
+
+      {showVerifyBanner && (
+        <div
+          className={`sticky ${isDemoPath ? "top-[6.5rem]" : "top-14"} z-40 w-full`}
           style={{
             background: "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(234,88,12,0.1))",
             borderBottom: "1px solid rgba(245,158,11,0.25)",
@@ -496,6 +556,31 @@ export default function App() {
       )}
 
       <div className="max-w-screen-xl mx-auto px-4">
+        {isDemoPath && !isAuthenticated && (
+          <div className="lg:hidden pt-4">
+            <div className="rounded-2xl p-4 border border-cyan-500/15" style={{ background: "rgba(8, 20, 36, 0.72)" }}>
+              <p className="text-sm font-semibold text-slate-100">Demo access</p>
+              <p className="text-xs text-slate-400 mt-1">Use a seeded account to preview the creator and listener flows instantly.</p>
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <button
+                  onClick={() => handleDemoLogin("listener")}
+                  disabled={demoLoginLoading !== null}
+                  className="px-3 py-2 rounded-xl font-semibold text-xs text-cyan-200 border border-cyan-400/25 bg-cyan-500/10 disabled:opacity-50"
+                >
+                  {demoLoginLoading === "listener" ? "Signing in..." : "Demo Listener"}
+                </button>
+                <button
+                  onClick={() => handleDemoLogin("creator")}
+                  disabled={demoLoginLoading !== null}
+                  className="px-3 py-2 rounded-xl font-semibold text-xs text-indigo-200 border border-indigo-400/25 bg-indigo-500/10 disabled:opacity-50"
+                >
+                  {demoLoginLoading === "creator" ? "Signing in..." : "Demo Creator"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="hidden lg:grid gap-6 py-6" style={{ gridTemplateColumns: "220px 1fr" }}>
           <DesktopNav activeNav={activeNav} setActiveNav={navigateTo} onOpenAuth={() => setAuthOpen(true)} />
 
