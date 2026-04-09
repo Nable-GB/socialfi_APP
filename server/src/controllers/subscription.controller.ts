@@ -19,6 +19,8 @@ export const SUBSCRIPTION_TIERS = {
     monthlyPriceUsd: 10,
     features: [
       "Upload music to the platform",
+      "Mint virtual NFTs (non-dividend NFTs)",
+      "Buy and sell NFTs with SMFI tokens",
       "3,000 upload credits per month (3 tracks)",
       "Create NFT Brochure for your tracks (promotional, sold once)",
       "Enter monthly competition to become a Top Artist",
@@ -38,6 +40,7 @@ export async function getSubscriptionTiers(_req: Request, res: Response): Promis
         monthlyPriceUsd: 0,
         features: [
           "Listen to all music on the platform",
+          "Buy and sell NFTs with SMFI tokens",
           "Like, comment, share, and vote",
           "Follow artists and build your feed",
         ],
@@ -48,7 +51,7 @@ export async function getSubscriptionTiers(_req: Request, res: Response): Promis
       name: "Top Artist",
       how: "Win Top 10 in the monthly competition",
       privileges: [
-        "Mint full Copyright Song NFTs with revenue sharing",
+        "Mint revenue-sharing Music NFTs for the winning track",
         "Platform publishes your track globally (Spotify, YouTube Music, etc.)",
         "Per-song privilege — applies to the winning track only",
       ],

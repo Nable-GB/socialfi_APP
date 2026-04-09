@@ -9,7 +9,7 @@ import {
   getNft,
   getUserNfts,
 } from "../controllers/nft.controller.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireTier } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -19,7 +19,7 @@ router.get("/users/:id", getUserNfts);
 router.get("/:id", getNft);
 
 // Auth-required routes
-router.post("/mint", requireAuth, mintNft);
+router.post("/mint", requireAuth, requireTier("CREATOR"), mintNft);
 router.get("/my", requireAuth, getMyNfts);
 router.post("/:id/list", requireAuth, listNftForSale);
 router.delete("/listings/:id", requireAuth, cancelListing);

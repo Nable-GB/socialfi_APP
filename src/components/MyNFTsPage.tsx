@@ -216,7 +216,7 @@ function MyNftCard({ nft, onList, onCancelListing, cancelling }: {
 type Tab = "collection" | "mint";
 
 export function MyNFTsPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { t } = useLang();
   const [tab, setTab] = useState<Tab>("collection");
   const [nfts, setNfts] = useState<ApiNft[]>([]);
@@ -225,6 +225,9 @@ export function MyNFTsPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [listingNft, setListingNft] = useState<ApiNft | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const canMintVirtualNfts = Boolean(
+    user?.creatorAccessForced || ["CREATOR", "PRO", "PREMIUM"].includes((user?.subscriptionTier as string | undefined) ?? ""),
+  );
 
   const fetchNfts = useCallback(async (cursor?: string) => {
     if (!isAuthenticated) return;
@@ -269,16 +272,36 @@ export function MyNFTsPage() {
         </div>
 
         <div className="flex gap-1.5">
-          {(["collection", "mint"] as Tab[]).map(tabId => (
-            <button key={tabId} onClick={() => setTab(tabId)}
-              className={`px-4 py-2 rounded-xl text-xs font-medium transition-all capitalize ${tab === tabId ? "bg-purple-500/15 text-purple-400 border border-purple-500/25" : "text-slate-500 hover:text-slate-300 border border-transparent"}`}>
-              {tabId === "collection" ? `${t.myNfts.tabCollection} (${nfts.length})` : t.myNfts.tabMint}
-            </button>
-          ))}
+          {(["collection", "mint"] as Tab[]).map(tabId => {
+            const mintLocked = tabId === "mint" && !canMintVirtualNfts;
+            return (
+              <button
+                key={tabId}
+                onClick={() => !mintLocked && setTab(tabId)}
+                disabled={mintLocked}
+                className={`px-4 py-2 rounded-xl text-xs font-medium transition-all capitalize ${tab === tabId ? "bg-purple-500/15 text-purple-400 border border-purple-500/25" : "text-slate-500 hover:text-slate-300 border border-transparent"} ${mintLocked ? "cursor-not-allowed opacity-45 hover:text-slate-500" : ""}`}
+              >
+                {tabId === "collection" ? `${t.myNfts.tabCollection} (${nfts.length})` : t.myNfts.tabMint}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {tab === "mint" && <MintForm onMinted={() => { setTab("collection"); fetchNfts(); }} />}
+      {tab === "mint" && (
+        canMintVirtualNfts ? (
+          <MintForm onMinted={() => { setTab("collection"); fetchNfts(); }} />
+        ) : (
+          <div className="glass rounded-2xl p-6 border border-amber-500/20 space-y-3" style={{ background: "rgba(245,158,11,0.06)" }}>
+            <h2 className="text-sm font-bold text-amber-300">{t.myNfts.membershipRequiredTitle}</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">{t.myNfts.membershipRequiredBody}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-400">
+              <div className="rounded-xl px-3 py-2 border border-slate-700/20 bg-slate-900/20">{t.myNfts.freeBenefit}</div>
+              <div className="rounded-xl px-3 py-2 border border-slate-700/20 bg-slate-900/20">{t.myNfts.paidBenefit}</div>
+            </div>
+          </div>
+        )
+      )}
 
       {tab === "collection" && (
         loading ? (
@@ -287,11 +310,13 @@ export function MyNFTsPage() {
           <div className="glass rounded-2xl p-12 text-center border border-slate-700/10">
             <Image size={40} className="text-slate-700 mx-auto mb-3" />
             <p className="text-sm text-slate-400">{t.myNfts.noNFTs}</p>
-            <button onClick={() => setTab("mint")}
-              className="mt-4 px-5 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, #a855f7, #6366f1)" }}>
-              {t.myNfts.mintFirst}
-            </button>
+            {canMintVirtualNfts && (
+              <button onClick={() => setTab("mint")}
+                className="mt-4 px-5 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, #a855f7, #6366f1)" }}>
+                {t.myNfts.mintFirst}
+              </button>
+            )}
           </div>
         ) : (
           <>

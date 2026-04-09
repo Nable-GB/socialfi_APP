@@ -7,8 +7,7 @@ import { useLang } from "../contexts/LangContext";
 
 const TIER_COLORS: Record<string, { bg: string; border: string; text: string; badge: string }> = {
   FREE: { bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.2)", text: "#94a3b8", badge: "bg-slate-700/30 text-slate-400" },
-  PRO: { bg: "rgba(34,211,238,0.08)", border: "rgba(34,211,238,0.25)", text: "#22d3ee", badge: "bg-cyan-500/15 text-cyan-400" },
-  PREMIUM: { bg: "rgba(168,85,247,0.08)", border: "rgba(168,85,247,0.25)", text: "#a855f7", badge: "bg-purple-500/15 text-purple-400" },
+  CREATOR: { bg: "rgba(34,211,238,0.08)", border: "rgba(34,211,238,0.25)", text: "#22d3ee", badge: "bg-cyan-500/15 text-cyan-400" },
 };
 
 export function SubscriptionPage() {
@@ -37,8 +36,7 @@ export function SubscriptionPage() {
 
   const getTierLabel = (tierId: string, fallback?: string) => {
     if (tierId === "FREE") return t.subscription.tierFree;
-    if (tierId === "PRO") return t.subscription.tierPro;
-    if (tierId === "PREMIUM") return t.subscription.tierPremium;
+    if (tierId === "CREATOR" || tierId === "PRO" || tierId === "PREMIUM") return t.subscription.tierCreator;
     return fallback ?? tierId;
   };
 
@@ -46,30 +44,19 @@ export function SubscriptionPage() {
     if (tierId === "FREE") {
       return [
         t.subscription.featureBasicFeedAccess,
+        t.subscription.featureMarketplaceTrading,
         t.subscription.featureEarnRewardsFromAds,
         t.subscription.featureStandardAnalytics,
       ];
     }
 
-    if (tierId === "PRO") {
+    if (tierId === "CREATOR" || tierId === "PRO" || tierId === "PREMIUM") {
       return [
-        t.subscription.featureAdvancedAnalyticsDashboard,
-        t.subscription.featurePriorityAdPlacement,
-        t.subscription.featureCustomProfileBadge,
-        t.subscription.feature5xDailyRewardCap,
-        t.subscription.featureAdFreeBrowsing,
-      ];
-    }
-
-    if (tierId === "PREMIUM") {
-      return [
-        t.subscription.featureEverythingInPro,
-        t.subscription.featureVerifiedBadge,
-        t.subscription.feature10xDailyRewardCap,
-        t.subscription.featureEarlyAccess,
-        t.subscription.featureDirectMerchantMessaging,
-        t.subscription.featurePrioritySupport,
-        t.subscription.featureCustomNftMinting,
+        t.subscription.featureUploadMusic,
+        t.subscription.featureVirtualNftMinting,
+        t.subscription.featureCreatorUploadCredits,
+        t.subscription.featureMarketplaceTrading,
+        t.subscription.featureCompetitionEntry,
       ];
     }
 
@@ -164,8 +151,7 @@ export function SubscriptionPage() {
           const colors = TIER_COLORS[tier.id] || TIER_COLORS.FREE;
           const features = getTierFeatures(tier.id, tier.features);
           const isCurrent = currentTier === tier.id;
-          const isUpgrade = tier.id !== "FREE" && currentTier === "FREE";
-          const isPremiumUpgrade = tier.id === "PREMIUM" && currentTier === "PRO";
+          const isUpgrade = tier.id === "CREATOR" && currentTier === "FREE";
 
           return (
             <div key={tier.id} className="glass rounded-2xl p-5 border transition-all hover:scale-[1.01]"
@@ -177,8 +163,8 @@ export function SubscriptionPage() {
               {/* Tier badge */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  {tier.id === "PREMIUM" && <Star size={16} style={{ color: colors.text }} />}
-                  {tier.id === "PRO" && <Zap size={16} style={{ color: colors.text }} />}
+                  {tier.id === "FREE" && <Star size={16} style={{ color: colors.text }} />}
+                  {tier.id === "CREATOR" && <Zap size={16} style={{ color: colors.text }} />}
                   <h2 className="text-lg font-bold" style={{ color: colors.text }}>{getTierLabel(tier.id, tier.name)}</h2>
                 </div>
                 {isCurrent && (
@@ -218,7 +204,7 @@ export function SubscriptionPage() {
                   {actionLoading === "cancel" ? <RefreshCw size={12} className="animate-spin" /> : <XCircle size={12} />}
                   {mySub?.subscription?.cancelAtPeriodEnd ? t.subscription.cancellationPending : t.subscription.cancelSubscription}
                 </button>
-              ) : (isUpgrade || isPremiumUpgrade) ? (
+              ) : isUpgrade ? (
                 <button
                   onClick={() => handleSubscribe(tier.id)}
                   disabled={!!actionLoading}
