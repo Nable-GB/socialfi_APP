@@ -6,6 +6,7 @@ import { env } from "../config/env.js";
 import { calculateRewardSplit } from "../services/reward.service.js";
 import { isDemoMode } from "../lib/demo.js";
 import { applyActiveSubscriptionEntitlements, syncUserSubscriptionTier } from "../services/subscription.service.js";
+import { applyPaidServiceEntitlements } from "../services/paid-service.service.js";
 
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
@@ -130,21 +131,18 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
     // (B) Service purchase checkout
     if (meta.type === "service_purchase" && meta.purchaseId) {
       try {
-        await prisma.servicePurchase.update({
-          where: { id: meta.purchaseId },
-          data: {
-            status: "COMPLETED",
-            stripePaymentId: session.payment_intent as string,
-            amountPaid: new Prisma.Decimal((session.amount_total ?? 0) / 100),
-          },
-        });
-
-        if (meta.serviceType === "VERIFIED_BADGE" || meta.serviceType === "PREMIUM_BADGE") {
-          await prisma.user.update({
-            where: { id: meta.userId },
-            data: { isVerified: true },
+        await prisma.$transaction(async (tx) => {
+          await tx.servicePurchase.update({
+            where: { id: meta.purchaseId },
+            data: {
+              status: "COMPLETED",
+              stripePaymentId: session.payment_intent as string,
+              amountPaid: new Prisma.Decimal((session.amount_total ?? 0) / 100),
+            },
           });
-        }
+
+          await applyPaidServiceEntitlements(tx, meta.userId!, meta.serviceType as any);
+        });
 
         console.log(`Service purchase ${meta.purchaseId} completed: ${meta.serviceType} for user ${meta.userId}`);
       } catch (err) {

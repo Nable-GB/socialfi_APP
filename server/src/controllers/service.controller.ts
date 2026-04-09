@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import Stripe from "stripe";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
-import { rejectInDemoMode } from "../lib/demo.js";
+import { isDemoMode, sendDemoModeResponse } from "../lib/demo.js";
+import { applyPaidServiceEntitlements } from "../services/paid-service.service.js";
 
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
@@ -29,10 +30,6 @@ export async function getPaidServices(_req: Request, res: Response): Promise<voi
 
 export async function createServiceCheckout(req: Request, res: Response): Promise<void> {
   try {
-    if (rejectInDemoMode(res, "Paid service checkout is disabled in demo mode.")) {
-      return;
-    }
-
     const serviceId = req.params.id as string;
     const userId = req.user!.userId;
     const { metadata } = req.body; // e.g. { postId } for BOOST_POST
@@ -46,6 +43,66 @@ export async function createServiceCheckout(req: Request, res: Response): Promis
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const existingActivePurchase = await prisma.servicePurchase.findFirst({
+      where: {
+        userId,
+        serviceId,
+        status: "COMPLETED",
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } },
+        ],
+      },
+      include: {
+        service: { select: { name: true, type: true, description: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (isDemoMode()) {
+      if (existingActivePurchase) {
+        sendDemoModeResponse(res, {
+          success: true,
+          message: `${service.name} is already active in demo mode.`,
+          purchaseId: existingActivePurchase.id,
+          purchase: existingActivePurchase,
+        });
+        return;
+      }
+
+      const purchase = await prisma.$transaction(async (tx) => {
+        const createdPurchase = await tx.servicePurchase.create({
+          data: {
+            userId,
+            serviceId,
+            status: "COMPLETED",
+            amountPaid: service.priceUsd,
+            metadata: metadata || undefined,
+            expiresAt: service.durationDays
+              ? new Date(Date.now() + service.durationDays * 24 * 60 * 60 * 1000)
+              : null,
+          },
+        });
+
+        await applyPaidServiceEntitlements(tx, userId, service.type);
+
+        return tx.servicePurchase.findUniqueOrThrow({
+          where: { id: createdPurchase.id },
+          include: {
+            service: { select: { name: true, type: true, description: true } },
+          },
+        });
+      });
+
+      sendDemoModeResponse(res, {
+        success: true,
+        message: `${service.name} activated in demo mode.`,
+        purchaseId: purchase.id,
+        purchase,
+      });
       return;
     }
 

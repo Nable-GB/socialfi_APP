@@ -4,7 +4,7 @@ import { z } from "zod";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
 import { sanitizeText } from "../middleware/sanitize.js";
-import { rejectInDemoMode } from "../lib/demo.js";
+import { isDemoMode, sendDemoModeResponse } from "../lib/demo.js";
 
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
@@ -53,10 +53,6 @@ export async function getAdPackages(req: Request, res: Response): Promise<void> 
 
 export async function createCheckout(req: Request, res: Response): Promise<void> {
   try {
-    if (rejectInDemoMode(res, "Ad package checkout is disabled in demo mode.")) {
-      return;
-    }
-
     const data = checkoutSchema.parse(req.body);
     const merchantId = req.user!.userId;
 
@@ -73,6 +69,63 @@ export async function createCheckout(req: Request, res: Response): Promise<void>
     });
     if (!adPackage || !adPackage.isActive) {
       res.status(404).json({ error: "Ad package not found" });
+      return;
+    }
+
+    if (isDemoMode()) {
+      const impressionsDelivered = Math.max(250, Math.floor(adPackage.impressions * 0.18));
+      const clickCount = Math.max(18, Math.floor(impressionsDelivered * 0.07));
+      const rewardPool = adPackage.totalRewardPool.toNumber();
+      const perViewReward = rewardPool / Math.max(adPackage.impressions, 1);
+      const perEngagementReward = rewardPool / Math.max(Math.floor(adPackage.impressions / 5), 1);
+
+      const campaign = await prisma.$transaction(async (tx) => {
+        const createdCampaign = await tx.adCampaign.create({
+          data: {
+            merchantId,
+            adPackageId: adPackage.id,
+            title: sanitizeText(data.campaignTitle),
+            description: data.campaignDescription ? sanitizeText(data.campaignDescription) : undefined,
+            targetUrl: data.targetUrl,
+            paymentMethod: "FIAT_STRIPE",
+            paymentStatus: "COMPLETED",
+            amountPaid: adPackage.priceFiat,
+            impressionsTotal: adPackage.impressions,
+            impressionsDelivered,
+            clickCount,
+            rewardPoolTotal: adPackage.totalRewardPool,
+            rewardPoolDistributed: adPackage.totalRewardPool.mul(Math.min(impressionsDelivered / Math.max(adPackage.impressions, 1), 0.18)),
+            status: "ACTIVE",
+            startsAt: new Date(),
+            endsAt: new Date(Date.now() + adPackage.durationDays * 24 * 60 * 60 * 1000),
+          },
+          include: {
+            adPackage: { select: { name: true, impressions: true, durationDays: true } },
+          },
+        });
+
+        await tx.socialPost.create({
+          data: {
+            authorId: merchantId,
+            content: `🔥 SPONSORED | ${createdCampaign.title}\n\n${createdCampaign.description || "Explore this featured campaign."}${createdCampaign.targetUrl ? `\n\n👉 ${createdCampaign.targetUrl}` : ""}`,
+            type: "SPONSORED",
+            adCampaignId: createdCampaign.id,
+            rewardPerView: perViewReward,
+            rewardPerEngagement: perEngagementReward,
+            viewsCount: impressionsDelivered,
+            likesCount: Math.max(10, Math.floor(clickCount * 0.4)),
+          },
+        });
+
+        return createdCampaign;
+      });
+
+      sendDemoModeResponse(res, {
+        success: true,
+        message: `Demo campaign \"${campaign.title}\" launched successfully.`,
+        campaignId: campaign.id,
+        campaign,
+      });
       return;
     }
 
@@ -169,7 +222,7 @@ export async function createCampaign(req: Request, res: Response): Promise<void>
       return;
     }
 
-    if (merchant.offChainBalance.lessThan(adPackage.priceCrypto)) {
+    if (!isDemoMode() && merchant.offChainBalance.lessThan(adPackage.priceCrypto)) {
       res.status(400).json({
         error: `Insufficient balance. Need ${adPackage.priceCrypto} SFT, have ${merchant.offChainBalance} SFT`,
       });
@@ -182,8 +235,18 @@ export async function createCampaign(req: Request, res: Response): Promise<void>
     const perEngagement = pool / (impr / 5);
     const rawContent = data.content || `🔥 SPONSORED | ${data.campaignTitle}\n\n${data.campaignDescription || "Check out this campaign!"}\n\n${data.targetUrl ? `👉 ${data.targetUrl}` : ""}`;
     const postContent = sanitizeText(rawContent);
+    const demoTopUpAmount = isDemoMode() && merchant.offChainBalance.lessThan(adPackage.priceCrypto)
+      ? adPackage.priceCrypto.minus(merchant.offChainBalance).plus(adPackage.priceCrypto)
+      : null;
 
     const campaign = await prisma.$transaction(async (tx) => {
+      if (demoTopUpAmount && demoTopUpAmount.greaterThan(0)) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { offChainBalance: { increment: demoTopUpAmount } },
+        });
+      }
+
       await tx.user.update({
         where: { id: userId },
         data: { offChainBalance: { decrement: adPackage.priceCrypto } },

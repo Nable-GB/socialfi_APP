@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import Stripe from "stripe";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
-import { rejectInDemoMode } from "../lib/demo.js";
+import { isDemoMode, sendDemoModeResponse } from "../lib/demo.js";
 import { applyActiveSubscriptionEntitlements, getEffectiveSubscriptionTier, isCreatorAccessForced } from "../services/subscription.service.js";
 
 function getStripe(): Stripe {
@@ -108,15 +108,6 @@ export async function getMySubscription(req: Request, res: Response): Promise<vo
 
 export async function createSubscriptionCheckout(req: Request, res: Response): Promise<void> {
   try {
-    if (rejectInDemoMode(res, "Live subscription checkout is disabled in demo mode. Use seeded demo accounts instead.")) {
-      return;
-    }
-
-    if (isCreatorAccessForced()) {
-      res.status(400).json({ error: "Creator access is already enabled for all users during testing." });
-      return;
-    }
-
     const { tier } = req.body;
     const userId = req.user!.userId;
 
@@ -128,6 +119,60 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    if (isDemoMode()) {
+      const now = new Date();
+      const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      const subscription = await prisma.$transaction(async (tx) => {
+        const existingActive = await tx.subscription.findFirst({
+          where: {
+            userId,
+            status: "ACTIVE",
+            tier: "CREATOR" as any,
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        if (existingActive) {
+          return existingActive;
+        }
+
+        const createdSubscription = await tx.subscription.create({
+          data: {
+            userId,
+            tier: "CREATOR" as any,
+            paymentMethod: "FIAT_STRIPE",
+            status: "ACTIVE",
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+          },
+        });
+
+        await applyActiveSubscriptionEntitlements(tx, createdSubscription);
+
+        return tx.subscription.findUniqueOrThrow({ where: { id: createdSubscription.id } });
+      });
+
+      sendDemoModeResponse(res, {
+        success: true,
+        message: "Creator plan activated in demo mode.",
+        subscription: {
+          id: subscription.id,
+          tier: subscription.tier,
+          status: subscription.status,
+          currentPeriodStart: subscription.currentPeriodStart,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+        },
+      });
+      return;
+    }
+
+    if (isCreatorAccessForced()) {
+      res.status(400).json({ error: "Creator access is already enabled for all users during testing." });
       return;
     }
 
@@ -194,10 +239,6 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
 
 export async function cancelSubscription(req: Request, res: Response): Promise<void> {
   try {
-    if (rejectInDemoMode(res, "Live subscription changes are disabled in demo mode.")) {
-      return;
-    }
-
     const userId = req.user!.userId;
 
     const subscription = await prisma.subscription.findFirst({
@@ -205,7 +246,26 @@ export async function cancelSubscription(req: Request, res: Response): Promise<v
       orderBy: { createdAt: "desc" },
     });
 
-    if (!subscription || !subscription.stripeSubscriptionId) {
+    if (!subscription) {
+      res.status(404).json({ error: "No active subscription found" });
+      return;
+    }
+
+    if (isDemoMode()) {
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: { cancelAtPeriodEnd: true },
+      });
+
+      sendDemoModeResponse(res, {
+        success: true,
+        message: "Demo subscription marked to cancel at period end.",
+        currentPeriodEnd: subscription.currentPeriodEnd,
+      });
+      return;
+    }
+
+    if (!subscription.stripeSubscriptionId) {
       res.status(404).json({ error: "No active subscription found" });
       return;
     }
@@ -237,15 +297,6 @@ export async function cancelSubscription(req: Request, res: Response): Promise<v
 
 export async function createUsdtCheckout(req: Request, res: Response): Promise<void> {
   try {
-    if (rejectInDemoMode(res, "USDT subscription checkout is disabled in demo mode.")) {
-      return;
-    }
-
-    if (isCreatorAccessForced()) {
-      res.status(400).json({ error: "Creator access is already enabled for all users during testing." });
-      return;
-    }
-
     const { txHash, walletAddress } = req.body;
     const userId = req.user!.userId;
 
@@ -294,6 +345,34 @@ export async function createUsdtCheckout(req: Request, res: Response): Promise<v
     const normalizedWalletAddress = typeof walletAddress === "string"
       ? walletAddress.trim().toLowerCase()
       : user.walletAddress?.toLowerCase() ?? null;
+
+    if (isDemoMode()) {
+      const pendingSubscription = await prisma.subscription.create({
+        data: {
+          userId,
+          tier: "CREATOR" as any,
+          paymentMethod: "CRYPTO_USDT",
+          cryptoTxHash: txHash,
+          cryptoWalletAddress: normalizedWalletAddress,
+          status: "INCOMPLETE",
+        },
+      });
+
+      sendDemoModeResponse(res, {
+        success: true,
+        message: "Demo USDT submission recorded for admin review.",
+        subscriptionId: pendingSubscription?.id,
+        txHash,
+        walletAddress: normalizedWalletAddress,
+        status: "PENDING_REVIEW",
+      });
+      return;
+    }
+
+    if (isCreatorAccessForced()) {
+      res.status(400).json({ error: "Creator access is already enabled for all users during testing." });
+      return;
+    }
 
     // Record the pending USDT payment for admin review
     const pendingSubscription = await prisma.subscription.create({

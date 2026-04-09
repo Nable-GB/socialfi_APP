@@ -383,15 +383,15 @@ export const adminApi = {
 // ─── Subscriptions ────────────────────────────────────────────────────────────
 export const subscriptionApi = {
   getTiers: () => request<{ tiers: any[] }>("/api/subscriptions/tiers"),
-  getMySubscription: () => request<{ tier: string; subscription: any }>("/api/subscriptions/me"),
-  checkout: (tier: string) => request<{ checkoutUrl: string; sessionId: string }>("/api/subscriptions/checkout", { method: "POST", body: JSON.stringify({ tier }) }),
-  cancel: () => request<{ success: boolean; message: string }>("/api/subscriptions/cancel", { method: "POST" }),
+  getMySubscription: () => request<{ tier: string; subscription: any; pendingReview?: any }>("/api/subscriptions/me"),
+  checkout: (tier: string) => request<{ checkoutUrl?: string; sessionId?: string; success?: boolean; message?: string; demoMode?: boolean; subscription?: any }>("/api/subscriptions/checkout", { method: "POST", body: JSON.stringify({ tier }) }),
+  cancel: () => request<{ success: boolean; message: string; demoMode?: boolean; currentPeriodEnd?: string }>("/api/subscriptions/cancel", { method: "POST" }),
 };
 
 // ─── Paid Services ────────────────────────────────────────────────────────────
 export const serviceApi = {
   list: () => request<{ services: any[] }>("/api/services"),
-  checkout: (serviceId: string, metadata?: any) => request<{ checkoutUrl: string; purchaseId: string }>(`/api/services/${serviceId}/checkout`, { method: "POST", body: JSON.stringify({ metadata }) }),
+  checkout: (serviceId: string, metadata?: any) => request<{ checkoutUrl?: string; purchaseId?: string; success?: boolean; message?: string; demoMode?: boolean; purchase?: any }>(`/api/services/${serviceId}/checkout`, { method: "POST", body: JSON.stringify({ metadata }) }),
   myPurchases: () => request<{ purchases: any[] }>("/api/services/purchases"),
   checkActive: (type: string) => request<{ active: boolean; purchase?: any }>(`/api/services/check?type=${type}`),
 };

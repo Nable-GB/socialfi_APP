@@ -16,6 +16,13 @@ const DEMO_EMAILS = [
   "mira@musicfi.io",
 ];
 
+const SUPPORT_EMAILS = [
+  "alice@example.com",
+  "bob@example.com",
+  "merchant@nftstore.io",
+  "admin@socialfi.app",
+];
+
 const AUDIO_POOL = [
   "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
   "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
@@ -55,6 +62,99 @@ async function ensureCoreServices() {
       skipDuplicates: true,
     });
   }
+}
+
+async function upsertSupportUsers() {
+  const passwordHash = await bcrypt.hash(PASSWORD, 12);
+  const defs = [
+    {
+      email: "alice@example.com",
+      username: "alice_web3",
+      displayName: "Alice",
+      role: UserRole.USER,
+      bio: "Collector and early supporter tracking the strongest demo drops.",
+      avatarSeed: "alice",
+      verified: true,
+      balance: 180,
+      earned: 64,
+      subscriptionTier: "FREE",
+      uploadCredits: 0,
+    },
+    {
+      email: "bob@example.com",
+      username: "bob_crypto",
+      displayName: "Bob",
+      role: UserRole.USER,
+      bio: "Playlist hunter chasing high-engagement releases before they break out.",
+      avatarSeed: "bob",
+      verified: false,
+      balance: 95,
+      earned: 38,
+      subscriptionTier: "FREE",
+      uploadCredits: 0,
+    },
+    {
+      email: "merchant@nftstore.io",
+      username: "nft_store",
+      displayName: "NFT Store Official",
+      role: UserRole.MERCHANT,
+      bio: "Showcase merchant running brand campaigns and creator collabs in demo mode.",
+      avatarSeed: "merchant",
+      verified: true,
+      balance: 950,
+      earned: 420,
+      subscriptionTier: "FREE",
+      uploadCredits: 0,
+    },
+    {
+      email: "admin@socialfi.app",
+      username: "admin",
+      displayName: "SocialFi Admin",
+      role: UserRole.ADMIN,
+      bio: "Platform operator curating featured drops and reviewing showcase activity.",
+      avatarSeed: "admin",
+      verified: true,
+      balance: 500,
+      earned: 0,
+      subscriptionTier: "FREE",
+      uploadCredits: 0,
+    },
+  ] as const;
+
+  const users: Record<string, any> = {};
+  for (const user of defs) {
+    users[user.username] = await prisma.user.upsert({
+      where: { email: user.email },
+      update: {
+        displayName: user.displayName,
+        bio: user.bio,
+        role: user.role,
+        isVerified: user.verified,
+        offChainBalance: user.balance,
+        totalEarned: user.earned,
+        subscriptionTier: user.subscriptionTier as any,
+        uploadCredits: user.uploadCredits,
+      },
+      create: {
+        email: user.email,
+        passwordHash,
+        username: user.username,
+        displayName: user.displayName,
+        role: user.role,
+        authProvider: AuthProvider.EMAIL,
+        referralCode: user.username.toUpperCase(),
+        avatarUrl: `https://api.dicebear.com/9.x/avataaars/svg?seed=${user.avatarSeed}`,
+        bio: user.bio,
+        isVerified: user.verified,
+        offChainBalance: user.balance,
+        totalEarned: user.earned,
+        subscriptionTier: user.subscriptionTier as any,
+        uploadCredits: user.uploadCredits,
+      } as any,
+    });
+  }
+
+  return users;
 }
 
 async function upsertArtists() {
@@ -392,23 +492,406 @@ async function seedEngagement(tracks: any[], artists: Record<string, any>) {
   }
 }
 
+async function seedSupportNetwork(artists: Record<string, any>, supportUsers: Record<string, any>) {
+  const follows = [
+    { followerId: supportUsers.alice_web3.id, followingId: artists.luna_beats.id },
+    { followerId: supportUsers.alice_web3.id, followingId: artists.mira_flux.id },
+    { followerId: supportUsers.alice_web3.id, followingId: artists.kai_fire.id },
+    { followerId: supportUsers.bob_crypto.id, followingId: artists.nova_synth.id },
+    { followerId: supportUsers.bob_crypto.id, followingId: artists.vela_echo.id },
+    { followerId: supportUsers.bob_crypto.id, followingId: artists.luna_beats.id },
+    { followerId: supportUsers.nft_store.id, followingId: artists.kai_fire.id },
+    { followerId: supportUsers.nft_store.id, followingId: artists.luna_beats.id },
+    { followerId: artists.luna_beats.id, followingId: artists.kai_fire.id },
+    { followerId: artists.kai_fire.id, followingId: artists.mira_flux.id },
+  ];
+
+  for (const follow of follows) {
+    await prisma.follow.upsert({
+      where: { followerId_followingId: follow },
+      update: {},
+      create: follow,
+    });
+  }
+}
+
+async function upsertShowcasePost(authorId: string, content: string, data: Record<string, any>) {
+  const existing = await prisma.socialPost.findFirst({
+    where: { authorId, content },
+  });
+
+  if (existing) {
+    return prisma.socialPost.update({
+      where: { id: existing.id },
+      data,
+    });
+  }
+
+  return prisma.socialPost.create({
+    data: {
+      authorId,
+      content,
+      ...data,
+    },
+  });
+}
+
+async function seedShowcaseFeed(tracks: any[], artists: Record<string, any>, supportUsers: Record<string, any>) {
+  const paperClouds = tracks.find((track) => track.title === "Paper Clouds");
+  const cryptoKings = tracks.find((track) => track.title === "Crypto Kings");
+  const candyOrbit = tracks.find((track) => track.title === "Candy Orbit");
+  const growthPackage = await prisma.adPackage.findUnique({ where: { id: "pkg-growth" } });
+
+  const organicPosts = [
+    {
+      authorId: artists.luna_beats.id,
+      content: "Demo showcase: Paper Clouds just crossed 15k plays and the brochure sold out faster than expected.",
+      likesCount: 18,
+      commentsCount: 4,
+      sharesCount: 2,
+      viewsCount: 220,
+    },
+    {
+      authorId: artists.kai_fire.id,
+      content: "Demo showcase: Crypto Kings is holding the #1 competition slot and the collector NFT floor keeps tightening.",
+      likesCount: 24,
+      commentsCount: 6,
+      sharesCount: 3,
+      viewsCount: 310,
+    },
+    {
+      authorId: supportUsers.alice_web3.id,
+      content: "Demo showcase: picked up the Paper Clouds collector piece and voting it into global distribution next.",
+      likesCount: 11,
+      commentsCount: 2,
+      sharesCount: 1,
+      viewsCount: 140,
+    },
+    {
+      authorId: artists.mira_flux.id,
+      content: "Demo showcase: Candy Orbit is now live across the NFT market and the release campaign is outperforming our forecast.",
+      likesCount: 15,
+      commentsCount: 3,
+      sharesCount: 2,
+      viewsCount: 205,
+    },
+  ];
+
+  const createdPosts = [];
+  for (const post of organicPosts) {
+    createdPosts.push(await upsertShowcasePost(post.authorId, post.content, {
+      type: "ORGANIC",
+      likesCount: post.likesCount,
+      commentsCount: post.commentsCount,
+      sharesCount: post.sharesCount,
+      viewsCount: post.viewsCount,
+    }));
+  }
+
+  await prisma.postInteraction.deleteMany({
+    where: {
+      postId: { in: createdPosts.map((post) => post.id) },
+      userId: { in: [supportUsers.alice_web3.id, supportUsers.bob_crypto.id, artists.luna_beats.id, artists.kai_fire.id] },
+    },
+  });
+
+  await prisma.postInteraction.createMany({
+    data: [
+      { postId: createdPosts[0].id, userId: supportUsers.alice_web3.id, type: "LIKE" },
+      { postId: createdPosts[0].id, userId: supportUsers.bob_crypto.id, type: "COMMENT", commentText: "This is the kind of drop that makes the demo feel real." },
+      { postId: createdPosts[1].id, userId: supportUsers.alice_web3.id, type: "LIKE" },
+      { postId: createdPosts[1].id, userId: artists.luna_beats.id, type: "COMMENT", commentText: "Need that finals screenshot when the leaderboard locks." },
+      { postId: createdPosts[2].id, userId: artists.mira_flux.id, type: "LIKE" },
+      { postId: createdPosts[3].id, userId: supportUsers.bob_crypto.id, type: "LIKE" },
+    ],
+    skipDuplicates: true,
+  });
+
+  if (!growthPackage || !paperClouds || !cryptoKings || !candyOrbit) {
+    return;
+  }
+
+  const campaignTitle = "Demo Spotlight: Creator Rewards Week";
+  const existingCampaign = await prisma.adCampaign.findFirst({
+    where: {
+      merchantId: supportUsers.nft_store.id,
+      title: campaignTitle,
+    },
+  });
+
+  const campaign = existingCampaign
+    ? await prisma.adCampaign.update({
+        where: { id: existingCampaign.id },
+        data: {
+          description: "A featured demo campaign driving traffic to top-performing creator drops.",
+          targetUrl: "https://socialmusicfi.com/demo#listen",
+          paymentMethod: "FIAT_STRIPE",
+          paymentStatus: "COMPLETED",
+          amountPaid: growthPackage.priceFiat,
+          impressionsTotal: growthPackage.impressions,
+          impressionsDelivered: 3620,
+          clickCount: 290,
+          rewardPoolTotal: growthPackage.totalRewardPool,
+          rewardPoolDistributed: 362,
+          status: "ACTIVE",
+          startsAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+          endsAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        },
+      })
+    : await prisma.adCampaign.create({
+        data: {
+          merchantId: supportUsers.nft_store.id,
+          adPackageId: growthPackage.id,
+          title: campaignTitle,
+          description: "A featured demo campaign driving traffic to top-performing creator drops.",
+          targetUrl: "https://socialmusicfi.com/demo#listen",
+          paymentMethod: "FIAT_STRIPE",
+          paymentStatus: "COMPLETED",
+          amountPaid: growthPackage.priceFiat,
+          impressionsTotal: growthPackage.impressions,
+          impressionsDelivered: 3620,
+          clickCount: 290,
+          rewardPoolTotal: growthPackage.totalRewardPool,
+          rewardPoolDistributed: 362,
+          status: "ACTIVE",
+          startsAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+          endsAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+  const sponsoredContent = `🔥 SPONSORED | ${campaignTitle}\n\nVote the month’s strongest releases, collect the winning drops, and earn while you explore the demo economy.\n\nFeatured now: ${paperClouds.title}, ${cryptoKings.title}, ${candyOrbit.title}`;
+  await upsertShowcasePost(supportUsers.nft_store.id, sponsoredContent, {
+    type: "SPONSORED",
+    adCampaignId: campaign.id,
+    rewardPerView: 0.1,
+    rewardPerEngagement: 0.5,
+    viewsCount: 3620,
+    likesCount: 96,
+    commentsCount: 8,
+    sharesCount: 12,
+  });
+}
+
+async function seedDemoServicePurchases(artists: Record<string, any>, supportUsers: Record<string, any>) {
+  const services = await prisma.paidService.findMany({
+    where: { type: { in: ["VERIFIED_BADGE", "ANALYTICS_PRO", "BOOST_POST"] as any } },
+  });
+  const serviceMap = new Map(services.map((service) => [service.type, service]));
+
+  const purchases = [
+    { userId: supportUsers.alice_web3.id, serviceType: "VERIFIED_BADGE", metadata: { demoSeed: true, reason: "collector profile" } },
+    { userId: supportUsers.alice_web3.id, serviceType: "ANALYTICS_PRO", metadata: { demoSeed: true, dashboard: "creator intel" } },
+    { userId: artists.luna_beats.id, serviceType: "BOOST_POST", metadata: { demoSeed: true, trackTitle: "Paper Clouds" } },
+  ];
+
+  for (const purchase of purchases) {
+    const service = serviceMap.get(purchase.serviceType);
+    if (!service) continue;
+
+    const existing = await prisma.servicePurchase.findFirst({
+      where: {
+        userId: purchase.userId,
+        serviceId: service.id,
+        status: "COMPLETED",
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (existing) {
+      await prisma.servicePurchase.update({
+        where: { id: existing.id },
+        data: {
+          amountPaid: service.priceUsd,
+          metadata: purchase.metadata,
+          expiresAt: service.durationDays
+            ? new Date(Date.now() + service.durationDays * 24 * 60 * 60 * 1000)
+            : null,
+        },
+      });
+      continue;
+    }
+
+    await prisma.servicePurchase.create({
+      data: {
+        userId: purchase.userId,
+        serviceId: service.id,
+        status: "COMPLETED",
+        amountPaid: service.priceUsd,
+        metadata: purchase.metadata,
+        expiresAt: service.durationDays
+          ? new Date(Date.now() + service.durationDays * 24 * 60 * 60 * 1000)
+          : null,
+      },
+    });
+  }
+
+  await prisma.user.update({
+    where: { id: supportUsers.alice_web3.id },
+    data: { isVerified: true },
+  });
+}
+
+async function seedCollectorState(tracks: any[], supportUsers: Record<string, any>) {
+  const spotlightTracks = tracks.filter((track) => ["Paper Clouds", "Crypto Kings", "Candy Orbit"].includes(track.title));
+  const spotlightTrackIds = spotlightTracks.map((track) => track.id);
+  const audienceIds = [supportUsers.alice_web3.id, supportUsers.bob_crypto.id, supportUsers.nft_store.id];
+
+  await prisma.trackLike.deleteMany({
+    where: { trackId: { in: spotlightTrackIds }, userId: { in: audienceIds } },
+  });
+  await prisma.trackComment.deleteMany({
+    where: { trackId: { in: spotlightTrackIds }, userId: { in: audienceIds } },
+  });
+  await prisma.trackPlay.deleteMany({
+    where: { trackId: { in: spotlightTrackIds }, listenerId: { in: audienceIds } },
+  });
+  await prisma.releaseVote.deleteMany({
+    where: { trackId: { in: spotlightTrackIds }, voterId: { in: audienceIds } },
+  });
+
+  await prisma.trackLike.createMany({
+    data: [
+      { trackId: spotlightTracks[0].id, userId: supportUsers.alice_web3.id },
+      { trackId: spotlightTracks[0].id, userId: supportUsers.bob_crypto.id },
+      { trackId: spotlightTracks[1].id, userId: supportUsers.alice_web3.id },
+      { trackId: spotlightTracks[1].id, userId: supportUsers.nft_store.id },
+      { trackId: spotlightTracks[2].id, userId: supportUsers.bob_crypto.id },
+    ],
+    skipDuplicates: true,
+  });
+
+  await prisma.trackComment.createMany({
+    data: [
+      { trackId: spotlightTracks[0].id, userId: supportUsers.alice_web3.id, content: "This one feels ready for wider distribution.", timestampSec: 58 },
+      { trackId: spotlightTracks[1].id, userId: supportUsers.bob_crypto.id, content: "Competition favorite. The hook lands immediately.", timestampSec: 42 },
+      { trackId: spotlightTracks[2].id, userId: supportUsers.nft_store.id, content: "Strong conversion track for sponsored placement.", timestampSec: 64 },
+    ],
+  });
+
+  await prisma.trackPlay.createMany({
+    data: [
+      { trackId: spotlightTracks[0].id, listenerId: supportUsers.alice_web3.id, durationPlayed: 176, completedFull: true },
+      { trackId: spotlightTracks[0].id, listenerId: supportUsers.bob_crypto.id, durationPlayed: 160, completedFull: false },
+      { trackId: spotlightTracks[1].id, listenerId: supportUsers.alice_web3.id, durationPlayed: 220, completedFull: true },
+      { trackId: spotlightTracks[1].id, listenerId: supportUsers.nft_store.id, durationPlayed: 187, completedFull: true },
+      { trackId: spotlightTracks[2].id, listenerId: supportUsers.bob_crypto.id, durationPlayed: 190, completedFull: true },
+    ],
+  });
+
+  await prisma.releaseVote.createMany({
+    data: [
+      { trackId: spotlightTracks[0].id, voterId: supportUsers.alice_web3.id, voteType: "RELEASE", weight: 1.2 },
+      { trackId: spotlightTracks[1].id, voterId: supportUsers.bob_crypto.id, voteType: "RELEASE", weight: 1.1 },
+      { trackId: spotlightTracks[2].id, voterId: supportUsers.nft_store.id, voteType: "RELEASE", weight: 1.3 },
+    ],
+  });
+
+  const musicNfts = await prisma.musicNFT.findMany({
+    where: { trackId: { in: spotlightTrackIds } },
+    select: { id: true, trackId: true, pricePerFraction: true },
+  });
+  const musicNftMap = new Map(musicNfts.map((nft) => [nft.trackId, nft]));
+
+  const holderRows = [
+    { trackTitle: "Paper Clouds", userId: supportUsers.alice_web3.id, fractions: 8 },
+    { trackTitle: "Crypto Kings", userId: supportUsers.bob_crypto.id, fractions: 5 },
+    { trackTitle: "Candy Orbit", userId: supportUsers.alice_web3.id, fractions: 4 },
+  ];
+
+  for (const row of holderRows) {
+    const track = spotlightTracks.find((item) => item.title === row.trackTitle);
+    const musicNft = track ? musicNftMap.get(track.id) : null;
+    if (!musicNft) continue;
+
+    await p.musicNFTHolder.upsert({
+      where: {
+        musicNftId_userId: {
+          musicNftId: musicNft.id,
+          userId: row.userId,
+        },
+      },
+      update: {
+        fractions: row.fractions,
+        purchasePrice: musicNft.pricePerFraction.mul(row.fractions),
+      },
+      create: {
+        musicNftId: musicNft.id,
+        userId: row.userId,
+        fractions: row.fractions,
+        purchasePrice: musicNft.pricePerFraction.mul(row.fractions),
+      },
+    });
+  }
+
+  const brochure = await prisma.nFTBrochure.findFirst({
+    where: { trackId: spotlightTracks[0].id },
+  });
+  if (brochure) {
+    await prisma.nFTBrochure.update({
+      where: { id: brochure.id },
+      data: {
+        isSold: true,
+        buyerId: supportUsers.alice_web3.id,
+        soldAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+
+  const distributionRows = [
+    { trackTitle: "Paper Clouds", platform: "SPOTIFY", url: "https://open.spotify.com/track/demo-paper-clouds" },
+    { trackTitle: "Paper Clouds", platform: "YOUTUBE_MUSIC", url: "https://music.youtube.com/watch?v=demo-paper-clouds" },
+    { trackTitle: "Crypto Kings", platform: "APPLE_MUSIC", url: "https://music.apple.com/album/demo-crypto-kings" },
+  ];
+
+  for (const row of distributionRows) {
+    const track = spotlightTracks.find((item) => item.title === row.trackTitle);
+    if (!track) continue;
+
+    await p.distributionSubmission.upsert({
+      where: { trackId_platform: { trackId: track.id, platform: row.platform } },
+      update: {
+        status: "LIVE",
+        externalUrl: row.url,
+        submittedById: track.artistId,
+        approvedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        liveAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+      },
+      create: {
+        trackId: track.id,
+        platform: row.platform,
+        status: "LIVE",
+        externalUrl: row.url,
+        submittedById: track.artistId,
+        approvedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        liveAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+}
+
 async function main() {
   console.log("🎬 Seeding demo showcase...\n");
 
   await ensureCoreServices();
+  const supportUsers = await upsertSupportUsers();
   const artists = await upsertArtists();
   const tracks = await seedTracks(artists);
   await seedCompetitionState(tracks);
   await seedBrochuresAndNfts(tracks);
   await seedEngagement(tracks, artists);
+  await seedSupportNetwork(artists, supportUsers);
+  await seedShowcaseFeed(tracks, artists, supportUsers);
+  await seedDemoServicePurchases(artists, supportUsers);
+  await seedCollectorState(tracks, supportUsers);
 
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("✅ Demo showcase seed complete");
   console.log(`   Artists: ${Object.keys(artists).length}`);
   console.log(`   Tracks:  ${tracks.length}`);
+  console.log(`   Support users: ${SUPPORT_EMAILS.length}`);
   console.log("   Live competition: current month seeded");
   console.log("   Past competition: previous month finalized");
-  console.log("   Brochures and music NFTs: seeded");
+  console.log("   Brochures, music NFTs, feed posts, and service history: seeded");
   console.log(`   Demo logins use password: ${PASSWORD}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 }

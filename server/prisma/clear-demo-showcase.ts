@@ -14,6 +14,13 @@ const DEMO_EMAILS = [
   "mira@musicfi.io",
 ];
 
+const SUPPORT_EMAILS = [
+  "alice@example.com",
+  "bob@example.com",
+  "merchant@nftstore.io",
+  "admin@socialfi.app",
+];
+
 async function main() {
   const artists = await prisma.user.findMany({
     where: { email: { in: DEMO_EMAILS } },
@@ -28,10 +35,18 @@ async function main() {
   const artistIds = artists.map((artist) => artist.id);
   const tracks = await prisma.track.findMany({ where: { artistId: { in: artistIds } }, select: { id: true } });
   const trackIds = tracks.map((track) => track.id);
+  const supportUsers = await prisma.user.findMany({
+    where: { email: { in: SUPPORT_EMAILS } },
+    select: { id: true, email: true },
+  });
+  const supportIds = supportUsers.map((user) => user.id);
+  const merchant = supportUsers.find((user) => user.email === "merchant@nftstore.io");
 
   console.log("Clearing demo showcase for artists:", artists.map((artist) => artist.username).join(", "));
 
   if (trackIds.length > 0) {
+    await prisma.distributionSubmission.deleteMany({ where: { trackId: { in: trackIds } } });
+    await p.musicNFTHolder.deleteMany({ where: { musicNft: { trackId: { in: trackIds } } } });
     await p.topArtistGrant.deleteMany({ where: { trackId: { in: trackIds } } });
     await p.competitionEntry.deleteMany({ where: { trackId: { in: trackIds } } });
     await p.nFTBrochure.deleteMany({ where: { trackId: { in: trackIds } } });
@@ -44,6 +59,36 @@ async function main() {
     await p.trackRepost.deleteMany({ where: { trackId: { in: trackIds } } });
     await p.payoutRelease.deleteMany({ where: { trackId: { in: trackIds } } });
     await prisma.track.deleteMany({ where: { id: { in: trackIds } } });
+  }
+
+  if (supportIds.length > 0) {
+    await prisma.servicePurchase.deleteMany({ where: { userId: { in: supportIds } } });
+    await prisma.postInteraction.deleteMany({ where: { userId: { in: supportIds } } });
+    await prisma.socialPost.deleteMany({
+      where: {
+        authorId: { in: supportIds },
+        OR: [
+          { content: { startsWith: "Demo showcase:" } },
+          { content: { startsWith: "🔥 SPONSORED | Demo Spotlight:" } },
+        ],
+      },
+    });
+  }
+
+  if (merchant) {
+    const merchantCampaigns = await prisma.adCampaign.findMany({
+      where: {
+        merchantId: merchant.id,
+        title: { startsWith: "Demo Spotlight:" },
+      },
+      select: { id: true },
+    });
+
+    if (merchantCampaigns.length > 0) {
+      const merchantCampaignIds = merchantCampaigns.map((campaign) => campaign.id);
+      await prisma.socialPost.deleteMany({ where: { adCampaignId: { in: merchantCampaignIds } } });
+      await prisma.adCampaign.deleteMany({ where: { id: { in: merchantCampaignIds } } });
+    }
   }
 
   await p.monthlyCompetition.deleteMany({ where: { OR: [{ entries: { none: {} } }, { grants: { none: {} } }] } });

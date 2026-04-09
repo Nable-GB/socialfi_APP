@@ -31,6 +31,22 @@ export function PaidServicesPage() {
   const [buyLoading, setBuyLoading] = useState<string | null>(null);
   const [tab, setTab] = useState<"services" | "history">("services");
 
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [svcRes, purchRes] = await Promise.all([
+        serviceApi.list(),
+        serviceApi.myPurchases(),
+      ]);
+      setServices(svcRes.services);
+      setPurchases(purchRes.purchases);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getServiceName = (type?: string, fallback?: string) => {
     if (type === "BOOST_POST") return t.paidServices.serviceBoostPost;
     if (type === "PREMIUM_BADGE") return t.paidServices.servicePremiumBadge;
@@ -58,18 +74,6 @@ export function PaidServicesPage() {
   };
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const [svcRes, purchRes] = await Promise.all([
-          serviceApi.list(),
-          serviceApi.myPurchases(),
-        ]);
-        setServices(svcRes.services);
-        setPurchases(purchRes.purchases);
-      } catch { /* ignore */ }
-      finally { setLoading(false); }
-    }
     load();
   }, []);
 
@@ -77,7 +81,15 @@ export function PaidServicesPage() {
     setBuyLoading(serviceId);
     try {
       const res = await serviceApi.checkout(serviceId);
-      if (res.checkoutUrl) window.location.href = res.checkoutUrl;
+      if (res.checkoutUrl) {
+        window.location.href = res.checkoutUrl;
+        return;
+      }
+
+      if (res.message) {
+        toast.success(res.message);
+      }
+      await load();
     } catch (err: any) {
       toast.error(err?.message || t.paidServices.checkoutFailed);
     } finally {

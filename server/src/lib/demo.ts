@@ -20,3 +20,14 @@ export function rejectInDemoMode(
   });
   return true;
 }
+
+export function sendDemoModeResponse(
+  res: Response,
+  body: Record<string, unknown>,
+  status = 200,
+): void {
+  res.status(status).json({
+    ...body,
+    demoMode: true,
+  });
+}

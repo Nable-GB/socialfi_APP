@@ -19,6 +19,22 @@ export function SubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [tiersRes, subRes] = await Promise.all([
+        subscriptionApi.getTiers(),
+        subscriptionApi.getMySubscription(),
+      ]);
+      setTiers(tiersRes.tiers);
+      setMySub(subRes);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getTierLabel = (tierId: string, fallback?: string) => {
     if (tierId === "FREE") return t.subscription.tierFree;
     if (tierId === "PRO") return t.subscription.tierPro;
@@ -70,18 +86,6 @@ export function SubscriptionPage() {
   };
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const [tiersRes, subRes] = await Promise.all([
-          subscriptionApi.getTiers(),
-          subscriptionApi.getMySubscription(),
-        ]);
-        setTiers(tiersRes.tiers);
-        setMySub(subRes);
-      } catch { /* ignore */ }
-      finally { setLoading(false); }
-    }
     load();
   }, []);
 
@@ -89,7 +93,15 @@ export function SubscriptionPage() {
     setActionLoading(tierId);
     try {
       const res = await subscriptionApi.checkout(tierId);
-      if (res.checkoutUrl) window.location.href = res.checkoutUrl;
+      if (res.checkoutUrl) {
+        window.location.href = res.checkoutUrl;
+        return;
+      }
+
+      if (res.message) {
+        toast.success(res.message);
+      }
+      await load();
     } catch (err: any) {
       toast.error(err?.message || t.subscription.failedCheckout);
     } finally {
@@ -103,8 +115,7 @@ export function SubscriptionPage() {
     try {
       const res = await subscriptionApi.cancel();
       toast.success(res.message);
-      const subRes = await subscriptionApi.getMySubscription();
-      setMySub(subRes);
+      await load();
     } catch (err: any) {
       toast.error(err?.message || t.subscription.failedCancel);
     } finally {
