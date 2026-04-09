@@ -187,7 +187,7 @@ model User {
   // --- Subscription ---
   subscriptionTier SubscriptionTier @default(FREE)
 
-  uploadCredits    Int      @default(3000)
+  uploadCredits    Int      @default(0)
 
   // --- Top Artist Status (earned via competition, not subscription) ---
   isTopArtist      Boolean   @default(false)
@@ -479,12 +479,21 @@ model Subscription {
   stripeCustomerId      String?
   stripeSubscriptionId  String?            @unique
   stripePriceId         String?
+  paymentMethod         PaymentMethod?
+  cryptoTxHash          String?            @unique
+  cryptoWalletAddress   String?
 
   // --- Billing Period ---
   status                SubscriptionStatus @default(ACTIVE)
   currentPeriodStart    DateTime?
   currentPeriodEnd      DateTime?
   cancelAtPeriodEnd     Boolean            @default(false)
+  creditsGrantedThrough DateTime?
+
+  // --- Manual Review ---
+  reviewedAt            DateTime?
+  reviewedBy            String?
+  reviewNotes           String?
 
   // --- Timestamps ---
   createdAt             DateTime           @default(now())
@@ -493,6 +502,7 @@ model Subscription {
   @@index([userId])
   @@index([stripeSubscriptionId])
   @@index([status])
+  @@index([paymentMethod, status])
   @@map("subscriptions")
 }
 

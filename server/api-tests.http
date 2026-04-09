@@ -16,8 +16,12 @@
 # ── Copy JWT token มาวางตรงนี้หลัง login ─────────────────────
 @userToken = PASTE_TOKEN_HERE
 @merchantToken = PASTE_MERCHANT_TOKEN_HERE
+@adminToken = PASTE_ADMIN_TOKEN_HERE
 @postId = PASTE_POST_ID_HERE
 @sponsoredPostId = PASTE_SPONSORED_POST_ID_HERE
+@usdtSubscriptionId = PASTE_USDT_SUBSCRIPTION_ID_HERE
+@payoutReleaseId = PASTE_PAYOUT_RELEASE_ID_HERE
+@payoutTrackId = PASTE_TRACK_ID_HERE
 
 
 ###############################################################
@@ -68,6 +72,19 @@ Content-Type: {{contentType}}
 
 {
   "email": "merchant@nftstore.io",
+  "password": "Password123!"
+}
+
+###
+
+### 2.3b ล็อกอิน Admin
+# ✅ คาดหวัง: 200 + { token, user.role = "ADMIN" }
+# 👉 Copy "token" ไปวางใน @adminToken บนสุด
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "admin@socialfi.app",
   "password": "Password123!"
 }
 
@@ -257,6 +274,94 @@ GET {{baseUrl}}/api/rewards/balance
 Authorization: Bearer {{userToken}}
 
 ###
+
+
+###############################################################
+# 13. ADMIN — SUBSCRIPTION REVIEW & PAYOUT SMOKE
+###############################################################
+
+### 13.1 ส่ง USDT subscription request เพื่อรอ admin review
+# ✅ คาดหวัง: 200 + { subscriptionId, status: "PENDING_REVIEW" }
+# ⚠️ ใช้กับ user ที่ยังไม่เป็น CREATOR
+POST {{baseUrl}}/api/subscriptions/checkout-usdt
+Content-Type: {{contentType}}
+Authorization: Bearer {{userToken}}
+
+{
+  "txHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+  "walletAddress": "0x742d35Cc6634C0532925a3b8D4C9B0BaE29E5123"
+}
+
+###
+
+### 13.2 ดูคิว pending USDT subscriptions ฝั่ง admin
+# ✅ คาดหวัง: 200 + { subscriptions: [...] }
+GET {{baseUrl}}/api/admin/subscriptions/usdt-pending
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 13.3 อนุมัติ USDT subscription
+# ✅ คาดหวัง: 200 + { success: true, creditsGranted: 3000 }
+POST {{baseUrl}}/api/admin/subscriptions/{{usdtSubscriptionId}}/approve-usdt
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "notes": "Manual smoke approval"
+}
+
+###
+
+### 13.4 ปฏิเสธ USDT subscription
+# ✅ คาดหวัง: 200 + { success: true }
+# ⚠️ ใช้กับ subscription request คนละรายการจากข้อ 13.3
+POST {{baseUrl}}/api/admin/subscriptions/{{usdtSubscriptionId}}/reject-usdt
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "notes": "Manual smoke rejection"
+}
+
+###
+
+### 13.5 ตรวจสอบ subscription state หลัง approve
+# ✅ คาดหวัง: tier = CREATOR และ pendingReview = null
+GET {{baseUrl}}/api/subscriptions/me
+Authorization: Bearer {{userToken}}
+
+###
+
+### 13.6 สร้าง payout release ฝั่ง admin
+# ✅ คาดหวัง: 201 + { success: true, release: { id, status: "PENDING" } }
+POST {{baseUrl}}/api/admin/payout-releases
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "trackId": "{{payoutTrackId}}",
+  "totalRevenue": 42.5
+}
+
+###
+
+### 13.7 release payout ฝั่ง admin
+# ✅ คาดหวัง: 200 + { success: true, releaseId }
+POST {{baseUrl}}/api/admin/payout-releases/{{payoutReleaseId}}/release
+Content-Type: {{contentType}}
+Authorization: Bearer {{adminToken}}
+
+{
+  "notes": "Manual payout smoke test"
+}
+
+###
+
+### 13.8 ดู payout queue หลังสร้าง/release
+# ✅ คาดหวัง: 200 + { releases: [...] }
+GET {{baseUrl}}/api/admin/payout-queue?status=PENDING
+Authorization: Bearer {{adminToken}}
 
 ### 6.2 เคลมรางวัล VIEW บน Sponsored Post
 # ✅ คาดหวัง: 200 + { success: true, reward: { type: "AD_VIEW", amount: "0.05" } }

@@ -15,7 +15,7 @@ const router = Router();
 // ── Track CRUD ──────────────────────────────────────────────────────────────
 router.get("/tracks", getTracks);
 router.get("/tracks/:id", getTrack);
-router.post("/tracks", requireAuth, createTrack);
+router.post("/tracks", requireAuth, requireTier("CREATOR"), createTrack);
 router.patch("/tracks/:id", requireAuth, updateTrack);
 router.delete("/tracks/:id", requireAuth, deleteTrack);
 
@@ -49,7 +49,7 @@ router.get("/my-nfts", requireAuth, getMyMusicNFTs);
 // ── My Tracks & Albums ──────────────────────────────────────────────────────
 router.get("/my-tracks", requireAuth, getMyTracks);
 router.get("/albums", requireAuth, getAlbums);
-router.post("/albums", requireAuth, createAlbum);
+router.post("/albums", requireAuth, requireTier("CREATOR"), createAlbum);
 
 // ── Revenue Dashboard ───────────────────────────────────────────────────────
 router.get("/revenue/artist", requireAuth, getArtistRevenue);

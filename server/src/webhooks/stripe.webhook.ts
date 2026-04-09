@@ -5,6 +5,7 @@ import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
 import { calculateRewardSplit } from "../services/reward.service.js";
 import { isDemoMode } from "../lib/demo.js";
+import { applyActiveSubscriptionEntitlements, syncUserSubscriptionTier } from "../services/subscription.service.js";
 
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
@@ -191,35 +192,45 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
           : subscription.status === "incomplete" ? "INCOMPLETE"
           : "CANCELLED";
 
-        await prisma.subscription.upsert({
-          where: { stripeSubscriptionId: subscription.id },
-          create: {
-            userId,
-            tier: normalizedTier as any,
-            stripeCustomerId: subscription.customer as string,
-            stripeSubscriptionId: subscription.id,
-            stripePriceId: subscription.items.data[0]?.price?.id,
-            status,
-            currentPeriodStart: new Date(subscription.current_period_start * 1000),
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-            cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          },
-          update: {
-            status,
-            currentPeriodStart: new Date(subscription.current_period_start * 1000),
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-            cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          },
+        const currentPeriodStart = new Date(subscription.current_period_start * 1000);
+        const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+
+        const result = await prisma.$transaction(async (tx) => {
+          const syncedSubscription = await tx.subscription.upsert({
+            where: { stripeSubscriptionId: subscription.id },
+            create: {
+              userId,
+              tier: normalizedTier as any,
+              stripeCustomerId: subscription.customer as string,
+              stripeSubscriptionId: subscription.id,
+              stripePriceId: subscription.items.data[0]?.price?.id,
+              paymentMethod: "FIAT_STRIPE",
+              status,
+              currentPeriodStart,
+              currentPeriodEnd,
+              cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            },
+            update: {
+              tier: normalizedTier as any,
+              stripeCustomerId: subscription.customer as string,
+              stripePriceId: subscription.items.data[0]?.price?.id,
+              paymentMethod: "FIAT_STRIPE",
+              status,
+              currentPeriodStart,
+              currentPeriodEnd,
+              cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            },
+          });
+
+          if (status === "ACTIVE") {
+            return applyActiveSubscriptionEntitlements(tx, syncedSubscription as any);
+          }
+
+          await syncUserSubscriptionTier(tx, userId);
+          return { normalizedTier: "FREE" as const, creditsGranted: 0 };
         });
 
-        if (status === "ACTIVE") {
-          await prisma.user.update({
-            where: { id: userId },
-            data: { subscriptionTier: normalizedTier as any },
-          });
-        }
-
-        console.log(`Subscription ${subscription.id} ${eventType}: user=${userId} tier=${normalizedTier} status=${status}`);
+        console.log(`Subscription ${subscription.id} ${eventType}: user=${userId} tier=${normalizedTier} status=${status} creditsGranted=${result.creditsGranted}`);
       } catch (err) {
         console.error("Subscription webhook error:", err);
       }
@@ -234,13 +245,12 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
 
     if (userId) {
       try {
-        await prisma.subscription.updateMany({
-          where: { stripeSubscriptionId: subscription.id },
-          data: { status: "CANCELLED" },
-        });
-        await prisma.user.update({
-          where: { id: userId },
-          data: { subscriptionTier: "FREE" },
+        await prisma.$transaction(async (tx) => {
+          await tx.subscription.updateMany({
+            where: { stripeSubscriptionId: subscription.id },
+            data: { status: "CANCELLED" },
+          });
+          await syncUserSubscriptionTier(tx, userId);
         });
         console.log(`Subscription ${subscription.id} cancelled for user ${userId}`);
       } catch (err) {

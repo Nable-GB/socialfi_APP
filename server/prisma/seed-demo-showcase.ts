@@ -81,6 +81,7 @@ async function upsertArtists() {
         totalEarned: artist.earned,
         offChainBalance: artist.balance,
         subscriptionTier: "CREATOR" as any,
+        uploadCredits: 9000,
       },
       create: {
         email: artist.email,

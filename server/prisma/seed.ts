@@ -370,6 +370,16 @@ async function main() {
     },
   });
 
+  for (const artist of [artist1, artist2, artist3, artist4, artist5]) {
+    await prisma.user.update({
+      where: { id: artist.id },
+      data: {
+        subscriptionTier: "CREATOR" as any,
+        uploadCredits: 9000,
+      },
+    });
+  }
+
   console.log("  ✅ Artists created:", artist1.username, artist2.username, artist3.username, artist4.username, artist5.username);
 
   // ── 8. Mock Tracks (Songs) ──────────────────────────────────────────────

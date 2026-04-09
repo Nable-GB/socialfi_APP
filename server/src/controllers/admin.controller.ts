@@ -4,6 +4,7 @@ import { z } from "zod";
 import prisma from "../lib/prisma.js";
 import { sendTokens, isOnChainEnabled, getOperatorBalance } from "../services/onchain.service.js";
 import { env } from "../config/env.js";
+import { applyActiveSubscriptionEntitlements, syncUserSubscriptionTier } from "../services/subscription.service.js";
 
 // ─── GET /api/admin/stats ─────────────────────────────────────────────────────
 
@@ -256,6 +257,202 @@ export async function updateCampaignStatus(req: Request, res: Response): Promise
       return;
     }
     console.error("AdminUpdateCampaignStatus error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// ─── GET /api/admin/subscriptions/usdt-pending — Review queue ───────────────
+
+const pendingUsdtSubscriptionsQuerySchema = z.object({
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(20),
+});
+
+const reviewUsdtSubscriptionSchema = z.object({
+  notes: z.string().trim().max(500).optional(),
+});
+
+export async function getPendingUsdtSubscriptions(req: Request, res: Response): Promise<void> {
+  try {
+    const { page, limit } = pendingUsdtSubscriptionsQuerySchema.parse(req.query);
+    const skip = (page - 1) * limit;
+
+    const where = { paymentMethod: "CRYPTO_USDT" as any, status: "INCOMPLETE" as any };
+
+    const [subscriptions, total] = await Promise.all([
+      prisma.subscription.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          userId: true,
+          tier: true,
+          cryptoTxHash: true,
+          cryptoWalletAddress: true,
+          createdAt: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              email: true,
+              walletAddress: true,
+              subscriptionTier: true,
+            },
+          },
+        },
+      }),
+      prisma.subscription.count({ where }),
+    ]);
+
+    res.json({ subscriptions, total, page, pages: Math.ceil(total / limit), limit });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid query params" });
+      return;
+    }
+    console.error("GetPendingUsdtSubscriptions error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function approveUsdtSubscription(req: Request, res: Response): Promise<void> {
+  try {
+    const subscriptionId = req.params.id as string;
+    const adminId = req.user!.userId;
+    const { notes } = reviewUsdtSubscriptionSchema.parse(req.body ?? {});
+
+    const existing = await prisma.subscription.findUnique({
+      where: { id: subscriptionId },
+      select: {
+        id: true,
+        userId: true,
+        tier: true,
+        status: true,
+        paymentMethod: true,
+        currentPeriodStart: true,
+        currentPeriodEnd: true,
+        creditsGrantedThrough: true,
+        cryptoTxHash: true,
+      },
+    });
+
+    if (!existing || existing.paymentMethod !== "CRYPTO_USDT") {
+      res.status(404).json({ error: "USDT subscription request not found" });
+      return;
+    }
+
+    if (existing.status !== "INCOMPLETE") {
+      res.status(400).json({ error: `Subscription request is already ${existing.status}` });
+      return;
+    }
+
+    const duplicateActive = await prisma.subscription.findFirst({
+      where: {
+        userId: existing.userId,
+        id: { not: existing.id },
+        status: "ACTIVE",
+        tier: { in: ["CREATOR", "PRO", "PREMIUM"] as any },
+      },
+      select: { id: true },
+    });
+
+    if (duplicateActive) {
+      res.status(400).json({ error: "User already has an active Creator subscription." });
+      return;
+    }
+
+    const approvedAt = new Date();
+    const periodEnd = new Date(approvedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const approvedSubscription = await tx.subscription.update({
+        where: { id: subscriptionId },
+        data: {
+          status: "ACTIVE",
+          currentPeriodStart: approvedAt,
+          currentPeriodEnd: periodEnd,
+          cancelAtPeriodEnd: false,
+          reviewedAt: approvedAt,
+          reviewedBy: adminId,
+          reviewNotes: notes ?? null,
+        },
+      });
+
+      const entitlement = await applyActiveSubscriptionEntitlements(tx, approvedSubscription as any);
+      return { approvedSubscription, entitlement };
+    });
+
+    res.json({
+      success: true,
+      subscription: result.approvedSubscription,
+      creditsGranted: result.entitlement.creditsGranted,
+      message: "USDT Creator subscription approved successfully.",
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid approval payload" });
+      return;
+    }
+    console.error("ApproveUsdtSubscription error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function rejectUsdtSubscription(req: Request, res: Response): Promise<void> {
+  try {
+    const subscriptionId = req.params.id as string;
+    const adminId = req.user!.userId;
+    const { notes } = reviewUsdtSubscriptionSchema.parse(req.body ?? {});
+
+    const existing = await prisma.subscription.findUnique({
+      where: { id: subscriptionId },
+      select: { id: true, userId: true, paymentMethod: true, status: true },
+    });
+
+    if (!existing || existing.paymentMethod !== "CRYPTO_USDT") {
+      res.status(404).json({ error: "USDT subscription request not found" });
+      return;
+    }
+
+    if (existing.status !== "INCOMPLETE") {
+      res.status(400).json({ error: `Subscription request is already ${existing.status}` });
+      return;
+    }
+
+    const reviewedAt = new Date();
+    const result = await prisma.$transaction(async (tx) => {
+      const rejectedSubscription = await tx.subscription.update({
+        where: { id: subscriptionId },
+        data: {
+          status: "CANCELLED",
+          currentPeriodStart: null,
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false,
+          reviewedAt,
+          reviewedBy: adminId,
+          reviewNotes: notes ?? null,
+        },
+      });
+
+      const nextTier = await syncUserSubscriptionTier(tx, existing.userId);
+      return { rejectedSubscription, nextTier };
+    });
+
+    res.json({
+      success: true,
+      subscription: result.rejectedSubscription,
+      tier: result.nextTier,
+      message: "USDT subscription request rejected.",
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid rejection payload" });
+      return;
+    }
+    console.error("RejectUsdtSubscription error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }
@@ -530,11 +727,7 @@ export async function releasePayout(req: Request, res: Response): Promise<void> 
     const musicNft = await (prisma as any).musicNFT.findFirst({ where: { trackId: release.trackId } });
 
     await prisma.$transaction(async (tx: any) => {
-      // Credit artist
-      await tx.user.update({
-        where: { id: release.artistId },
-        data: { offChainBalance: { increment: artistAmount }, totalEarned: { increment: artistAmount } },
-      });
+      let holderPayoutTotal = 0;
 
       // Distribute to NFT shareholders if NFT exists
       if (musicNft) {
@@ -542,9 +735,13 @@ export async function releasePayout(req: Request, res: Response): Promise<void> 
           where: { musicNftId: musicNft.id },
         });
         const totalSupply = musicNft.totalSupply;
+        const holderRevenuePool = artistAmount * 0.5;
         for (const holder of holders) {
-          const share = (holder.fractions / totalSupply) * artistAmount * 0.5; // 50% of artist share
+          const share = totalSupply > 0
+            ? (holder.fractions / totalSupply) * holderRevenuePool
+            : 0;
           if (share > 0) {
+            holderPayoutTotal += share;
             await tx.user.update({
               where: { id: holder.userId },
               data: { offChainBalance: { increment: share }, totalEarned: { increment: share } },
@@ -560,6 +757,16 @@ export async function releasePayout(req: Request, res: Response): Promise<void> 
             });
           }
         }
+      }
+
+      const artistDirectAmount = Math.max(artistAmount - holderPayoutTotal, 0);
+
+      // Credit the artist with the remaining artist share after holder dividends.
+      if (artistDirectAmount > 0) {
+        await tx.user.update({
+          where: { id: release.artistId },
+          data: { offChainBalance: { increment: artistDirectAmount }, totalEarned: { increment: artistDirectAmount } },
+        });
       }
 
       // Mark release as paid

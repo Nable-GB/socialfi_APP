@@ -11,6 +11,9 @@ import {
   getPayoutQueue,
   createPayoutRelease,
   releasePayout,
+  getPendingUsdtSubscriptions,
+  approveUsdtSubscription,
+  rejectUsdtSubscription,
 } from "../controllers/admin.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
@@ -30,6 +33,11 @@ router.patch("/users/:id/role", updateUserRole);
 // Campaigns
 router.get("/campaigns", getCampaigns);
 router.patch("/campaigns/:id/status", updateCampaignStatus);
+
+// Manual USDT subscription review
+router.get("/subscriptions/usdt-pending", getPendingUsdtSubscriptions);
+router.post("/subscriptions/:id/approve-usdt", approveUsdtSubscription);
+router.post("/subscriptions/:id/reject-usdt", rejectUsdtSubscription);
 
 // Rewards
 router.post("/rewards/distribute", distributeRewards);

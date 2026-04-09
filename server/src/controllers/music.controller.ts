@@ -133,11 +133,20 @@ export async function createTrack(req: Request, res: Response): Promise<void> {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { uploadCredits: true },
+      select: { uploadCredits: true, subscriptionTier: true },
     } as any) as any;
 
     if (!user) {
       res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    if (!["CREATOR", "PRO", "PREMIUM"].includes(user.subscriptionTier ?? "FREE")) {
+      res.status(403).json({
+        error: "Upgrade required",
+        message: "Uploading music requires an active Creator subscription",
+        currentTier: user.subscriptionTier ?? "FREE",
+      });
       return;
     }
 

@@ -1,8 +1,10 @@
 import { Request, Response } from "express";
+import { Prisma } from "@prisma/client";
 import Stripe from "stripe";
 import prisma from "../lib/prisma.js";
 import { env } from "../config/env.js";
 import { rejectInDemoMode } from "../lib/demo.js";
+import { applyActiveSubscriptionEntitlements } from "../services/subscription.service.js";
 
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) throw new Error("Stripe is not configured. Set STRIPE_SECRET_KEY.");
@@ -60,15 +62,20 @@ export async function getMySubscription(req: Request, res: Response): Promise<vo
   try {
     const userId = req.user!.userId;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { subscriptionTier: true },
-    });
-
-    const subscription = await prisma.subscription.findFirst({
-      where: { userId, status: "ACTIVE" },
-      orderBy: { createdAt: "desc" },
-    });
+    const [user, subscription, pendingReview] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { subscriptionTier: true },
+      }),
+      prisma.subscription.findFirst({
+        where: { userId, status: "ACTIVE" },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.subscription.findFirst({
+        where: { userId, status: "INCOMPLETE", paymentMethod: "CRYPTO_USDT" },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
     res.json({
       tier: user?.subscriptionTier || "FREE",
@@ -79,6 +86,16 @@ export async function getMySubscription(req: Request, res: Response): Promise<vo
         currentPeriodStart: subscription.currentPeriodStart,
         currentPeriodEnd: subscription.currentPeriodEnd,
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+      } : null,
+      pendingReview: pendingReview ? {
+        id: pendingReview.id,
+        tier: pendingReview.tier,
+        paymentMethod: pendingReview.paymentMethod,
+        cryptoTxHash: pendingReview.cryptoTxHash,
+        cryptoWalletAddress: pendingReview.cryptoWalletAddress,
+        createdAt: pendingReview.createdAt,
+        reviewedAt: pendingReview.reviewedAt,
+        reviewNotes: pendingReview.reviewNotes,
       } : null,
     });
   } catch (err) {
@@ -227,33 +244,72 @@ export async function createUsdtCheckout(req: Request, res: Response): Promise<v
       return;
     }
 
+    if (walletAddress && (typeof walletAddress !== "string" || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress))) {
+      res.status(400).json({ error: "Invalid wallet address" });
+      return;
+    }
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
-    if (user.subscriptionTier === "CREATOR" as any) {
+    const [activeCreatorSubscription, pendingReviewSubscription] = await Promise.all([
+      prisma.subscription.findFirst({
+        where: {
+          userId,
+          status: "ACTIVE",
+          tier: { in: ["CREATOR", "PRO", "PREMIUM"] as any },
+        },
+        select: { id: true },
+      }),
+      prisma.subscription.findFirst({
+        where: {
+          userId,
+          paymentMethod: "CRYPTO_USDT",
+          status: "INCOMPLETE",
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    if (user.subscriptionTier === "CREATOR" as any || activeCreatorSubscription) {
       res.status(400).json({ error: "Already subscribed as Creator." });
       return;
     }
 
+    if (pendingReviewSubscription) {
+      res.status(409).json({ error: "You already have a USDT subscription awaiting admin review." });
+      return;
+    }
+
+    const normalizedWalletAddress = typeof walletAddress === "string"
+      ? walletAddress.trim().toLowerCase()
+      : user.walletAddress?.toLowerCase() ?? null;
+
     // Record the pending USDT payment for admin review
-    await prisma.subscription.create({
+    const pendingSubscription = await prisma.subscription.create({
       data: {
         userId,
         tier: "CREATOR" as any,
+        paymentMethod: "CRYPTO_USDT",
+        cryptoTxHash: txHash,
+        cryptoWalletAddress: normalizedWalletAddress,
         status: "INCOMPLETE", // Admin will change to ACTIVE after verification
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 days
       },
     });
 
     res.json({
       success: true,
       message: "USDT payment submitted for admin review. Your Creator subscription will be activated within 24 hours.",
+      subscriptionId: pendingSubscription.id,
       txHash,
-      walletAddress: walletAddress || user.walletAddress,
+      walletAddress: normalizedWalletAddress,
       status: "PENDING_REVIEW",
     });
   } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      res.status(409).json({ error: "This USDT transaction hash has already been submitted." });
+      return;
+    }
     console.error("CreateUsdtCheckout error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
