@@ -110,8 +110,8 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           <div className="px-6 pb-6 pt-7 sm:px-8 sm:pb-8 sm:pt-8">
             <DialogHeader className="items-center text-center">
               <div className="mb-5 flex flex-col items-center gap-4">
-                <div className="rounded-[1.75rem] border border-slate-200 bg-white px-5 py-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
-                  <img src="/smfi-logo.jpeg" alt="SMFI" className="h-20 w-auto object-contain sm:h-24" />
+                <div className="flex h-28 w-28 items-center justify-center rounded-full border border-slate-200 bg-white p-4 shadow-[0_16px_36px_rgba(15,23,42,0.08)] sm:h-32 sm:w-32">
+                  <img src="/smfi-logo.jpeg" alt="SMFI" className="h-16 w-16 rounded-full object-contain sm:h-20 sm:w-20" />
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700">
                   <ShieldCheck size={13} />
