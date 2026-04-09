@@ -119,12 +119,24 @@ npm run db:seed
 npm run db:seed:demo
 ```
 
+Or from the app root, use the convenience scripts:
+
+```bash
+npm run demo:seed
+```
+
 - **Demo reset** — To clear and rebuild the showcase dataset:
 
 ```bash
 cd server
 npm run db:clear:demo
 npm run db:seed:demo
+```
+
+Or from the app root:
+
+```bash
+npm run demo:reset
 ```
 
 - **Demo safety** — Stripe checkout, service checkout, ad checkout, withdrawals, swaps, and Stripe webhooks are blocked or ignored when `DEMO_MODE=true`.

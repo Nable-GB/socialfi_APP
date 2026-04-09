@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, TrendingUp, Clock, Heart, Play, Pause, Music, Sparkles, Zap, Share2 } from "lucide-react";
+import { Search, TrendingUp, Clock, Heart, Play, Pause, Music, Zap, Share2 } from "lucide-react";
 import { musicApi, type ApiTrack } from "../lib/api";
 import { usePlayer } from "../contexts/PlayerContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -57,12 +57,6 @@ function TrackCard({ track, onPlay, isCurrentTrack, isPlaying }: {
             {isCurrentTrack && isPlaying ? <Pause size={20} className="text-white" /> : <Play size={20} className="text-white ml-0.5" />}
           </div>
         </div>
-        {/* AI badge */}
-        {track.isAiGenerated && (
-          <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-purple-500/80 text-[9px] font-bold text-white flex items-center gap-1">
-            <Sparkles size={10} /> AI
-          </div>
-        )}
         {/* Duration */}
         <span className="absolute bottom-2 right-2 text-[10px] font-mono bg-black/60 text-white px-1.5 py-0.5 rounded">
           {formatDuration(track.duration)}

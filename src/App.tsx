@@ -82,38 +82,39 @@ function Header({ onOpenAuth, onOpenLanding }: { onOpenAuth: () => void; onOpenL
 
   return (
     <header
-      className="sticky top-0 z-50 backdrop-blur-xl border-b border-slate-800/50"
-      style={{ background: "rgba(3,7,17,0.85)" }}
+      className="nav-shell sticky top-0 z-50 backdrop-blur-xl border-b border-cyan-500/10"
+      style={{ background: "linear-gradient(180deg, rgba(3,7,17,0.96), rgba(3,7,17,0.82))" }}
     >
-      <div className="max-w-screen-xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+      <div className="max-w-screen-xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
         <button onClick={onOpenLanding} className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-indigo-500 flex items-center justify-center text-white font-black text-sm">
+          <div className="w-9 h-9 rounded-xl border border-cyan-300/30 bg-gradient-to-br from-cyan-400/95 via-sky-400 to-indigo-500 flex items-center justify-center text-white font-black text-sm shadow-glow-cyan">
             S
           </div>
           <div className="min-w-0 text-left">
-            <div className="text-sm font-black tracking-tight text-slate-100">SocialMusicFi</div>
-            <div className="text-[10px] text-slate-500">Music. Competition. Ownership.</div>
+            <div className="text-sm font-black tracking-[0.02em] text-slate-100">SocialMusicFi</div>
+            <div className="tech-stat text-[10px] text-cyan-400/75">MUSIC. COMPETITION. OWNERSHIP.</div>
           </div>
         </button>
 
         <div className="flex items-center gap-2">
           <div
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-700/30"
-            style={{ background: "rgba(15,23,42,0.6)" }}
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-cyan-500/15 panel-sci-soft"
+            style={{ background: "linear-gradient(135deg, rgba(10,18,36,0.8), rgba(6,10,24,0.72))" }}
           >
             <Wallet size={13} className="text-amber-400" />
-            <span className="text-xs font-mono text-slate-300">{parseFloat(balance || "0").toFixed(2)} SMFI</span>
+            <span className="tech-stat text-xs text-slate-100">{parseFloat(balance || "0").toFixed(2)} SMFI</span>
           </div>
 
           {!wallet.address && isAuthenticated && (
             <button
               onClick={handleConnectWallet}
               disabled={wallet.isConnecting}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-90"
+              className="button-sci flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-300 hover:-translate-y-0.5"
               style={{
                 background: "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(234,88,12,0.1))",
                 border: "1px solid rgba(245,158,11,0.35)",
                 color: "#fbbf24",
+                boxShadow: "0 0 0 1px rgba(245,158,11,0.15), 0 0 24px rgba(245,158,11,0.12)",
               }}
             >
               {wallet.isConnecting ? <RefreshCw size={13} className="animate-spin" /> : <Wallet size={13} />}
@@ -125,10 +126,11 @@ function Header({ onOpenAuth, onOpenLanding }: { onOpenAuth: () => void; onOpenL
 
           {isAuthenticated && wallet.address && (
             <div
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs tech-stat"
               style={{
                 background: "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(34,211,238,0.08))",
                 border: "1px solid rgba(16,185,129,0.3)",
+                boxShadow: "0 0 0 1px rgba(16,185,129,0.12), 0 0 24px rgba(16,185,129,0.12)",
               }}
             >
               <div className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 6px #34d399" }} />
@@ -142,7 +144,7 @@ function Header({ onOpenAuth, onOpenLanding }: { onOpenAuth: () => void; onOpenL
           {isAuthenticated ? (
             <div className="flex items-center gap-2">
               <div
-                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl"
+                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl panel-sci-soft"
                 style={{ background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)" }}
               >
                 <div className="w-5 h-5 rounded-full bg-gradient-to-br from-cyan-400 to-indigo-500 flex items-center justify-center text-[10px] font-bold text-white">
@@ -155,7 +157,7 @@ function Header({ onOpenAuth, onOpenLanding }: { onOpenAuth: () => void; onOpenL
                   logout();
                   toast.info(t.header.signedOut);
                 }}
-                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:bg-slate-800 border border-slate-700/20 text-slate-500 hover:text-red-400"
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 hover:-translate-y-0.5 hover:bg-slate-800/80 border border-slate-700/20 text-slate-500 hover:text-red-400"
               >
                 <LogOut size={14} />
               </button>
@@ -163,11 +165,12 @@ function Header({ onOpenAuth, onOpenLanding }: { onOpenAuth: () => void; onOpenL
           ) : (
             <button
               onClick={onOpenAuth}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl font-semibold text-sm transition-all"
+              className="button-sci flex items-center gap-2 px-3 py-1.5 rounded-xl font-semibold text-sm transition-all duration-300 hover:-translate-y-0.5"
               style={{
                 background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.15))",
                 border: "1px solid rgba(99,102,241,0.35)",
                 color: "#a5b4fc",
+                boxShadow: "0 0 0 1px rgba(99,102,241,0.12), 0 0 24px rgba(99,102,241,0.12)",
               }}
             >
               <Wallet size={14} />
@@ -189,11 +192,12 @@ function DesktopNavUserChip({ onOpenAuth }: { onOpenAuth: () => void }) {
       <div className="mt-auto pt-6 pb-2">
         <button
           onClick={onOpenAuth}
-          className="w-full py-2.5 rounded-xl text-sm font-bold transition-all"
+          className="button-sci w-full py-2.5 rounded-xl text-sm font-bold transition-all duration-300 hover:-translate-y-0.5"
           style={{
             background: "linear-gradient(135deg,rgba(99,102,241,0.2),rgba(168,85,247,0.15))",
             border: "1px solid rgba(99,102,241,0.35)",
             color: "#a5b4fc",
+            boxShadow: "0 0 0 1px rgba(99,102,241,0.12), 0 0 24px rgba(99,102,241,0.12)",
           }}
         >
           {t.header.signInRegister}
@@ -204,7 +208,7 @@ function DesktopNavUserChip({ onOpenAuth }: { onOpenAuth: () => void }) {
 
   return (
     <div className="mt-auto pt-6 pb-2">
-      <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700/10">
+      <div className="panel-sci-soft flex items-center gap-3 p-3 rounded-xl border border-cyan-500/10 bg-slate-800/50">
         <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-cyan-400 to-indigo-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
           {(user?.displayName ?? user?.username ?? "U")[0].toUpperCase()}
         </div>
@@ -217,7 +221,7 @@ function DesktopNavUserChip({ onOpenAuth }: { onOpenAuth: () => void }) {
             logout();
             toast.info(t.header.signedOut);
           }}
-          className="text-slate-500 hover:text-red-400 ml-auto flex-shrink-0 p-1 rounded-lg hover:bg-slate-700 transition-colors"
+          className="text-slate-500 hover:text-red-400 ml-auto flex-shrink-0 p-1 rounded-lg hover:bg-slate-700 transition-colors duration-300"
         >
           <LogOut size={14} />
         </button>
@@ -239,7 +243,7 @@ function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string
   ];
 
   return (
-    <nav className="sticky top-14 pt-6 flex flex-col gap-1 h-fit">
+    <nav className="sticky top-20 pt-4 flex flex-col gap-2 h-fit rounded-[1.75rem] panel-sci p-3 overflow-hidden">
       {navItems.map((item, idx) => (
         <div key={item.id}>
           {idx === 4 && <div className="my-2 h-px bg-slate-700/30" />}
@@ -249,7 +253,7 @@ function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string
             style={{ color: activeNav === item.id ? "#22d3ee" : "#94a3b8", fontWeight: activeNav === item.id ? 600 : 400 }}
           >
             <item.icon size={18} />
-            <span className="text-sm">{item.label}</span>
+            <span className="text-sm tracking-[0.01em]">{item.label}</span>
           </button>
         </div>
       ))}
@@ -270,14 +274,14 @@ function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTa
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-50 border-t border-white/[0.04] flex lg:hidden"
-      style={{ background: "rgba(3,7,17,0.95)", backdropFilter: "blur(20px)" }}
+      className="nav-shell fixed bottom-0 inset-x-0 z-50 border-t border-cyan-500/10 flex lg:hidden"
+      style={{ background: "linear-gradient(180deg, rgba(5,10,22,0.95), rgba(3,7,17,0.98))", backdropFilter: "blur(20px)" }}
     >
       {navItems.map((item) => (
         <button
           key={item.id}
           onClick={() => setMobileTab(item.id)}
-          className={`bnav-item flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all ${mobileTab === item.id ? "active" : ""}`}
+          className={`bnav-item relative flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all ${mobileTab === item.id ? "active" : ""}`}
           style={{ color: mobileTab === item.id ? "#22d3ee" : "#475569" }}
         >
           <item.icon size={20} className="bnav-icon" />
@@ -476,7 +480,7 @@ export default function App() {
   const showVerifyBanner = user?.email && !user.emailVerified && !verifyBannerDismissed;
 
   return (
-    <div className="bg-mesh min-h-screen">
+    <div className="bg-mesh min-h-screen panel-grid">
       {showOnboarding && isAuthenticated && (
         <OnboardingFlow
           onComplete={() => {
@@ -511,14 +515,14 @@ export default function App() {
                 <button
                   onClick={() => handleDemoLogin("listener")}
                   disabled={demoLoginLoading !== null}
-                  className="px-3 py-1 rounded-lg font-semibold text-cyan-200 border border-cyan-400/25 bg-cyan-500/10 disabled:opacity-50"
+                  className="button-sci px-3 py-1 rounded-lg font-semibold text-cyan-200 border border-cyan-400/25 bg-cyan-500/10 disabled:opacity-50"
                 >
                   {demoLoginLoading === "listener" ? "Signing in..." : "Demo Listener"}
                 </button>
                 <button
                   onClick={() => handleDemoLogin("creator")}
                   disabled={demoLoginLoading !== null}
-                  className="px-3 py-1 rounded-lg font-semibold text-indigo-200 border border-indigo-400/25 bg-indigo-500/10 disabled:opacity-50"
+                  className="button-sci px-3 py-1 rounded-lg font-semibold text-indigo-200 border border-indigo-400/25 bg-indigo-500/10 disabled:opacity-50"
                 >
                   {demoLoginLoading === "creator" ? "Signing in..." : "Demo Creator"}
                 </button>
@@ -543,7 +547,7 @@ export default function App() {
             <button
               onClick={handleSendVerification}
               disabled={sendingVerification}
-              className="text-xs font-semibold text-amber-400 hover:text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg transition-all disabled:opacity-50 flex items-center gap-1 flex-shrink-0"
+              className="button-sci text-xs font-semibold text-amber-400 hover:text-amber-300 border border-amber-500/40 px-3 py-1 rounded-lg transition-all disabled:opacity-50 flex items-center gap-1 flex-shrink-0"
             >
               {sendingVerification ? <RefreshCw size={11} className="animate-spin" /> : null}
               {sendingVerification ? t.auth.sending : t.auth.sendLink}
@@ -558,21 +562,21 @@ export default function App() {
       <div className="max-w-screen-xl mx-auto px-4">
         {isDemoPath && !isAuthenticated && (
           <div className="lg:hidden pt-4">
-            <div className="rounded-2xl p-4 border border-cyan-500/15" style={{ background: "rgba(8, 20, 36, 0.72)" }}>
+            <div className="panel-sci rounded-2xl p-4 border border-cyan-500/15" style={{ background: "rgba(8, 20, 36, 0.72)" }}>
               <p className="text-sm font-semibold text-slate-100">Demo access</p>
               <p className="text-xs text-slate-400 mt-1">Use a seeded account to preview the creator and listener flows instantly.</p>
               <div className="grid grid-cols-2 gap-2 mt-3">
                 <button
                   onClick={() => handleDemoLogin("listener")}
                   disabled={demoLoginLoading !== null}
-                  className="px-3 py-2 rounded-xl font-semibold text-xs text-cyan-200 border border-cyan-400/25 bg-cyan-500/10 disabled:opacity-50"
+                  className="button-sci px-3 py-2 rounded-xl font-semibold text-xs text-cyan-200 border border-cyan-400/25 bg-cyan-500/10 disabled:opacity-50"
                 >
                   {demoLoginLoading === "listener" ? "Signing in..." : "Demo Listener"}
                 </button>
                 <button
                   onClick={() => handleDemoLogin("creator")}
                   disabled={demoLoginLoading !== null}
-                  className="px-3 py-2 rounded-xl font-semibold text-xs text-indigo-200 border border-indigo-400/25 bg-indigo-500/10 disabled:opacity-50"
+                  className="button-sci px-3 py-2 rounded-xl font-semibold text-xs text-indigo-200 border border-indigo-400/25 bg-indigo-500/10 disabled:opacity-50"
                 >
                   {demoLoginLoading === "creator" ? "Signing in..." : "Demo Creator"}
                 </button>
@@ -581,10 +585,10 @@ export default function App() {
           </div>
         )}
 
-        <div className="hidden lg:grid gap-6 py-6" style={{ gridTemplateColumns: "220px 1fr" }}>
+        <div className="hidden lg:grid gap-6 py-6" style={{ gridTemplateColumns: "240px 1fr" }}>
           <DesktopNav activeNav={activeNav} setActiveNav={navigateTo} onOpenAuth={() => setAuthOpen(true)} />
 
-          <main className="min-w-0">
+          <main className="min-w-0 rounded-[1.75rem] panel-sci p-5 lg:p-6 overflow-hidden">
             {activeNav === "listen" && <ListenPage />}
             {activeNav === "compete" && <CompetePage />}
             {activeNav === "create" && <CreatePage onOpenAuth={() => setAuthOpen(true)} onNavigate={navigateTo} />}

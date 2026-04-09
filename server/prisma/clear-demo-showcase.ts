@@ -41,6 +41,11 @@ async function main() {
   });
   const supportIds = supportUsers.map((user) => user.id);
   const merchant = supportUsers.find((user) => user.email === "merchant@nftstore.io");
+  const demoMarketNfts = await prisma.nft.findMany({
+    where: { tokenId: { startsWith: "DEMO-MARKET-" } },
+    select: { id: true },
+  });
+  const demoMarketNftIds = demoMarketNfts.map((nft) => nft.id);
 
   console.log("Clearing demo showcase for artists:", artists.map((artist) => artist.username).join(", "));
 
@@ -59,6 +64,11 @@ async function main() {
     await p.trackRepost.deleteMany({ where: { trackId: { in: trackIds } } });
     await p.payoutRelease.deleteMany({ where: { trackId: { in: trackIds } } });
     await prisma.track.deleteMany({ where: { id: { in: trackIds } } });
+  }
+
+  if (demoMarketNftIds.length > 0) {
+    await prisma.nftListing.deleteMany({ where: { nftId: { in: demoMarketNftIds } } });
+    await prisma.nft.deleteMany({ where: { id: { in: demoMarketNftIds } } });
   }
 
   if (supportIds.length > 0) {

@@ -38,6 +38,13 @@
     --bg2: #111827;
     --glass: rgba(8, 14, 30, 0.85);
     --border-color: rgba(148, 163, 184, 0.07);
+    --panel-border: rgba(56, 189, 248, 0.14);
+    --panel-border-strong: rgba(34, 211, 238, 0.28);
+    --panel-bg: linear-gradient(180deg, rgba(9, 16, 30, 0.96), rgba(4, 9, 20, 0.92));
+    --panel-bg-soft: linear-gradient(180deg, rgba(10, 18, 36, 0.78), rgba(6, 10, 24, 0.74));
+    --panel-glow: 0 24px 80px rgba(2, 6, 23, 0.58);
+    --glow-cyan: 0 0 0 1px rgba(34, 211, 238, 0.22), 0 0 28px rgba(34, 211, 238, 0.16);
+    --glow-indigo: 0 0 0 1px rgba(99, 102, 241, 0.22), 0 0 28px rgba(99, 102, 241, 0.14);
     --text1: #f1f5f9;
     --text2: #94a3b8;
     --text3: #475569;
@@ -82,6 +89,100 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
+}
+
+.panel-sci {
+  position: relative;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-glow);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.panel-sci::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(34,211,238,0.3), rgba(99,102,241,0.16), rgba(168,85,247,0.18));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+.panel-sci-soft {
+  position: relative;
+  background: var(--panel-bg-soft);
+  border: 1px solid rgba(99, 102, 241, 0.14);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.panel-grid {
+  background-image:
+    linear-gradient(rgba(34,211,238,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34,211,238,0.03) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.tech-heading {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.tech-stat {
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.button-sci {
+  position: relative;
+  overflow: hidden;
+}
+
+.button-sci::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 25%, rgba(255,255,255,0.18) 50%, transparent 75%);
+  transform: translateX(-140%);
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.button-sci:hover::after {
+  transform: translateX(140%);
+}
+
+.input-sci {
+  background: linear-gradient(180deg, rgba(8, 15, 28, 0.92), rgba(4, 9, 18, 0.88));
+  border: 1px solid rgba(71, 85, 105, 0.4);
+  box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.06);
+}
+
+.input-sci:focus-visible {
+  box-shadow: 0 0 0 1px rgba(34,211,238,0.35), 0 0 0 4px rgba(34,211,238,0.12), 0 0 20px rgba(34,211,238,0.12);
+}
+
+.nav-shell {
+  position: relative;
+  background: linear-gradient(180deg, rgba(4, 10, 22, 0.95), rgba(3, 7, 17, 0.84));
+  border: 1px solid rgba(34, 211, 238, 0.08);
+  box-shadow: 0 16px 60px rgba(2, 6, 23, 0.5);
+}
+
+.nav-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at top center, rgba(34,211,238,0.08), transparent 45%);
 }
 
 /* Glow effects */
@@ -247,25 +348,38 @@
 
 /* Nav item */
 .nav-item { 
-  transition: all 0.2s ease; 
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1); 
 }
 .nav-item:hover { 
-  background: rgba(99,102,241,0.12); 
+  background: linear-gradient(135deg, rgba(34,211,238,0.1), rgba(99,102,241,0.08)); 
+  box-shadow: var(--glow-indigo);
 }
 .nav-item.active {
-  background: linear-gradient(135deg, rgba(34,211,238,0.12), rgba(99,102,241,0.12));
+  background: linear-gradient(135deg, rgba(34,211,238,0.16), rgba(99,102,241,0.16));
   border-left: 3px solid var(--cyan);
+  box-shadow: var(--glow-cyan);
 }
 
 /* Bottom nav active */
 .bnav-item { 
-  transition: all 0.2s ease; 
+  transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1); 
 }
 .bnav-item.active { 
   color: var(--cyan); 
 }
 .bnav-item.active .bnav-icon { 
   filter: drop-shadow(0 0 6px var(--cyan)); 
+}
+
+.bnav-item.active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(34,211,238,0.95), transparent);
 }
 
 /* Like pop */

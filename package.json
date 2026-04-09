@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "demo:seed": "npm --prefix server run db:seed:demo",
+    "demo:clear": "npm --prefix server run db:clear:demo",
+    "demo:reset": "npm --prefix server run db:clear:demo && npm --prefix server run db:seed:demo"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",

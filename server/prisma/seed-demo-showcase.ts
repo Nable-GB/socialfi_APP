@@ -460,6 +460,215 @@ async function seedBrochuresAndNfts(tracks: any[]) {
   }
 }
 
+async function seedRealNftMarket(tracks: any[], artists: Record<string, any>, supportUsers: Record<string, any>) {
+  const users = {
+    ...artists,
+    ...supportUsers,
+  } as Record<string, any>;
+
+  const nftDefs = [
+    {
+      slug: "crypto-kings",
+      trackTitle: "Crypto Kings",
+      name: "Crypto Kings Master Pass",
+      description: "Primary collector NFT tied to the strongest demo competition campaign.",
+      collection: "Top Artist Vault",
+      rarity: "LEGENDARY",
+      tokenId: "DEMO-MARKET-001",
+      ownerUsername: "alice_web3",
+      minterUsername: "kai_fire",
+      attributes: [
+        { trait_type: "Track", value: "Crypto Kings" },
+        { trait_type: "Campaign", value: "Finals Push" },
+        { trait_type: "Utility", value: "Backstage Pass" },
+      ],
+      listings: [
+        { id: "demo-listing-crypto-kings-sold", sellerUsername: "kai_fire", buyerUsername: "alice_web3", price: 210, status: "SOLD", listedHoursAgo: 240, soldHoursAgo: 228 },
+        { id: "demo-listing-crypto-kings-active", sellerUsername: "alice_web3", price: 285, status: "ACTIVE", listedHoursAgo: 12 },
+      ],
+    },
+    {
+      slug: "paper-clouds",
+      trackTitle: "Paper Clouds",
+      name: "Paper Clouds Archive Card",
+      description: "Archive collectible with distribution-era provenance and fan perks.",
+      collection: "Fan Archive",
+      rarity: "EPIC",
+      tokenId: "DEMO-MARKET-002",
+      ownerUsername: "bob_crypto",
+      minterUsername: "luna_beats",
+      attributes: [
+        { trait_type: "Track", value: "Paper Clouds" },
+        { trait_type: "Edition", value: "12/50" },
+        { trait_type: "Perk", value: "Early Merch" },
+      ],
+      listings: [
+        { id: "demo-listing-paper-clouds-sold", sellerUsername: "luna_beats", buyerUsername: "bob_crypto", price: 116, status: "SOLD", listedHoursAgo: 310, soldHoursAgo: 304 },
+        { id: "demo-listing-paper-clouds-cancelled", sellerUsername: "bob_crypto", price: 148, status: "CANCELLED", listedHoursAgo: 90 },
+        { id: "demo-listing-paper-clouds-active", sellerUsername: "bob_crypto", price: 164, status: "ACTIVE", listedHoursAgo: 38 },
+      ],
+    },
+    {
+      slug: "velocity",
+      trackTitle: "Velocity",
+      name: "Velocity Drop Frame",
+      description: "High-energy framed edition from the festival push sequence.",
+      collection: "Tour Poster Drops",
+      rarity: "RARE",
+      tokenId: "DEMO-MARKET-003",
+      ownerUsername: "nova_synth",
+      minterUsername: "nova_synth",
+      attributes: [
+        { trait_type: "Track", value: "Velocity" },
+        { trait_type: "Edition", value: "32/100" },
+        { trait_type: "Unlock", value: "VIP Presale" },
+      ],
+      listings: [
+        { id: "demo-listing-velocity-active", sellerUsername: "nova_synth", price: 92, status: "ACTIVE", listedHoursAgo: 26 },
+      ],
+    },
+    {
+      slug: "candy-orbit",
+      trackTitle: "Candy Orbit",
+      name: "Candy Orbit Signal Sheet",
+      description: "Bright future-pop collectible with gated fan room access.",
+      collection: "Signal Bloom",
+      rarity: "EPIC",
+      tokenId: "DEMO-MARKET-004",
+      ownerUsername: "mira_flux",
+      minterUsername: "mira_flux",
+      attributes: [
+        { trait_type: "Track", value: "Candy Orbit" },
+        { trait_type: "Access", value: "Fan Room" },
+        { trait_type: "Tier", value: "Gold" },
+      ],
+      listings: [
+        { id: "demo-listing-candy-orbit-cancelled", sellerUsername: "mira_flux", price: 144, status: "CANCELLED", listedHoursAgo: 102 },
+        { id: "demo-listing-candy-orbit-active", sellerUsername: "mira_flux", price: 133, status: "ACTIVE", listedHoursAgo: 44 },
+      ],
+    },
+    {
+      slug: "monsoon",
+      trackTitle: "Monsoon",
+      name: "Monsoon Field Note",
+      description: "Meditative field-note NFT from the world fusion campaign.",
+      collection: "Clip Editions",
+      rarity: "UNCOMMON",
+      tokenId: "DEMO-MARKET-005",
+      ownerUsername: "atlas_sound",
+      minterUsername: "atlas_sound",
+      attributes: [
+        { trait_type: "Track", value: "Monsoon" },
+        { trait_type: "Format", value: "Animated" },
+        { trait_type: "Season", value: "Monsoon" },
+      ],
+      listings: [
+        { id: "demo-listing-monsoon-active", sellerUsername: "atlas_sound", price: 58, status: "ACTIVE", listedHoursAgo: 61 },
+      ],
+    },
+    {
+      slug: "bangkok-drip",
+      trackTitle: "Bangkok Drip",
+      name: "Bangkok Drip Street Pass",
+      description: "Street-pass edition from the #1 performance campaign in the showcase.",
+      collection: "Session Access",
+      rarity: "COMMON",
+      tokenId: "DEMO-MARKET-006",
+      ownerUsername: "kai_fire",
+      minterUsername: "kai_fire",
+      attributes: [
+        { trait_type: "Track", value: "Bangkok Drip" },
+        { trait_type: "Perk", value: "Release Notes" },
+        { trait_type: "Edition", value: "241/500" },
+      ],
+      listings: [
+        { id: "demo-listing-bangkok-drip-active", sellerUsername: "kai_fire", price: 41, status: "ACTIVE", listedHoursAgo: 72 },
+      ],
+    },
+  ] as const;
+
+  const now = Date.now();
+  const seededNftIds: string[] = [];
+  const seededListingIds: string[] = [];
+
+  for (const def of nftDefs) {
+    const track = tracks.find((item) => item.title === def.trackTitle);
+    const owner = users[def.ownerUsername];
+    const minter = users[def.minterUsername];
+    if (!track || !owner || !minter) continue;
+
+    const nft = await prisma.nft.upsert({
+      where: { tokenId: def.tokenId },
+      update: {
+        ownerId: owner.id,
+        minterId: minter.id,
+        name: def.name,
+        description: def.description,
+        imageUrl: track.coverUrl,
+        collection: def.collection,
+        rarity: def.rarity as any,
+        attributes: def.attributes,
+        contractAddress: "0xDeMo00000000000000000000000000000000NFT",
+        chainId: 137,
+      },
+      create: {
+        ownerId: owner.id,
+        minterId: minter.id,
+        name: def.name,
+        description: def.description,
+        imageUrl: track.coverUrl,
+        collection: def.collection,
+        rarity: def.rarity as any,
+        attributes: def.attributes,
+        tokenId: def.tokenId,
+        contractAddress: "0xDeMo00000000000000000000000000000000NFT",
+        chainId: 137,
+      },
+    });
+
+    seededNftIds.push(nft.id);
+
+    for (const listingDef of def.listings) {
+      const seller = users[listingDef.sellerUsername];
+      const buyer = listingDef.buyerUsername ? users[listingDef.buyerUsername] : undefined;
+      if (!seller) continue;
+      seededListingIds.push(listingDef.id);
+
+      await prisma.nftListing.upsert({
+        where: { id: listingDef.id },
+        update: {
+          nftId: nft.id,
+          sellerId: seller.id,
+          buyerId: buyer?.id,
+          price: listingDef.price,
+          status: listingDef.status as any,
+          listedAt: new Date(now - listingDef.listedHoursAgo * 60 * 60 * 1000),
+          soldAt: listingDef.soldHoursAgo ? new Date(now - listingDef.soldHoursAgo * 60 * 60 * 1000) : null,
+        },
+        create: {
+          id: listingDef.id,
+          nftId: nft.id,
+          sellerId: seller.id,
+          buyerId: buyer?.id,
+          price: listingDef.price,
+          status: listingDef.status as any,
+          listedAt: new Date(now - listingDef.listedHoursAgo * 60 * 60 * 1000),
+          soldAt: listingDef.soldHoursAgo ? new Date(now - listingDef.soldHoursAgo * 60 * 60 * 1000) : null,
+        },
+      });
+    }
+  }
+
+  if (seededNftIds.length > 0) {
+    await prisma.nftListing.deleteMany({
+      where: {
+        nftId: { in: seededNftIds },
+        id: { notIn: seededListingIds },
+      },
+    });
+  }
+}
+
 async function seedEngagement(tracks: any[], artists: Record<string, any>) {
   const fanEmails = ["alice@example.com", "bob@example.com"];
   const fans = await prisma.user.findMany({ where: { email: { in: fanEmails } }, select: { id: true } });
@@ -879,6 +1088,7 @@ async function main() {
   const tracks = await seedTracks(artists);
   await seedCompetitionState(tracks);
   await seedBrochuresAndNfts(tracks);
+  await seedRealNftMarket(tracks, artists, supportUsers);
   await seedEngagement(tracks, artists);
   await seedSupportNetwork(artists, supportUsers);
   await seedShowcaseFeed(tracks, artists, supportUsers);
