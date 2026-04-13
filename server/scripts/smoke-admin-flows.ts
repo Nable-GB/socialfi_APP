@@ -91,6 +91,60 @@ async function main() {
   const tempUser = await registerTempUser();
   console.log(`Registered temp user: ${tempUser.email}`);
 
+  const creatorCodeUser = await registerTempUser();
+  console.log(`Registered creator-code user: ${creatorCodeUser.email}`);
+
+  const creatorCodeValue = `SMOKE-${Date.now().toString(36).toUpperCase()}`;
+  const createdCreatorCode = await request<{ success: boolean; creatorCode: JsonRecord }>("/api/admin/creator-codes", {
+    method: "POST",
+    body: JSON.stringify({
+      code: creatorCodeValue,
+      notes: "Smoke test Creator code",
+    }),
+  }, admin.token);
+  if (!createdCreatorCode.success || createdCreatorCode.creatorCode?.code !== creatorCodeValue) {
+    throw new Error(`Failed to create Creator code: ${JSON.stringify(createdCreatorCode)}`);
+  }
+  console.log(`Created Creator code: ${creatorCodeValue}`);
+
+  const redemption = await request<{ success: boolean; code: string; creditsGranted: number; subscription: JsonRecord }>("/api/subscriptions/redeem-code", {
+    method: "POST",
+    body: JSON.stringify({ code: creatorCodeValue }),
+  }, creatorCodeUser.token);
+  if (!redemption.success || redemption.code !== creatorCodeValue || redemption.creditsGranted !== 3000 || redemption.subscription?.paymentMethod !== "CREATOR_CODE") {
+    throw new Error(`Unexpected Creator code redemption result: ${JSON.stringify(redemption)}`);
+  }
+  console.log(`Redeemed Creator code and granted ${redemption.creditsGranted} upload credits`);
+
+  const creatorCodeSubscriptionState = await request<{ tier: string; subscription: JsonRecord | null; pendingReview: JsonRecord | null }>("/api/subscriptions/me", {}, creatorCodeUser.token);
+  if (creatorCodeSubscriptionState.tier !== "CREATOR" || creatorCodeSubscriptionState.subscription?.paymentMethod !== "CREATOR_CODE") {
+    throw new Error(`Creator code subscription state not updated correctly: ${JSON.stringify(creatorCodeSubscriptionState)}`);
+  }
+  console.log("Creator code user moved to CREATOR tier via complimentary access");
+
+  const creatorCodeQueue = await request<{ codes: Array<JsonRecord> }>(`/api/admin/creator-codes?search=${encodeURIComponent(creatorCodeValue)}`, {}, admin.token);
+  const matchingCode = creatorCodeQueue.codes.find((code) => code.code === creatorCodeValue);
+  const creatorCodeRedemption = matchingCode?.redemptions?.find((entry: JsonRecord) => entry.user?.id === creatorCodeUser.user.id);
+  if (!matchingCode || !creatorCodeRedemption?.id) {
+    throw new Error(`Creator code redemption ${creatorCodeValue} not found in admin list`);
+  }
+  console.log("Creator code redemption is visible in the admin list");
+
+  const revokedRedemption = await request<{ success: boolean; tier: string }>(`/api/admin/creator-code-redemptions/${creatorCodeRedemption.id}/revoke`, {
+    method: "POST",
+    body: JSON.stringify({ reason: "Smoke test revoke" }),
+  }, admin.token);
+  if (!revokedRedemption.success || revokedRedemption.tier !== "FREE") {
+    throw new Error(`Unexpected Creator code revoke result: ${JSON.stringify(revokedRedemption)}`);
+  }
+  console.log("Revoked complimentary Creator access and downgraded the user to FREE");
+
+  const creatorCodeRevokedState = await request<{ tier: string; subscription: JsonRecord | null; pendingReview: JsonRecord | null }>("/api/subscriptions/me", {}, creatorCodeUser.token);
+  if (creatorCodeRevokedState.tier !== "FREE") {
+    throw new Error(`Creator code revocation not reflected in subscription state: ${JSON.stringify(creatorCodeRevokedState)}`);
+  }
+  console.log("Creator code revocation is reflected in the user subscription state");
+
   const txHash = `0x${crypto.randomBytes(32).toString("hex")}`;
   const walletAddress = `0x${crypto.randomBytes(20).toString("hex")}`;
 

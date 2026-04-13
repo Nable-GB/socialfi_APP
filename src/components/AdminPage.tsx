@@ -3,7 +3,7 @@ import { adminApi } from "../lib/api";
 import {
   Users, BarChart2, Zap, ShoppingBag, RefreshCw,
   Shield, CheckCircle, XCircle, ArrowUpRight, Gift, Play, Pause, Ban,
-  AlertTriangle, Crown
+  AlertTriangle, Crown, Ticket, Copy
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLang } from "../contexts/LangContext";
@@ -31,6 +31,31 @@ interface AdminCampaign {
   budget: string; rewardPoolTotal: string; rewardPoolDistributed: string;
   impressionsTotal: number; impressionsDelivered: number;
   createdAt: string; merchant: { id: string; username: string; email?: string };
+}
+
+interface AdminCreatorCodeRedemption {
+  id: string;
+  redeemedAt: string;
+  revokedAt?: string | null;
+  revokedBy?: string | null;
+  revokeReason?: string | null;
+  subscriptionId?: string | null;
+  user: { id: string; username: string; displayName?: string | null; email?: string | null };
+}
+
+interface AdminCreatorCode {
+  id: string;
+  code: string;
+  tier: string;
+  isActive: boolean;
+  expiresAt?: string | null;
+  maxRedemptions?: number | null;
+  redemptionCount: number;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+  createdBy?: { id: string; username: string; displayName?: string | null };
+  redemptions: AdminCreatorCodeRedemption[];
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -66,9 +91,20 @@ const STATUS_COLORS: Record<string, string> = {
   PENDING_PAYMENT: "text-orange-400 bg-orange-500/10 border-orange-500/25",
 };
 
+const CREATOR_CODES_PAGE_SIZE = 10;
+
+function toDateTimeLocalValue(value?: string | null): string {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60 * 1000);
+  return local.toISOString().slice(0, 16);
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-type Tab = "overview" | "users" | "campaigns" | "rewards";
+type Tab = "overview" | "users" | "campaigns" | "creatorCodes" | "rewards";
+type CreatorCodeFilter = "all" | "active" | "inactive";
 
 export function AdminPage() {
   const { t } = useLang();
@@ -85,6 +121,19 @@ export function AdminPage() {
   const [distributing, setDistributing] = useState(false);
   const [airdropAmount, setAirdropAmount] = useState("10");
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [creatorCodes, setCreatorCodes] = useState<AdminCreatorCode[]>([]);
+  const [creatorCodeTotal, setCreatorCodeTotal] = useState(0);
+  const [creatorCodePage, setCreatorCodePage] = useState(1);
+  const [creatorCodeSearch, setCreatorCodeSearch] = useState("");
+  const [creatorCodeFilter, setCreatorCodeFilter] = useState<CreatorCodeFilter>("all");
+  const [creatorCodesLoading, setCreatorCodesLoading] = useState(false);
+  const [creatorCodeSubmitting, setCreatorCodeSubmitting] = useState(false);
+  const [creatorCodeActionId, setCreatorCodeActionId] = useState<string | null>(null);
+  const [editingCreatorCodeId, setEditingCreatorCodeId] = useState<string | null>(null);
+  const [creatorCodeValue, setCreatorCodeValue] = useState("");
+  const [creatorCodeExpiresAt, setCreatorCodeExpiresAt] = useState("");
+  const [creatorCodeMaxRedemptions, setCreatorCodeMaxRedemptions] = useState("");
+  const [creatorCodeNotes, setCreatorCodeNotes] = useState("");
 
   const fetchStats = useCallback(async () => {
     try {
@@ -113,9 +162,27 @@ export function AdminPage() {
     finally { setLoading(false); }
   }, []);
 
+  const fetchCreatorCodes = useCallback(async (page = 1, search = "", filter: CreatorCodeFilter = "all") => {
+    setCreatorCodesLoading(true);
+    try {
+      const data = await adminApi.getCreatorCodes({
+        page,
+        limit: CREATOR_CODES_PAGE_SIZE,
+        search: search || undefined,
+        active: filter === "all" ? undefined : filter === "active",
+      });
+      setCreatorCodes(data.codes);
+      setCreatorCodeTotal(data.total);
+    } catch { /* ignore */ }
+    finally { setCreatorCodesLoading(false); }
+  }, []);
+
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { if (tab === "users") fetchUsers(userPage, userSearch); }, [tab, userPage, fetchUsers]);
   useEffect(() => { if (tab === "campaigns") fetchCampaigns(campaignPage); }, [tab, campaignPage, fetchCampaigns]);
+  useEffect(() => {
+    if (tab === "creatorCodes") fetchCreatorCodes(creatorCodePage, creatorCodeSearch, creatorCodeFilter);
+  }, [tab, creatorCodePage, creatorCodeFilter, fetchCreatorCodes]);
 
   const handleUpdateRole = async (userId: string, role: string) => {
     try {
@@ -157,10 +224,142 @@ export function AdminPage() {
     } catch (err: any) { toast.error(err?.message ?? t.admin.airdropFailed); }
   };
 
+  const resetCreatorCodeForm = () => {
+    setEditingCreatorCodeId(null);
+    setCreatorCodeValue("");
+    setCreatorCodeExpiresAt("");
+    setCreatorCodeMaxRedemptions("");
+    setCreatorCodeNotes("");
+  };
+
+  const handleCreatorCodeSearch = () => {
+    setCreatorCodePage(1);
+    fetchCreatorCodes(1, creatorCodeSearch, creatorCodeFilter);
+  };
+
+  const handleEditCreatorCode = (code: AdminCreatorCode) => {
+    setEditingCreatorCodeId(code.id);
+    setCreatorCodeValue(code.code);
+    setCreatorCodeExpiresAt(toDateTimeLocalValue(code.expiresAt));
+    setCreatorCodeMaxRedemptions(code.maxRedemptions != null ? String(code.maxRedemptions) : "");
+    setCreatorCodeNotes(code.notes ?? "");
+  };
+
+  const handleSubmitCreatorCode = async () => {
+    const maxRedemptions = creatorCodeMaxRedemptions.trim();
+    const parsedMaxRedemptions = maxRedemptions ? Number(maxRedemptions) : null;
+
+    if (parsedMaxRedemptions !== null && (!Number.isInteger(parsedMaxRedemptions) || parsedMaxRedemptions <= 0)) {
+      toast.error(t.admin.enterValidAmount);
+      return;
+    }
+
+    if (creatorCodeExpiresAt && Number.isNaN(new Date(creatorCodeExpiresAt).getTime())) {
+      toast.error(t.admin.failed);
+      return;
+    }
+
+    const expiresAt = creatorCodeExpiresAt ? new Date(creatorCodeExpiresAt).toISOString() : null;
+    setCreatorCodeSubmitting(true);
+    try {
+      if (editingCreatorCodeId) {
+        await adminApi.updateCreatorCode(editingCreatorCodeId, {
+          expiresAt,
+          maxRedemptions: parsedMaxRedemptions,
+          notes: creatorCodeNotes.trim() || null,
+        });
+        toast.success(t.admin.creatorCodeUpdated);
+      } else {
+        const nextFilter = creatorCodeFilter === "inactive" ? "all" : creatorCodeFilter;
+        await adminApi.createCreatorCode({
+          code: creatorCodeValue.trim() || undefined,
+          expiresAt,
+          maxRedemptions: parsedMaxRedemptions,
+          notes: creatorCodeNotes.trim() || undefined,
+        });
+        if (nextFilter !== creatorCodeFilter) {
+          setCreatorCodeFilter(nextFilter);
+        }
+        toast.success(t.admin.creatorCodeCreated);
+      }
+
+      resetCreatorCodeForm();
+      setCreatorCodePage(1);
+      fetchCreatorCodes(1, creatorCodeSearch, creatorCodeFilter === "inactive" && !editingCreatorCodeId ? "all" : creatorCodeFilter);
+    } catch (err: any) {
+      toast.error(err?.message ?? t.admin.failed);
+    } finally {
+      setCreatorCodeSubmitting(false);
+    }
+  };
+
+  const handleToggleCreatorCode = async (code: AdminCreatorCode) => {
+    setCreatorCodeActionId(code.id);
+    try {
+      await adminApi.updateCreatorCode(code.id, { isActive: !code.isActive });
+      toast.success(code.isActive ? t.admin.creatorCodeDeactivated : t.admin.creatorCodeActivated);
+      fetchCreatorCodes(creatorCodePage, creatorCodeSearch, creatorCodeFilter);
+    } catch (err: any) {
+      toast.error(err?.message ?? t.admin.failed);
+    } finally {
+      setCreatorCodeActionId(null);
+    }
+  };
+
+  const handleCopyCreatorCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast.success(t.admin.creatorCodeCopied);
+    } catch {
+      toast.error(t.admin.copyFailed);
+    }
+  };
+
+  const handleRevokeCreatorCodeRedemption = async (redemptionId: string) => {
+    const reason = window.prompt(t.admin.creatorCodeRevokePrompt);
+    if (!reason?.trim()) return;
+
+    setCreatorCodeActionId(redemptionId);
+    try {
+      await adminApi.revokeCreatorCodeRedemption(redemptionId, reason.trim());
+      toast.success(t.admin.creatorCodeRevoked);
+      fetchCreatorCodes(creatorCodePage, creatorCodeSearch, creatorCodeFilter);
+      fetchUsers(userPage, userSearch);
+    } catch (err: any) {
+      toast.error(err?.message ?? t.admin.failed);
+    } finally {
+      setCreatorCodeActionId(null);
+    }
+  };
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return t.admin.creatorCodeNever;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return t.admin.creatorCodeNever;
+    return parsed.toLocaleString();
+  };
+
+  const getCreatorCodeStatus = (code: AdminCreatorCode) => {
+    const isExpired = !!code.expiresAt && new Date(code.expiresAt).getTime() < Date.now();
+    const isExhausted = code.maxRedemptions != null && code.redemptionCount >= code.maxRedemptions;
+
+    if (!code.isActive) {
+      return { label: t.admin.creatorCodeStatusInactive, className: "text-slate-300 bg-slate-800 border-slate-700" };
+    }
+    if (isExpired) {
+      return { label: t.admin.creatorCodeStatusExpired, className: "text-amber-300 bg-amber-500/10 border-amber-500/30" };
+    }
+    if (isExhausted) {
+      return { label: t.admin.creatorCodeStatusExhausted, className: "text-red-300 bg-red-500/10 border-red-500/30" };
+    }
+    return { label: t.admin.creatorCodeStatusActive, className: "text-emerald-300 bg-emerald-500/10 border-emerald-500/30" };
+  };
+
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "overview", label: t.admin.tabOverview, icon: <BarChart2 size={14} /> },
     { id: "users", label: t.admin.tabUsers, icon: <Users size={14} /> },
     { id: "campaigns", label: t.admin.tabCampaigns, icon: <ShoppingBag size={14} /> },
+    { id: "creatorCodes", label: t.admin.tabCreatorCodes, icon: <Ticket size={14} /> },
     { id: "rewards", label: t.admin.tabRewards, icon: <Zap size={14} /> },
   ];
 
@@ -422,6 +621,260 @@ export function AdminPage() {
                 <span className="text-xs text-slate-400 self-center">{t.admin.pg} {campaignPage}</span>
                 <button disabled={campaignPage * 20 >= campaignTotal} onClick={() => setCampaignPage(p => p + 1)}
                   className="px-3 py-1 rounded-lg text-xs border border-slate-700 text-slate-400 disabled:opacity-30 hover:text-white transition-colors">{t.admin.next}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "creatorCodes" && (
+        <div className="grid lg:grid-cols-[360px,1fr] gap-4">
+          <div className="glass rounded-2xl p-5 border border-slate-700/10 space-y-4 h-fit">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Ticket size={16} className="text-cyan-400" />
+                  <h2 className="text-sm font-bold text-white">
+                    {editingCreatorCodeId ? t.admin.creatorCodeEditTitle : t.admin.creatorCodeCreateTitle}
+                  </h2>
+                </div>
+                <p className="text-xs text-slate-400">{t.admin.creatorCodeCreateSubtitle}</p>
+              </div>
+              {editingCreatorCodeId && (
+                <button
+                  onClick={resetCreatorCodeForm}
+                  className="px-3 py-1.5 rounded-lg text-xs border border-slate-700 text-slate-300 hover:text-white transition-colors"
+                >
+                  {t.admin.creatorCodeReset}
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">{t.admin.creatorCodeLabel}</label>
+                <input
+                  value={creatorCodeValue}
+                  onChange={(e) => setCreatorCodeValue(e.target.value.toUpperCase())}
+                  disabled={!!editingCreatorCodeId}
+                  placeholder={t.admin.creatorCodePlaceholder}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50 disabled:opacity-60"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">{editingCreatorCodeId ? t.admin.creatorCodeLockedHint : t.admin.creatorCodeHint}</p>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">{t.admin.creatorCodeExpiresLabel}</label>
+                <input
+                  type="datetime-local"
+                  value={creatorCodeExpiresAt}
+                  onChange={(e) => setCreatorCodeExpiresAt(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">{t.admin.creatorCodeMaxRedemptionsLabel}</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={creatorCodeMaxRedemptions}
+                  onChange={(e) => setCreatorCodeMaxRedemptions(e.target.value)}
+                  placeholder={t.admin.creatorCodeUnlimited}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">{t.admin.creatorCodeNotesLabel}</label>
+                <textarea
+                  value={creatorCodeNotes}
+                  onChange={(e) => setCreatorCodeNotes(e.target.value)}
+                  rows={4}
+                  placeholder={t.admin.creatorCodeNotesPlaceholder}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50 resize-none"
+                />
+              </div>
+
+              <button
+                onClick={handleSubmitCreatorCode}
+                disabled={creatorCodeSubmitting}
+                className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-40 transition-all hover:opacity-90"
+                style={{ background: "linear-gradient(135deg,#06b6d4,#3b82f6)" }}
+              >
+                {creatorCodeSubmitting ? <RefreshCw size={15} className="animate-spin" /> : <Ticket size={15} />}
+                {creatorCodeSubmitting
+                  ? (editingCreatorCodeId ? t.admin.creatorCodeUpdating : t.admin.creatorCodeCreating)
+                  : (editingCreatorCodeId ? t.admin.creatorCodeUpdateButton : t.admin.creatorCodeCreateButton)}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="glass rounded-2xl p-4 border border-slate-700/10 space-y-3">
+              <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-white">{t.admin.creatorCodesListTitle}</p>
+                  <p className="text-xs text-slate-500">{creatorCodeTotal} {t.admin.creatorCodesCount}</p>
+                </div>
+                <button
+                  onClick={() => fetchCreatorCodes(creatorCodePage, creatorCodeSearch, creatorCodeFilter)}
+                  className="self-start md:self-auto text-slate-500 hover:text-white transition-colors"
+                >
+                  <RefreshCw size={15} />
+                </button>
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-3">
+                <input
+                  value={creatorCodeSearch}
+                  onChange={(e) => setCreatorCodeSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreatorCodeSearch()}
+                  placeholder={t.admin.creatorCodeSearchPlaceholder}
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50"
+                />
+                <select
+                  value={creatorCodeFilter}
+                  onChange={(e) => {
+                    const next = e.target.value as CreatorCodeFilter;
+                    setCreatorCodeFilter(next);
+                    setCreatorCodePage(1);
+                  }}
+                  className="px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/30 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                >
+                  <option value="all">{t.admin.creatorCodeFilterAll}</option>
+                  <option value="active">{t.admin.creatorCodeFilterActive}</option>
+                  <option value="inactive">{t.admin.creatorCodeFilterInactive}</option>
+                </select>
+                <button
+                  onClick={handleCreatorCodeSearch}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg,#0ea5e9,#14b8a6)" }}
+                >
+                  {t.admin.creatorCodeSearchButton}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {creatorCodesLoading ? (
+                <div className="glass rounded-2xl border border-slate-700/10 flex justify-center py-12">
+                  <RefreshCw size={18} className="text-slate-500 animate-spin" />
+                </div>
+              ) : creatorCodes.length === 0 ? (
+                <div className="glass rounded-2xl p-6 border border-slate-700/10 text-sm text-slate-400">
+                  {t.admin.creatorCodeEmpty}
+                </div>
+              ) : creatorCodes.map((code) => {
+                const status = getCreatorCodeStatus(code);
+                return (
+                  <div key={code.id} className="glass rounded-2xl p-4 border border-slate-700/10 space-y-4">
+                    <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-lg font-bold text-white font-mono tracking-[0.08em]">{code.code}</p>
+                          <span className={`px-2 py-0.5 rounded-md border text-[11px] font-semibold ${status.className}`}>
+                            {status.label}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                          <span>{t.admin.creatorCodeUsageLabel}: <strong className="text-slate-200">{code.redemptionCount} / {code.maxRedemptions ?? t.admin.creatorCodeUnlimited}</strong></span>
+                          <span>{t.admin.creatorCodeExpiresLabel}: <strong className="text-slate-200">{formatDateTime(code.expiresAt)}</strong></span>
+                          <span>{t.admin.creatorCodeCreatedAtLabel}: <strong className="text-slate-200">{formatDateTime(code.createdAt)}</strong></span>
+                          <span>{t.admin.creatorCodeUpdatedAtLabel}: <strong className="text-slate-200">{formatDateTime(code.updatedAt)}</strong></span>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          {t.admin.creatorCodeCreatedByLabel}: <strong className="text-slate-300">{code.createdBy?.displayName ?? code.createdBy?.username ?? "-"}</strong>
+                        </p>
+                        {code.notes && <p className="text-sm text-slate-300">{code.notes}</p>}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleCopyCreatorCode(code.code)}
+                          className="px-3 py-1.5 rounded-lg text-xs border border-cyan-500/20 text-cyan-300 hover:text-white hover:border-cyan-400/40 transition-colors flex items-center gap-1.5"
+                        >
+                          <Copy size={12} />
+                          {t.admin.creatorCodeCopyButton}
+                        </button>
+                        <button
+                          onClick={() => handleEditCreatorCode(code)}
+                          className="px-3 py-1.5 rounded-lg text-xs border border-slate-700 text-slate-300 hover:text-white transition-colors"
+                        >
+                          {t.admin.creatorCodeEditButton}
+                        </button>
+                        <button
+                          onClick={() => handleToggleCreatorCode(code)}
+                          disabled={creatorCodeActionId === code.id}
+                          className="px-3 py-1.5 rounded-lg text-xs border border-amber-500/20 text-amber-300 hover:text-white hover:border-amber-400/40 transition-colors disabled:opacity-50"
+                        >
+                          {creatorCodeActionId === code.id ? t.admin.processing : (code.isActive ? t.admin.creatorCodeDeactivateButton : t.admin.activate)}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-700/20 bg-slate-900/35 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-bold text-slate-300">{t.admin.creatorCodeRecentRedemptions}</p>
+                        <p className="text-[11px] text-slate-500">{code.redemptions.length}</p>
+                      </div>
+
+                      {code.redemptions.length === 0 ? (
+                        <p className="text-xs text-slate-500">{t.admin.creatorCodeNoRedemptions}</p>
+                      ) : code.redemptions.map((redemption) => (
+                        <div key={redemption.id} className="rounded-xl border border-slate-700/20 bg-slate-950/30 p-3 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-white">{redemption.user.displayName ?? redemption.user.username}</p>
+                            <p className="text-xs text-slate-500">@{redemption.user.username}{redemption.user.email ? ` • ${redemption.user.email}` : ""}</p>
+                            <p className="text-xs text-slate-400 mt-1">{formatDateTime(redemption.redeemedAt)}</p>
+                            {redemption.revokeReason && (
+                              <p className="text-xs text-red-300 mt-1">{redemption.revokeReason}</p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-md border text-[11px] font-semibold ${redemption.revokedAt
+                              ? "text-red-300 bg-red-500/10 border-red-500/30"
+                              : "text-emerald-300 bg-emerald-500/10 border-emerald-500/30"}`}>
+                              {redemption.revokedAt ? t.admin.creatorCodeRedemptionRevoked : t.admin.creatorCodeRedemptionActive}
+                            </span>
+                            {!redemption.revokedAt && (
+                              <button
+                                onClick={() => handleRevokeCreatorCodeRedemption(redemption.id)}
+                                disabled={creatorCodeActionId === redemption.id}
+                                className="px-3 py-1.5 rounded-lg text-xs border border-red-500/20 text-red-300 hover:text-white hover:border-red-400/40 transition-colors disabled:opacity-50"
+                              >
+                                {creatorCodeActionId === redemption.id ? t.admin.processing : t.admin.creatorCodeRevokeButton}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs text-slate-500">{creatorCodeTotal} {t.admin.creatorCodesCount}</span>
+              <div className="flex gap-2">
+                <button
+                  disabled={creatorCodePage <= 1}
+                  onClick={() => setCreatorCodePage((page) => page - 1)}
+                  className="px-3 py-1 rounded-lg text-xs border border-slate-700 text-slate-400 disabled:opacity-30 hover:text-white transition-colors"
+                >
+                  {t.admin.prev}
+                </button>
+                <span className="text-xs text-slate-400 self-center">{t.admin.pg} {creatorCodePage}</span>
+                <button
+                  disabled={creatorCodePage * CREATOR_CODES_PAGE_SIZE >= creatorCodeTotal}
+                  onClick={() => setCreatorCodePage((page) => page + 1)}
+                  className="px-3 py-1 rounded-lg text-xs border border-slate-700 text-slate-400 disabled:opacity-30 hover:text-white transition-colors"
+                >
+                  {t.admin.next}
+                </button>
               </div>
             </div>
           </div>
