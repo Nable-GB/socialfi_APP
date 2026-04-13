@@ -409,7 +409,7 @@ export function SocialMusicFiLanding({ onLaunchApp, onApplyArtist }: { onLaunchA
           <div className="flex items-center gap-3">
             {/* Language Switcher */}
             <div className="flex items-center gap-1 border border-slate-700/40 rounded-lg overflow-hidden">
-              {(["en", "ko", "th"] as Lang[]).map((l) => (
+              {(["en", "ko"] as Lang[]).map((l) => (
                 <button
                   key={l}
                   onClick={() => setLang(l)}
@@ -419,7 +419,7 @@ export function SocialMusicFiLanding({ onLaunchApp, onApplyArtist }: { onLaunchA
                       : "text-slate-500 hover:text-slate-300"
                   }`}
                 >
-                  {l === "en" ? "EN" : l === "ko" ? "한" : "TH"}
+                  {l === "en" ? "EN" : "한"}
                 </button>
               ))}
             </div>

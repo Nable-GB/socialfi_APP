@@ -405,7 +405,6 @@ export function SettingsPage() {
         >
           <option value="en">English</option>
           <option value="ko">한국어</option>
-          <option value="th">ไทย</option>
         </select>
       </div>
     </div>
