@@ -378,6 +378,33 @@ export const adminApi = {
       "/api/admin/rewards/airdrop",
       { method: "POST", body: JSON.stringify({ userIds, amount, description }) }
     ),
+
+  getCreatorCodes: (params?: { page?: number; limit?: number; search?: string; active?: boolean }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set("page", String(params.page));
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.search) qs.set("search", params.search);
+    if (params?.active !== undefined) qs.set("active", String(params.active));
+    return request<{ codes: any[]; total: number; page: number; pages: number; limit: number }>(`/api/admin/creator-codes?${qs}`);
+  },
+
+  createCreatorCode: (body: { code?: string; expiresAt?: string | null; maxRedemptions?: number | null; notes?: string }) =>
+    request<{ success: boolean; creatorCode: any; message: string }>("/api/admin/creator-codes", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  updateCreatorCode: (codeId: string, body: { isActive?: boolean; expiresAt?: string | null; maxRedemptions?: number | null; notes?: string | null }) =>
+    request<{ success: boolean; creatorCode: any; message: string }>(`/api/admin/creator-codes/${codeId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  revokeCreatorCodeRedemption: (redemptionId: string, reason: string) =>
+    request<{ success: boolean; redemption: any; tier: string; message: string }>(`/api/admin/creator-code-redemptions/${redemptionId}/revoke`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
 };
 
 // ─── Subscriptions ────────────────────────────────────────────────────────────
@@ -385,6 +412,7 @@ export const subscriptionApi = {
   getTiers: () => request<{ tiers: any[] }>("/api/subscriptions/tiers"),
   getMySubscription: () => request<{ tier: string; subscription: any; pendingReview?: any }>("/api/subscriptions/me"),
   checkout: (tier: string) => request<{ checkoutUrl?: string; sessionId?: string; success?: boolean; message?: string; demoMode?: boolean; subscription?: any }>("/api/subscriptions/checkout", { method: "POST", body: JSON.stringify({ tier }) }),
+  redeemCode: (code: string) => request<{ success: boolean; message: string; code: string; creditsGranted: number; subscription: any }>("/api/subscriptions/redeem-code", { method: "POST", body: JSON.stringify({ code }) }),
   cancel: () => request<{ success: boolean; message: string; demoMode?: boolean; currentPeriodEnd?: string }>("/api/subscriptions/cancel", { method: "POST" }),
 };
 

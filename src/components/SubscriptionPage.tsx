@@ -11,12 +11,14 @@ const TIER_COLORS: Record<string, { bg: string; border: string; text: string; ba
 };
 
 export function SubscriptionPage() {
-  const { } = useAuth();
+  const { refreshUser } = useAuth();
   const { t } = useLang();
   const [tiers, setTiers] = useState<any[]>([]);
-  const [mySub, setMySub] = useState<{ tier: string; subscription: any } | null>(null);
+  const [mySub, setMySub] = useState<{ tier: string; subscription: any; pendingReview?: any } | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [creatorCode, setCreatorCode] = useState("");
+  const [redeemError, setRedeemError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -65,11 +67,24 @@ export function SubscriptionPage() {
 
   const getSubscriptionStatusLabel = (status?: string) => {
     if (status === "ACTIVE") return t.subscription.statusActive;
+    if (status === "CANCELLED") return t.subscription.statusCanceled;
     if (status === "CANCELED") return t.subscription.statusCanceled;
     if (status === "PAST_DUE") return t.subscription.statusPastDue;
     if (status === "TRIALING") return t.subscription.statusTrialing;
     if (status === "INCOMPLETE") return t.subscription.statusIncomplete;
     return status ?? "-";
+  };
+
+  const getAccessSourceLabel = (paymentMethod?: string) => {
+    if (paymentMethod === "CREATOR_CODE") return t.subscription.accessSourceCode;
+    if (paymentMethod === "CRYPTO_USDT") return t.subscription.accessSourceUsdt;
+    if (paymentMethod === "FIAT_STRIPE") return t.subscription.accessSourceStripe;
+    return "-";
+  };
+
+  const formatBillingPeriod = (currentPeriodStart?: string, currentPeriodEnd?: string) => {
+    if (!currentPeriodStart || !currentPeriodEnd) return t.subscription.noBillingPeriod;
+    return `${new Date(currentPeriodStart).toLocaleDateString()} - ${new Date(currentPeriodEnd).toLocaleDateString()}`;
   };
 
   useEffect(() => {
@@ -110,11 +125,38 @@ export function SubscriptionPage() {
     }
   };
 
+  const handleRedeemCode = async () => {
+    const normalizedCode = creatorCode.trim().toUpperCase();
+    if (!normalizedCode) {
+      setRedeemError(t.subscription.codeRequired);
+      return;
+    }
+
+    setActionLoading("redeem");
+    setRedeemError(null);
+    try {
+      const res = await subscriptionApi.redeemCode(normalizedCode);
+      toast.success(res.message || t.subscription.redeemSuccess);
+      setCreatorCode("");
+      await Promise.all([load(), refreshUser()]);
+    } catch (err: any) {
+      const message = err?.message || t.subscription.redeemFailed;
+      setRedeemError(message);
+      toast.error(message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading) return (
     <div className="flex justify-center py-20"><RefreshCw size={20} className="text-slate-500 animate-spin" /></div>
   );
 
   const currentTier = mySub?.tier || "FREE";
+  const currentPaymentMethod = mySub?.subscription?.paymentMethod;
+  const isComplimentaryCreator = currentPaymentMethod === "CREATOR_CODE";
+  const isStripeSubscription = currentPaymentMethod === "FIAT_STRIPE";
+  const isUsdtSubscription = currentPaymentMethod === "CRYPTO_USDT";
 
   return (
     <div className="space-y-5">
@@ -137,6 +179,11 @@ export function SubscriptionPage() {
           <span className={`px-3 py-1 rounded-full text-xs font-bold ${TIER_COLORS[currentTier]?.badge}`}>
             {getTierLabel(currentTier)}
           </span>
+          {isComplimentaryCreator && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+              {t.subscription.complimentaryAccess}
+            </span>
+          )}
           {mySub?.subscription?.cancelAtPeriodEnd && (
             <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-500/15 text-red-400 border border-red-500/25">
               {t.subscription.cancels} {new Date(mySub.subscription.currentPeriodEnd).toLocaleDateString()}
@@ -144,6 +191,37 @@ export function SubscriptionPage() {
           )}
         </div>
       </div>
+
+      {currentTier === "FREE" && (
+        <div className="glass rounded-2xl p-5 border border-cyan-500/15 bg-cyan-500/[0.04]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-white">{t.subscription.codeTitle}</h2>
+              <p className="mt-1 text-xs text-slate-400">{t.subscription.codeSubtitle}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              value={creatorCode}
+              onChange={(e) => setCreatorCode(e.target.value.toUpperCase())}
+              placeholder={t.subscription.codePlaceholder}
+              className="h-11 flex-1 rounded-xl border border-slate-700/30 bg-slate-900/70 px-4 font-mono text-sm text-white outline-none transition-colors placeholder:text-slate-500 focus:border-cyan-400/50"
+            />
+            <button
+              onClick={handleRedeemCode}
+              disabled={actionLoading === "redeem"}
+              className="h-11 rounded-xl px-4 text-xs font-semibold text-white transition-all disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, #0891b2, #2563eb)" }}
+            >
+              {actionLoading === "redeem" ? t.subscription.redeemingCode : t.subscription.redeemCode}
+            </button>
+          </div>
+
+          {redeemError && <p className="mt-3 text-xs text-red-400">{redeemError}</p>}
+        </div>
+      )}
 
       {/* Tiers */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -196,14 +274,24 @@ export function SubscriptionPage() {
                   <div className="text-center text-xs text-slate-600 py-2">{t.subscription.yourCurrentPlan}</div>
                 ) : null
               ) : isCurrent ? (
+                isComplimentaryCreator ? (
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-3 text-center text-xs font-medium text-emerald-300">
+                    {t.subscription.complimentaryCurrentPlan}
+                  </div>
+                ) : isUsdtSubscription ? (
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-center text-xs font-medium text-amber-200">
+                    {t.subscription.managedCreatorPlan}
+                  </div>
+                ) : (
                 <button
                   onClick={handleCancel}
-                  disabled={actionLoading === "cancel" || mySub?.subscription?.cancelAtPeriodEnd}
+                  disabled={!isStripeSubscription || actionLoading === "cancel" || mySub?.subscription?.cancelAtPeriodEnd}
                   className="w-full py-2.5 rounded-xl text-xs font-medium border border-red-500/25 text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {actionLoading === "cancel" ? <RefreshCw size={12} className="animate-spin" /> : <XCircle size={12} />}
                   {mySub?.subscription?.cancelAtPeriodEnd ? t.subscription.cancellationPending : t.subscription.cancelSubscription}
                 </button>
+                )
               ) : isUpgrade ? (
                 <button
                   onClick={() => handleSubscribe(tier.id)}
@@ -224,16 +312,18 @@ export function SubscriptionPage() {
       {mySub?.subscription && (
         <div className="glass rounded-2xl p-4 border border-slate-700/10">
           <p className="text-xs font-semibold text-slate-400 mb-3">{t.subscription.billingDetails}</p>
-          <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-3">
             <div>
               <span className="text-slate-500">{t.subscription.status}</span>
               <p className="text-white font-medium">{getSubscriptionStatusLabel(mySub.subscription.status)}</p>
             </div>
             <div>
               <span className="text-slate-500">{t.subscription.period}</span>
-              <p className="text-white font-medium">
-                {new Date(mySub.subscription.currentPeriodStart).toLocaleDateString()} - {new Date(mySub.subscription.currentPeriodEnd).toLocaleDateString()}
-              </p>
+              <p className="text-white font-medium">{formatBillingPeriod(mySub.subscription.currentPeriodStart, mySub.subscription.currentPeriodEnd)}</p>
+            </div>
+            <div>
+              <span className="text-slate-500">{t.subscription.accessSource}</span>
+              <p className="text-white font-medium">{getAccessSourceLabel(mySub.subscription.paymentMethod)}</p>
             </div>
           </div>
         </div>

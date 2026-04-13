@@ -4,7 +4,12 @@ import { z } from "zod";
 import prisma from "../lib/prisma.js";
 import { sendTokens, isOnChainEnabled, getOperatorBalance } from "../services/onchain.service.js";
 import { env } from "../config/env.js";
-import { applyActiveSubscriptionEntitlements, syncUserSubscriptionTier } from "../services/subscription.service.js";
+import {
+  applyActiveSubscriptionEntitlements,
+  generateCreatorCodeValue,
+  normalizeCreatorCodeValue,
+  syncUserSubscriptionTier,
+} from "../services/subscription.service.js";
 
 // ─── GET /api/admin/stats ─────────────────────────────────────────────────────
 
@@ -272,6 +277,45 @@ const reviewUsdtSubscriptionSchema = z.object({
   notes: z.string().trim().max(500).optional(),
 });
 
+const creatorCodesQuerySchema = z.object({
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(25),
+  search: z.string().trim().optional(),
+  active: z.enum(["true", "false"]).optional(),
+});
+
+const creatorCodeValueSchema = z.string().trim().min(4).max(32).regex(/^[A-Za-z0-9-]+$/);
+
+const createCreatorCodeSchema = z.object({
+  code: creatorCodeValueSchema.optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+  maxRedemptions: z.coerce.number().int().positive().nullable().optional(),
+  notes: z.string().trim().max(500).optional(),
+});
+
+const updateCreatorCodeSchema = z.object({
+  isActive: z.boolean().optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+  maxRedemptions: z.coerce.number().int().positive().nullable().optional(),
+  notes: z.string().trim().max(500).nullable().optional(),
+});
+
+const revokeCreatorCodeRedemptionSchema = z.object({
+  reason: z.string().trim().min(1).max(500),
+});
+
+async function createUniqueCreatorCodeValue(): Promise<string> {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const candidate = generateCreatorCodeValue();
+    const existing = await prisma.creatorCode.findUnique({ where: { code: candidate }, select: { id: true } });
+    if (!existing) {
+      return candidate;
+    }
+  }
+
+  throw new Error("Failed to generate a unique Creator code.");
+}
+
 export async function getPendingUsdtSubscriptions(req: Request, res: Response): Promise<void> {
   try {
     const { page, limit } = pendingUsdtSubscriptionsQuerySchema.parse(req.query);
@@ -453,6 +497,223 @@ export async function rejectUsdtSubscription(req: Request, res: Response): Promi
       return;
     }
     console.error("RejectUsdtSubscription error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function getCreatorCodes(req: Request, res: Response): Promise<void> {
+  try {
+    const { page, limit, search, active } = creatorCodesQuerySchema.parse(req.query);
+    const skip = (page - 1) * limit;
+    const where = {
+      ...(search ? { code: { contains: search, mode: "insensitive" as const } } : {}),
+      ...(active ? { isActive: active === "true" } : {}),
+    };
+
+    const [codes, total] = await Promise.all([
+      prisma.creatorCode.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          code: true,
+          tier: true,
+          isActive: true,
+          expiresAt: true,
+          maxRedemptions: true,
+          redemptionCount: true,
+          notes: true,
+          createdAt: true,
+          updatedAt: true,
+          createdBy: {
+            select: { id: true, username: true, displayName: true },
+          },
+          redemptions: {
+            orderBy: { redeemedAt: "desc" },
+            take: 10,
+            select: {
+              id: true,
+              redeemedAt: true,
+              revokedAt: true,
+              revokedBy: true,
+              revokeReason: true,
+              subscriptionId: true,
+              user: {
+                select: { id: true, username: true, displayName: true, email: true },
+              },
+            },
+          },
+        },
+      }),
+      prisma.creatorCode.count({ where }),
+    ]);
+
+    res.json({ codes, total, page, pages: Math.ceil(total / limit), limit });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid query params" });
+      return;
+    }
+    console.error("GetCreatorCodes error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function createCreatorCode(req: Request, res: Response): Promise<void> {
+  try {
+    const adminId = req.user!.userId;
+    const { code, expiresAt, maxRedemptions, notes } = createCreatorCodeSchema.parse(req.body ?? {});
+    const normalizedCode = code ? normalizeCreatorCodeValue(code) : await createUniqueCreatorCodeValue();
+
+    const creatorCode = await prisma.creatorCode.create({
+      data: {
+        code: normalizedCode,
+        tier: "CREATOR",
+        isActive: true,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        maxRedemptions,
+        notes: notes ?? null,
+        createdById: adminId,
+      },
+      select: {
+        id: true,
+        code: true,
+        tier: true,
+        isActive: true,
+        expiresAt: true,
+        maxRedemptions: true,
+        redemptionCount: true,
+        notes: true,
+        createdAt: true,
+      },
+    });
+
+    res.status(201).json({ success: true, creatorCode, message: "Creator code created successfully." });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid creator code payload" });
+      return;
+    }
+
+    if (err instanceof Error && err.message === "Failed to generate a unique Creator code.") {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      res.status(409).json({ error: "Creator code already exists." });
+      return;
+    }
+
+    console.error("CreateCreatorCode error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function updateCreatorCode(req: Request, res: Response): Promise<void> {
+  try {
+    const codeId = req.params.id as string;
+    const { isActive, expiresAt, maxRedemptions, notes } = updateCreatorCodeSchema.parse(req.body ?? {});
+
+    const existing = await prisma.creatorCode.findUnique({ where: { id: codeId }, select: { id: true } });
+    if (!existing) {
+      res.status(404).json({ error: "Creator code not found" });
+      return;
+    }
+
+    const creatorCode = await prisma.creatorCode.update({
+      where: { id: codeId },
+      data: {
+        ...(isActive !== undefined ? { isActive } : {}),
+        ...(expiresAt !== undefined ? { expiresAt: expiresAt ? new Date(expiresAt) : null } : {}),
+        ...(maxRedemptions !== undefined ? { maxRedemptions } : {}),
+        ...(notes !== undefined ? { notes } : {}),
+      },
+      select: {
+        id: true,
+        code: true,
+        tier: true,
+        isActive: true,
+        expiresAt: true,
+        maxRedemptions: true,
+        redemptionCount: true,
+        notes: true,
+        updatedAt: true,
+      },
+    });
+
+    res.json({ success: true, creatorCode, message: "Creator code updated successfully." });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid creator code payload" });
+      return;
+    }
+    console.error("UpdateCreatorCode error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function revokeCreatorCodeRedemption(req: Request, res: Response): Promise<void> {
+  try {
+    const redemptionId = req.params.id as string;
+    const adminId = req.user!.userId;
+    const { reason } = revokeCreatorCodeRedemptionSchema.parse(req.body ?? {});
+
+    const existing = await prisma.creatorCodeRedemption.findUnique({
+      where: { id: redemptionId },
+      select: {
+        id: true,
+        userId: true,
+        revokedAt: true,
+        subscriptionId: true,
+      },
+    });
+
+    if (!existing) {
+      res.status(404).json({ error: "Creator code redemption not found" });
+      return;
+    }
+
+    if (existing.revokedAt) {
+      res.status(400).json({ error: "Creator code redemption has already been revoked" });
+      return;
+    }
+
+    const revokedAt = new Date();
+    const result = await prisma.$transaction(async (tx) => {
+      const redemption = await tx.creatorCodeRedemption.update({
+        where: { id: redemptionId },
+        data: {
+          revokedAt,
+          revokedBy: adminId,
+          revokeReason: reason,
+        },
+      });
+
+      if (existing.subscriptionId) {
+        await tx.subscription.update({
+          where: { id: existing.subscriptionId },
+          data: {
+            status: "CANCELLED",
+            cancelAtPeriodEnd: false,
+            reviewNotes: `Creator code access revoked: ${reason}`,
+          },
+        });
+      }
+
+      const tier = await syncUserSubscriptionTier(tx, existing.userId);
+      return { redemption, tier };
+    });
+
+    res.json({ success: true, redemption: result.redemption, tier: result.tier, message: "Creator code access revoked successfully." });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid revoke payload" });
+      return;
+    }
+    console.error("RevokeCreatorCodeRedemption error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }

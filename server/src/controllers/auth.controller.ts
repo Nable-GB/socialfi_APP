@@ -13,6 +13,7 @@ import {
   getEffectiveSubscriptionTier,
   getEffectiveUploadCredits,
   isCreatorAccessForced,
+  refreshCreatorCodeEntitlementsForUser,
 } from "../services/subscription.service.js";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -348,6 +349,8 @@ export async function refreshTokenHandler(req: Request, res: Response): Promise<
 
 export async function getMe(req: Request, res: Response): Promise<void> {
   try {
+    await refreshCreatorCodeEntitlementsForUser(req.user!.userId);
+
     const userSelect: any = {
       id: true,
       email: true,

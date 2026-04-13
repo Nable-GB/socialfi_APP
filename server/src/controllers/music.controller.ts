@@ -7,6 +7,7 @@ import {
   getEffectiveUploadCredits,
   hasCreatorTier,
   isCreatorAccessForced,
+  refreshCreatorCodeEntitlementsForUser,
 } from "../services/subscription.service.js";
 
 function normalizeSearchToken(value: string) {
@@ -130,6 +131,8 @@ export async function getTrack(req: Request, res: Response): Promise<void> {
 export async function createTrack(req: Request, res: Response): Promise<void> {
   try {
     const userId = req.user!.userId;
+    await refreshCreatorCodeEntitlementsForUser(userId);
+
     const { title, description, lyrics, genre, tags, moodTags, bpm, key, duration, isAiGenerated, aiModel, aiPrompt, audioUrl, coverUrl, albumId, status } = req.body;
     const uploadCreditCost = 1000;
 

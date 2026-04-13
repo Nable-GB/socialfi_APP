@@ -14,6 +14,10 @@ import {
   getPendingUsdtSubscriptions,
   approveUsdtSubscription,
   rejectUsdtSubscription,
+  getCreatorCodes,
+  createCreatorCode,
+  updateCreatorCode,
+  revokeCreatorCodeRedemption,
 } from "../controllers/admin.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
@@ -38,6 +42,12 @@ router.patch("/campaigns/:id/status", updateCampaignStatus);
 router.get("/subscriptions/usdt-pending", getPendingUsdtSubscriptions);
 router.post("/subscriptions/:id/approve-usdt", approveUsdtSubscription);
 router.post("/subscriptions/:id/reject-usdt", rejectUsdtSubscription);
+
+// Complimentary Creator code management
+router.get("/creator-codes", getCreatorCodes);
+router.post("/creator-codes", createCreatorCode);
+router.patch("/creator-codes/:id", updateCreatorCode);
+router.post("/creator-code-redemptions/:id/revoke", revokeCreatorCodeRedemption);
 
 // Rewards
 router.post("/rewards/distribute", distributeRewards);

@@ -53,6 +53,7 @@ enum InteractionType {
 enum PaymentMethod {
   FIAT_STRIPE
   CRYPTO_USDT
+  CREATOR_CODE
 }
 
 enum PaymentStatus {
@@ -222,6 +223,8 @@ model User {
   following       Follow[]            @relation("Followers")      // Users this user follows
   notifications   Notification[]
   subscriptions   Subscription[]
+  creatorCodesCreated CreatorCode[]   @relation("CreatorCodeCreator")
+  creatorCodeRedemptions CreatorCodeRedemption[] @relation("CreatorCodeRedeemer")
   servicePurchases ServicePurchase[]
   nfts            Nft[]           @relation("NftOwner")
   mintedNfts      Nft[]           @relation("NftMinter")
@@ -495,6 +498,9 @@ model Subscription {
   reviewedBy            String?
   reviewNotes           String?
 
+  // --- Complimentary Creator Codes ---
+  creatorCodeRedemption CreatorCodeRedemption?
+
   // --- Timestamps ---
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
@@ -504,6 +510,49 @@ model Subscription {
   @@index([status])
   @@index([paymentMethod, status])
   @@map("subscriptions")
+}
+
+model CreatorCode {
+  id               String                 @id @default(uuid())
+  code             String                 @unique
+  tier             SubscriptionTier       @default(CREATOR)
+  isActive         Boolean                @default(true)
+  expiresAt        DateTime?
+  maxRedemptions   Int?
+  redemptionCount  Int                    @default(0)
+  notes            String?                @db.Text
+  createdBy        User                   @relation("CreatorCodeCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdById      String
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  redemptions      CreatorCodeRedemption[]
+
+  @@index([isActive, expiresAt])
+  @@index([createdById])
+  @@map("creator_codes")
+}
+
+model CreatorCodeRedemption {
+  id               String        @id @default(uuid())
+  creatorCode      CreatorCode   @relation(fields: [creatorCodeId], references: [id], onDelete: Cascade)
+  creatorCodeId    String
+  user             User          @relation("CreatorCodeRedeemer", fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  subscription     Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  subscriptionId   String?       @unique
+  redeemedAt       DateTime      @default(now())
+  revokedAt        DateTime?
+  revokedBy        String?
+  revokeReason     String?       @db.Text
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@unique([creatorCodeId, userId], name: "unique_creator_code_redemption")
+  @@index([creatorCodeId])
+  @@index([userId])
+  @@index([revokedAt])
+  @@map("creator_code_redemptions")
 }
 
 // ============================================================================

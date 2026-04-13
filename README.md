@@ -79,7 +79,7 @@ app/
 
 ### Monetisation
 - **Ad campaigns** — merchants pay via Stripe; viewers earn token rewards
-- **Subscriptions** — PRO / PREMIUM tiers via Stripe recurring checkout
+- **Subscriptions** — `CREATOR` tier at `$10/month` via Stripe recurring checkout
 - **Paid services** — verified badge, post boost (one-time Stripe checkout)
 - **Withdrawals** — automatic ERC-20 payout when on-chain is configured, otherwise queued for admin batch
 - **SMFI → ETH swap** — instant swap at configured rate
@@ -109,7 +109,7 @@ The frontend only needs `VITE_API_URL` (see `.env.example` in the app root).
 The repo now supports a separate showcase experience at `/demo` on the same frontend host.
 
 - **Frontend behavior** — `/` continues using the main API. `/demo` switches to `VITE_DEMO_API_URL` at runtime.
-- **Demo backend** — Deploy a second backend service with a separate `DATABASE_URL` and `DEMO_MODE=true`.
+- **Demo backend** — Deploy a second backend service with a separate `DATABASE_URL`, `DEMO_MODE=true`, and `FORCE_CREATOR_ACCESS=true` if you want all demo users to keep Creator access without paying.
 - **Demo database** — Use a different Postgres instance or database from production.
 - **Demo seeding** — After `npx prisma migrate deploy`, run:
 
@@ -140,6 +140,7 @@ npm run demo:reset
 ```
 
 - **Demo safety** — Stripe checkout, service checkout, ad checkout, withdrawals, swaps, and Stripe webhooks are blocked or ignored when `DEMO_MODE=true`.
+- **Demo access model** — `DEMO_MODE` only fakes or blocks payment-sensitive flows. Global Creator access is controlled separately by `FORCE_CREATOR_ACCESS`.
 - **Env examples** — Use `.env.example` for the frontend plus `server/.env.example` for the backend. Copy the new demo-focused examples as a starting point when provisioning the demo services.
 
 ## License
