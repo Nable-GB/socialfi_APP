@@ -95,7 +95,7 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
               <p className="text-xs text-slate-400 mb-1">{t.withdraw.availableBalance}</p>
               <p className="text-2xl font-bold font-mono text-cyan-400">
                 {availableBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
-                <span className="text-sm text-slate-400 ml-1">SFT</span>
+                <span className="text-sm text-slate-400 ml-1">SMFI</span>
               </p>
               <p className="text-[11px] text-slate-500 mt-2">{t.withdraw.walletHelp}</p>
             </div>
@@ -132,8 +132,8 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
                 </button>
               </div>
               <div className="flex justify-between mt-1">
-                <span className="text-xs text-slate-600">{t.withdraw.minShort}: {minWithdrawal} SFT</span>
-                <span className="text-xs text-slate-600">{t.withdraw.maxShort}: {maxWithdrawal.toLocaleString()} SFT</span>
+                <span className="text-xs text-slate-600">{t.withdraw.minShort}: {minWithdrawal} SMFI</span>
+                <span className="text-xs text-slate-600">{t.withdraw.maxShort}: {maxWithdrawal.toLocaleString()} SMFI</span>
               </div>
             </div>
 
@@ -149,7 +149,7 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
             <button onClick={handleWithdraw} disabled={loading || !targetWallet || !amountNum}
               className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-40 transition-all hover:opacity-90"
               style={{ background: "linear-gradient(135deg, #22d3ee, #6366f1)", boxShadow: "0 4px 15px rgba(34,211,238,0.2)" }}>
-              {loading ? <><RefreshCw size={14} className="animate-spin" /> {t.withdraw.processing}</> : <><ArrowUpRight size={14} /> {t.withdraw.btnWithdraw}{amountNum > 0 ? ` ${amountNum} SFT` : ""}</>}
+              {loading ? <><RefreshCw size={14} className="animate-spin" /> {t.withdraw.processing}</> : <><ArrowUpRight size={14} /> {t.withdraw.btnWithdraw}{amountNum > 0 ? ` ${amountNum} SMFI` : ""}</>}
             </button>
           </div>
         )}
@@ -169,7 +169,7 @@ export function WithdrawModal({ open, onOpenChange, balance, minWithdrawal = 10,
             <div className="rounded-xl p-4 border border-slate-700/30 bg-slate-800/40 text-left space-y-2">
               <div className="flex justify-between text-xs">
                 <span className="text-slate-400">{t.withdraw.amount}</span>
-                <span className="font-mono font-bold text-cyan-400">{result.amount} SFT</span>
+                <span className="font-mono font-bold text-cyan-400">{result.amount} SMFI</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-slate-400">{t.withdraw.to}</span>

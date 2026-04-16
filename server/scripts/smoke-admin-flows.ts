@@ -114,7 +114,7 @@ async function main() {
   if (!redemption.success || redemption.code !== creatorCodeValue || redemption.creditsGranted !== 3000 || redemption.subscription?.paymentMethod !== "CREATOR_CODE") {
     throw new Error(`Unexpected Creator code redemption result: ${JSON.stringify(redemption)}`);
   }
-  console.log(`Redeemed Creator code and granted ${redemption.creditsGranted} upload credits`);
+  console.log(`Redeemed Creator code and granted legacy entitlement value ${redemption.creditsGranted}`);
 
   const creatorCodeSubscriptionState = await request<{ tier: string; subscription: JsonRecord | null; pendingReview: JsonRecord | null }>("/api/subscriptions/me", {}, creatorCodeUser.token);
   if (creatorCodeSubscriptionState.tier !== "CREATOR" || creatorCodeSubscriptionState.subscription?.paymentMethod !== "CREATOR_CODE") {
@@ -168,7 +168,7 @@ async function main() {
   if (!approval.success || approval.creditsGranted !== 3000) {
     throw new Error(`Unexpected approval result: ${JSON.stringify(approval)}`);
   }
-  console.log(`Approved USDT subscription and granted ${approval.creditsGranted} upload credits`);
+  console.log(`Approved USDT subscription and granted legacy entitlement value ${approval.creditsGranted}`);
 
   const subscriptionState = await request<{ tier: string; subscription: JsonRecord | null; pendingReview: JsonRecord | null }>("/api/subscriptions/me", {}, tempUser.token);
   if (subscriptionState.tier !== "CREATOR" || subscriptionState.pendingReview !== null) {

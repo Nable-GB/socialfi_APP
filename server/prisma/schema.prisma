@@ -111,7 +111,7 @@ enum ListingStatus {
 
 enum SubscriptionTier {
   FREE
-  CREATOR   // $10/month — can upload music & create NFT Brochures
+  CREATOR   // 10000 SMFI/month — can upload music & create NFT Brochures
   // PRO and PREMIUM kept as aliases during migration window
   PRO       // @deprecated — maps to CREATOR
   PREMIUM   // @deprecated — maps to FREE (no longer a paid tier)
@@ -785,8 +785,8 @@ model NftListing {
   buyer           User?         @relation("ListingBuyer", fields: [buyerId], references: [id])
   buyerId         String?
 
-  // --- Pricing (SFT tokens) ---
-  price           Decimal       @db.Decimal(20, 8)  // Price in SFT tokens
+  // --- Pricing (SMFI tokens) ---
+  price           Decimal       @db.Decimal(20, 8)  // Price in SMFI tokens
   status          ListingStatus @default(ACTIVE)
 
   // --- Timestamps ---
@@ -1302,7 +1302,10 @@ model NFTBrochure {
   name        String
   description String?
   coverUrl    String?
-  price       Decimal   @db.Decimal(20, 8) // Price in SMFI tokens
+  isFractionalized Boolean @default(false)
+  maxSupply   Int       @default(1)
+  pricePerFraction Decimal @db.Decimal(20, 8)
+  totalPrice  Decimal   @db.Decimal(20, 8) // Total brochure price in SMFI tokens
 
   isSold      Boolean   @default(false)
   buyer       User?     @relation("BrochureBuyers", fields: [buyerId], references: [id])
@@ -1314,6 +1317,7 @@ model NFTBrochure {
 
   @@index([artistId])
   @@index([isSold])
+  @@index([isFractionalized])
   @@map("nft_brochures")
 }
 

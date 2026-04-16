@@ -141,9 +141,9 @@ export function AnalyticsPage() {
         <div className="space-y-4">
           {/* Overview cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <StatCard label={t.analytics.totalEarned} value={`${parseFloat(myData.overview.totalEarned).toFixed(0)} SFT`}
+            <StatCard label={t.analytics.totalEarned} value={`${parseFloat(myData.overview.totalEarned).toFixed(0)} SMFI`}
               icon={<Zap size={14} />} color="#10b981" />
-            <StatCard label={t.analytics.balance} value={`${parseFloat(myData.overview.balance).toFixed(2)} SFT`}
+            <StatCard label={t.analytics.balance} value={`${parseFloat(myData.overview.balance).toFixed(2)} SMFI`}
               sub={`${parseFloat(myData.overview.totalWithdrawn).toFixed(0)} ${t.analytics.withdrawn}`}
               icon={<ArrowUpRight size={14} />} color="#22d3ee" />
             <StatCard label={t.analytics.posts} value={myData.overview.posts}
@@ -182,7 +182,7 @@ export function AnalyticsPage() {
                     <div key={type} className="flex items-center gap-3">
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
                       <span className="text-xs text-slate-400 flex-1">{type.replace(/_/g, " ")}</span>
-                      <span className="text-xs font-mono text-white">{amount.toFixed(2)} SFT</span>
+                      <span className="text-xs font-mono text-white">{amount.toFixed(2)} SMFI</span>
                       <div className="w-16 h-1.5 rounded-full bg-slate-800 overflow-hidden">
                         <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
                       </div>
@@ -232,7 +232,7 @@ export function AnalyticsPage() {
             <StatCard label={t.analytics.totalPosts} value={platformData.overview.totalPosts}
               sub={`+${platformData.overview.posts7d} ${t.analytics.thisWeek}`}
               icon={<BarChart2 size={14} />} color="#6366f1" />
-            <StatCard label={t.analytics.rewardsPaid} value={`${parseFloat(platformData.overview.totalRewardsPaid).toFixed(0)} SFT`}
+            <StatCard label={t.analytics.rewardsPaid} value={`${parseFloat(platformData.overview.totalRewardsPaid).toFixed(0)} SMFI`}
               sub={`${platformData.overview.rewardTransactions} ${t.analytics.txs}`}
               icon={<Zap size={14} />} color="#10b981" />
             <StatCard label={t.analytics.interactions} value={platformData.overview.totalInteractions.toLocaleString()}
@@ -246,7 +246,7 @@ export function AnalyticsPage() {
             <StatCard label={t.analytics.totalNFTs} value={platformData.overview.totalNfts}
               sub={`${platformData.overview.nftSales} ${t.analytics.sold}`}
               icon={<BarChart2 size={14} />} color="#ec4899" />
-            <StatCard label={t.analytics.withdrawn} value={`${parseFloat(platformData.overview.totalWithdrawn).toFixed(0)} SFT`}
+            <StatCard label={t.analytics.withdrawn} value={`${parseFloat(platformData.overview.totalWithdrawn).toFixed(0)} SMFI`}
               sub={`${platformData.overview.withdrawalCount} ${t.analytics.txs}`}
               icon={<ArrowUpRight size={14} />} color="#ef4444" />
             <StatCard label={t.analytics.newUsers30d} value={platformData.overview.newUsers30d}

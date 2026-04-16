@@ -57,7 +57,7 @@ function TxRow({ tx, typeConfig }: { tx: ApiTransaction; typeConfig: ReturnType<
       <div className="text-right flex-shrink-0">
         <p className={`text-sm font-bold font-mono ${isWithdrawal ? "text-red-400" : "text-emerald-400"}`}>
           {isWithdrawal ? "-" : "+"}{absAmount.toFixed(4)}
-          <span className="text-xs text-slate-500 ml-0.5">{t.transactions.ledgerUnit ?? "SFT"}</span>
+          <span className="text-xs text-slate-500 ml-0.5">{t.transactions.ledgerUnit ?? "SMFI"}</span>
         </p>
         {tx.onChainTxHash && (
           <a href={`https://etherscan.io/tx/${tx.onChainTxHash}`} target="_blank" rel="noopener noreferrer"

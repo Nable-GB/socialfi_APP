@@ -226,7 +226,7 @@ export async function getMyMusicNFTs(req: Request, res: Response): Promise<void>
       include: {
         musicNft: {
           include: {
-            track: { select: { id: true, title: true, coverUrl: true, audioUrl: true, genre: true } },
+            track: { select: { id: true, title: true, coverUrl: true, audioUrl: true, genre: true, lyrics: true } },
             artist: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
           },
         },

@@ -313,7 +313,7 @@ function NftCard({ listing, onBuy, buying, onCollectionSelect, onOpenDetails }: 
             <p className="text-xs text-slate-500">{t.nftMarket.price}</p>
             <p className="text-base font-bold font-mono" style={{ color: rarity.color }}>
               {parseFloat(listing.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-              <span className="text-xs text-slate-400 ml-1">SFT</span>
+              <span className="text-xs text-slate-400 ml-1">SMFI</span>
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -369,8 +369,8 @@ function NftDetailModal({ nft, fallbackListing, loading, buying, onClose, onBuy 
                 <img src={nft.imageUrl} alt={nft.name} className="w-full aspect-square object-cover" />
               </div>
               <div className="grid grid-cols-3 gap-3 mt-4">
-                <MarketStat label={t.nftMarket.floor} value={activeListing ? `${parseFloat(activeListing.price).toFixed(0)} SFT` : "-"} accent="#22d3ee" />
-                <MarketStat label={t.nftMarket.lastSale} value={lastSale ? `${parseFloat(lastSale.price).toFixed(0)} SFT` : "-"} accent="#a855f7" />
+                <MarketStat label={t.nftMarket.floor} value={activeListing ? `${parseFloat(activeListing.price).toFixed(0)} SMFI` : "-"} accent="#22d3ee" />
+                <MarketStat label={t.nftMarket.lastSale} value={lastSale ? `${parseFloat(lastSale.price).toFixed(0)} SMFI` : "-"} accent="#a855f7" />
                 <MarketStat label={t.nftMarket.activity} value={String(history.length)} accent="#f59e0b" />
               </div>
             </div>
@@ -382,7 +382,7 @@ function NftDetailModal({ nft, fallbackListing, loading, buying, onClose, onBuy 
                     <h2 className="text-2xl font-bold text-white">{nft.name}</h2>
                     <p className="text-sm text-slate-400 mt-1">{nft.collection} · #{nft.tokenId ?? nft.id.slice(-4)}</p>
                   </div>
-                  {activeListing && <p className="text-lg font-bold font-mono" style={{ color: rarity.color }}>{parseFloat(activeListing.price).toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-xs text-slate-400">SFT</span></p>}
+                  {activeListing && <p className="text-lg font-bold font-mono" style={{ color: rarity.color }}>{parseFloat(activeListing.price).toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-xs text-slate-400">SMFI</span></p>}
                 </div>
                 {nft.description && <p className="text-sm text-slate-400 mt-3 leading-relaxed">{nft.description}</p>}
               </div>
@@ -452,7 +452,7 @@ function NftDetailModal({ nft, fallbackListing, loading, buying, onClose, onBuy 
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-mono text-slate-200">{parseFloat(listing.price).toFixed(0)} SFT</p>
+                        <p className="text-sm font-mono text-slate-200">{parseFloat(listing.price).toFixed(0)} SMFI</p>
                         <p className="text-[10px] text-slate-500">{getRelativeTime(listing.soldAt ?? listing.listedAt)}</p>
                       </div>
                     </div>
@@ -648,8 +648,8 @@ export function NFTMarketplacePage() {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <MarketStat label={t.nftMarket.floor} value={`${floorPrice.toFixed(0)} SFT`} accent="#22d3ee" />
-          <MarketStat label={t.nftMarket.average} value={`${averagePrice.toFixed(0)} SFT`} accent="#a855f7" />
+          <MarketStat label={t.nftMarket.floor} value={`${floorPrice.toFixed(0)} SMFI`} accent="#22d3ee" />
+          <MarketStat label={t.nftMarket.average} value={`${averagePrice.toFixed(0)} SMFI`} accent="#a855f7" />
           <MarketStat label={t.nftMarket.uniqueSellers} value={uniqueSellers.toLocaleString()} accent="#10b981" />
           <MarketStat label={t.nftMarket.topCollection} value={topCollection} accent="#f59e0b" />
         </div>

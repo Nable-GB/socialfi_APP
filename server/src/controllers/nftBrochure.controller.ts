@@ -7,18 +7,26 @@ import { hasCreatorTier } from "../services/subscription.service.js";
 export async function createBrochure(req: Request, res: Response): Promise<void> {
   try {
     const userId = req.user!.userId;
-    const { trackId, name, description, coverUrl, price } = req.body;
+    const { trackId, name, description, coverUrl, isFractionalized, maxSupply, pricePerFraction } = req.body;
 
-    if (!trackId || !name || price === undefined) {
-      res.status(400).json({ error: "trackId, name, and price are required" });
+    if (!trackId || !name || pricePerFraction === undefined) {
+      res.status(400).json({ error: "trackId, name, and pricePerFraction are required" });
       return;
     }
 
-    const parsedPrice = Number(price);
-    if (!Number.isFinite(parsedPrice) || parsedPrice < 0.01) {
-      res.status(400).json({ error: "price must be a positive number" });
+    const parsedPricePerFraction = Number(pricePerFraction);
+    const parsedMaxSupply = Number(maxSupply);
+    const fractionalized = Boolean(isFractionalized);
+    const normalizedMaxSupply = fractionalized
+      ? (Number.isFinite(parsedMaxSupply) ? Math.min(Math.max(Math.floor(parsedMaxSupply), 1), 10000) : 100)
+      : 1;
+
+    if (!Number.isFinite(parsedPricePerFraction) || parsedPricePerFraction < 0.01) {
+      res.status(400).json({ error: "pricePerFraction must be a positive number" });
       return;
     }
+
+    const totalPrice = parsedPricePerFraction * normalizedMaxSupply;
 
     // Validate track ownership
     const track = await prisma.track.findUnique({ where: { id: trackId } });
@@ -46,7 +54,10 @@ export async function createBrochure(req: Request, res: Response): Promise<void>
         name,
         description,
         coverUrl: coverUrl || track.coverUrl,
-        price: parsedPrice,
+        isFractionalized: fractionalized,
+        maxSupply: normalizedMaxSupply,
+        pricePerFraction: parsedPricePerFraction,
+        totalPrice,
       },
       include: {
         track: { select: { id: true, title: true, genre: true } },
@@ -137,7 +148,7 @@ export async function buyBrochure(req: Request, res: Response): Promise<void> {
     const buyer = await prisma.user.findUnique({ where: { id: userId }, select: { offChainBalance: true } });
     if (!buyer) { res.status(404).json({ error: "User not found" }); return; }
 
-    const price = Number(brochure.price);
+    const price = Number(brochure.totalPrice);
     if (Number(buyer.offChainBalance) < price) {
       res.status(400).json({ error: `Insufficient balance. Need ${price} SMFI, have ${buyer.offChainBalance} SMFI` });
       return;

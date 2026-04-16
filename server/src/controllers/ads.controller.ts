@@ -224,7 +224,7 @@ export async function createCampaign(req: Request, res: Response): Promise<void>
 
     if (!isDemoMode() && merchant.offChainBalance.lessThan(adPackage.priceCrypto)) {
       res.status(400).json({
-        error: `Insufficient balance. Need ${adPackage.priceCrypto} SFT, have ${merchant.offChainBalance} SFT`,
+        error: `Insufficient balance. Need ${adPackage.priceCrypto} SMFI, have ${merchant.offChainBalance} SMFI`,
       });
       return;
     }

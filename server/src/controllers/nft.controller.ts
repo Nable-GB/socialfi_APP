@@ -154,7 +154,7 @@ export async function buyNft(req: Request, res: Response): Promise<void> {
     if (!buyer) { res.status(404).json({ error: "Buyer not found" }); return; }
 
     if (buyer.offChainBalance.lessThan(listing.price)) {
-      res.status(400).json({ error: `Insufficient balance. Need ${listing.price} SFT, have ${buyer.offChainBalance} SFT` });
+      res.status(400).json({ error: `Insufficient balance. Need ${listing.price} SMFI, have ${buyer.offChainBalance} SMFI` });
       return;
     }
 
@@ -190,14 +190,14 @@ export async function buyNft(req: Request, res: Response): Promise<void> {
       userId: listing.sellerId,
       type: "REWARD_EARNED",
       title: "NFT Sold! 🎉",
-      message: `@${buyer.username} bought your "${listing.nft.name}" for ${listing.price} SFT`,
+      message: `@${buyer.username} bought your "${listing.nft.name}" for ${listing.price} SMFI`,
     }).catch(() => {});
 
     res.json({
       success: true,
       nftId: listing.nftId,
       price: listing.price.toString(),
-      message: `You bought "${listing.nft.name}" for ${listing.price} SFT!`,
+      message: `You bought "${listing.nft.name}" for ${listing.price} SMFI!`,
     });
   } catch (err) {
     console.error("BuyNft error:", err);

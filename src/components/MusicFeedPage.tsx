@@ -85,7 +85,7 @@ function TrackCard({ track, onPlay, isCurrentTrack, isPlaying }: {
           </div>
         )}
         {track.lyrics && (
-          <p className="text-[10px] text-slate-500 mt-2 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">
             {track.lyrics}
           </p>
         )}

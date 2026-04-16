@@ -411,7 +411,7 @@ export const adminApi = {
 export const subscriptionApi = {
   getTiers: () => request<{ tiers: any[] }>("/api/subscriptions/tiers"),
   getMySubscription: () => request<{ tier: string; subscription: any; pendingReview?: any }>("/api/subscriptions/me"),
-  checkout: (tier: string) => request<{ checkoutUrl?: string; sessionId?: string; success?: boolean; message?: string; demoMode?: boolean; subscription?: any }>("/api/subscriptions/checkout", { method: "POST", body: JSON.stringify({ tier }) }),
+  checkout: (tier: string) => request<{ success?: boolean; message?: string; demoMode?: boolean; subscription?: any }>("/api/subscriptions/checkout", { method: "POST", body: JSON.stringify({ tier }) }),
   redeemCode: (code: string) => request<{ success: boolean; message: string; code: string; creditsGranted: number; subscription: any }>("/api/subscriptions/redeem-code", { method: "POST", body: JSON.stringify({ code }) }),
   cancel: () => request<{ success: boolean; message: string; demoMode?: boolean; currentPeriodEnd?: string }>("/api/subscriptions/cancel", { method: "POST" }),
 };
@@ -770,7 +770,7 @@ export interface ApiMusicNFT {
   isMinted: boolean;
   isListed: boolean;
   createdAt: string;
-  track?: { id: string; title: string; coverUrl?: string; audioUrl: string; playCount: number; genre: string; duration?: number };
+  track?: { id: string; title: string; coverUrl?: string; audioUrl: string; playCount: number; genre: string; duration?: number; lyrics?: string };
   artist?: { id: string; username: string; displayName?: string; avatarUrl?: string };
   _count?: { holders: number };
   holders?: ApiNFTHolder[];
@@ -929,8 +929,29 @@ export const competitionApi = {
 export const brochureApi = {
   list: (page?: number) => request<any>(`/api/brochures${page ? `?page=${page}` : ""}`),
   mine: () => request<any>("/api/brochures/mine"),
-  create: (body: { trackId: string; name: string; price: number }) =>
+  create: (body: { trackId: string; name: string; description?: string; coverUrl?: string; isFractionalized?: boolean; maxSupply?: number; pricePerFraction?: number }) =>
     request<any>("/api/brochures", { method: "POST", body: JSON.stringify(body) }),
   buy: (id: string) =>
     request<any>(`/api/brochures/${id}/buy`, { method: "POST" }),
 };
+
+export interface ApiBrochure {
+  id: string;
+  trackId: string;
+  artistId: string;
+  name: string;
+  description?: string;
+  coverUrl?: string;
+  isFractionalized: boolean;
+  maxSupply: number;
+  pricePerFraction: string;
+  totalPrice: string;
+  isSold: boolean;
+  buyerId?: string;
+  soldAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  artist?: { id: string; username: string; displayName?: string; avatarUrl?: string };
+  buyer?: { id: string; username: string; displayName?: string; avatarUrl?: string };
+  track?: { id: string; title: string; genre?: string; coverUrl?: string; playCount?: number; artist?: { id?: string; username?: string; displayName?: string; avatarUrl?: string } };
+}

@@ -814,7 +814,7 @@ export async function airdropTokens(req: Request, res: Response): Promise<void> 
             userId,
             type: "AIRDROP",
             amount: amountDecimal,
-            description: description ?? `Admin airdrop of ${amount} SFT`,
+            description: description ?? `Admin airdrop of ${amount} SMFI`,
             status: "CONFIRMED",
           },
         })

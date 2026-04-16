@@ -231,7 +231,7 @@ export function ReferralPage() {
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: t.referral.statReferrals,   value: stats.totals.referralCount, color: "#22d3ee", icon: <Users size={16} /> },
-              { label: t.referral.statBonusEarned, value: `${parseFloat(stats.totals.bonusEarned).toFixed(2)} SFT`, color: "#10b981", icon: <Zap size={16} /> },
+              { label: t.referral.statBonusEarned, value: `${parseFloat(stats.totals.bonusEarned).toFixed(2)} SMFI`, color: "#10b981", icon: <Zap size={16} /> },
               { label: t.referral.statBonusTxs,    value: stats.totals.bonusTransactions, color: "#6366f1", icon: <TrendingUp size={16} /> },
             ].map(s => (
               <div key={s.label} className="glass rounded-2xl p-4 border border-slate-700/10">
@@ -264,7 +264,7 @@ export function ReferralPage() {
                     <span className="text-xs font-bold w-16 flex-shrink-0" style={{ color: tier.color }}>{tier.label}</span>
                     <span className="text-xs text-slate-400 flex-1">{tier.minReferrals}+ {t.referral.referralsUnit}</span>
                     <span className="text-xs font-mono font-bold text-white">{(tier.rate * 100).toFixed(0)}%</span>
-                    {tier.bonus > 0 && <span className="text-xs text-amber-400 font-mono">+{tier.bonus} SFT</span>}
+                    {tier.bonus > 0 && <span className="text-xs text-amber-400 font-mono">+{tier.bonus} SMFI</span>}
                     {isActive && <span className="text-xs px-1.5 py-0.5 rounded-md font-bold" style={{ background: `${tier.color}20`, color: tier.color }}>YOU</span>}
                   </div>
                 );
@@ -295,7 +295,7 @@ export function ReferralPage() {
                   <p className="text-xs text-slate-500">@{r.username} · {r._count.rewards} rewards</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-mono text-emerald-400">{parseFloat(r.totalEarned).toFixed(2)} SFT</p>
+                  <p className="text-xs font-mono text-emerald-400">{parseFloat(r.totalEarned).toFixed(2)} SMFI</p>
                   <p className="text-xs text-slate-600">{new Date(r.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
@@ -324,7 +324,7 @@ export function ReferralPage() {
                   <p className="text-xs text-slate-600">{new Date(b.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
                 </div>
                 <p className="text-sm font-bold font-mono text-emerald-400 flex-shrink-0">
-                  +{parseFloat(b.amount).toFixed(4)} SFT
+                  +{parseFloat(b.amount).toFixed(4)} SMFI
                 </p>
               </div>
             ))

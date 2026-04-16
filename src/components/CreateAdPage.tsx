@@ -74,7 +74,7 @@ export function CreateAdPage() {
     }
 
     if (selectedPackage && hasInsufficientFunds) {
-      toast.error(`Insufficient balance. Need ${selectedPackage.priceCrypto} SFT, have ${availableBalance.toFixed(2)} SFT`);
+      toast.error(`Insufficient balance. Need ${selectedPackage.priceCrypto} SMFI, have ${availableBalance.toFixed(2)} SMFI`);
       return;
     }
 
@@ -147,7 +147,7 @@ export function CreateAdPage() {
 
         <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-slate-900/40 px-3 py-2">
           <span className="text-xs text-slate-400">Available balance</span>
-          <span className="text-sm font-bold text-cyan-400 font-mono">{availableBalance.toFixed(2)} SFT</span>
+          <span className="text-sm font-bold text-cyan-400 font-mono">{availableBalance.toFixed(2)} SMFI</span>
         </div>
 
         {/* Steps */}
@@ -428,7 +428,7 @@ export function CreateAdPage() {
               <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3">
                 <p className="text-sm font-semibold text-red-300">Insufficient balance</p>
                 <p className="text-xs text-red-200/80 mt-1">
-                  You need {requiredBalance.toFixed(2)} SFT to launch this campaign, but only have {availableBalance.toFixed(2)} SFT.
+                  You need {requiredBalance.toFixed(2)} SMFI to launch this campaign, but only have {availableBalance.toFixed(2)} SMFI.
                 </p>
               </div>
             )}
@@ -494,7 +494,7 @@ export function CreateAdPage() {
                 <span className="block text-xl font-bold font-mono text-indigo-400">
                   ${parseFloat(selectedPackage.priceFiat).toLocaleString()}
                 </span>
-                <span className="block text-xs font-mono text-cyan-400 mt-0.5">{requiredBalance.toFixed(2)} SFT</span>
+                <span className="block text-xs font-mono text-cyan-400 mt-0.5">{requiredBalance.toFixed(2)} SMFI</span>
               </div>
             </div>
           </div>

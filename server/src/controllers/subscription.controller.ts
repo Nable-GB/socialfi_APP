@@ -24,12 +24,12 @@ function getStripe(): Stripe {
 export const SUBSCRIPTION_TIERS = {
   CREATOR: {
     name: "Creator",
-    monthlyPriceUsd: 10,
+    monthlyPriceSmfi: 10000,
     features: [
       "Upload music to the platform",
       "Mint virtual NFTs (non-dividend NFTs)",
       "Buy and sell NFTs with SMFI tokens",
-      "3,000 upload credits per month (3 tracks)",
+      "Use SMFI balance to upload music (1000 SMFI per track)",
       "Create NFT Brochure for your tracks (promotional, sold once)",
       "Enter monthly competition to become a Top Artist",
       "Artist profile & branding tools",
@@ -45,7 +45,7 @@ export async function getSubscriptionTiers(_req: Request, res: Response): Promis
       {
         id: "FREE",
         name: "Listener",
-        monthlyPriceUsd: 0,
+        monthlyPriceSmfi: 0,
         features: [
           "Listen to all music on the platform",
           "Buy and sell NFTs with SMFI tokens",
@@ -271,6 +271,7 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
   try {
     const { tier } = req.body;
     const userId = req.user!.userId;
+    const creatorPlanCostSmfi = SUBSCRIPTION_TIERS.CREATOR.monthlyPriceSmfi;
 
     if (!tier || !["CREATOR"].includes(tier)) {
       res.status(400).json({ error: "Invalid tier. Must be CREATOR." });
@@ -343,52 +344,49 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
       return;
     }
 
-    const tierConfig = SUBSCRIPTION_TIERS[tier as keyof typeof SUBSCRIPTION_TIERS];
-    // Find or create Stripe customer
-    let stripeCustomerId: string;
-    const existingSub = await prisma.subscription.findFirst({
-      where: { userId },
-      select: { stripeCustomerId: true },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (existingSub?.stripeCustomerId) {
-      stripeCustomerId = existingSub.stripeCustomerId;
-    } else {
-      const customer = await getStripe().customers.create({
-        email: user.email ?? undefined,
-        metadata: { userId: user.id, username: user.username },
-      });
-      stripeCustomerId = customer.id;
+    if (Number(user.offChainBalance ?? 0) < creatorPlanCostSmfi) {
+      res.status(400).json({ error: `Insufficient SMFI balance. Need ${creatorPlanCostSmfi} SMFI.` });
+      return;
     }
 
-    // Create Stripe Checkout Session for subscription
-    const session = await getStripe().checkout.sessions.create({
-      customer: stripeCustomerId,
-      payment_method_types: ["card"],
-      mode: "subscription",
-      metadata: { userId, tier },
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `SocialFi ${tierConfig.name} Plan`,
-              description: tierConfig.features.join(" • "),
-            },
-            unit_amount: Math.round(tierConfig.monthlyPriceUsd * 100),
-            recurring: { interval: "month" },
-          },
-          quantity: 1,
+    const now = new Date();
+    const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const subscription = await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          offChainBalance: { decrement: creatorPlanCostSmfi },
         },
-      ],
-      success_url: `${env.FRONTEND_URL}/?tab=subscription&status=success`,
-      cancel_url: `${env.FRONTEND_URL}/?tab=subscription&status=cancelled`,
+      });
+
+      const createdSubscription = await tx.subscription.create({
+        data: {
+          userId,
+          tier: "CREATOR" as any,
+          paymentMethod: "FIAT_STRIPE",
+          status: "ACTIVE",
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+          reviewNotes: `Activated with off-chain SMFI payment of ${creatorPlanCostSmfi} SMFI`,
+        },
+      });
+
+      await applyActiveSubscriptionEntitlements(tx, createdSubscription);
+      return tx.subscription.findUniqueOrThrow({ where: { id: createdSubscription.id } });
     });
 
     res.json({
-      checkoutUrl: session.url,
-      sessionId: session.id,
+      success: true,
+      message: `Creator plan activated for ${creatorPlanCostSmfi} SMFI.`,
+      subscription: {
+        id: subscription.id,
+        tier: subscription.tier,
+        status: subscription.status,
+        currentPeriodStart: subscription.currentPeriodStart,
+        currentPeriodEnd: subscription.currentPeriodEnd,
+        cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+      },
     });
   } catch (err) {
     console.error("CreateSubscriptionCheckout error:", err);
@@ -432,7 +430,16 @@ export async function cancelSubscription(req: Request, res: Response): Promise<v
     }
 
     if (!subscription.stripeSubscriptionId) {
-      res.status(404).json({ error: "No active subscription found" });
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: { cancelAtPeriodEnd: true },
+      });
+
+      res.json({
+        success: true,
+        message: "Subscription will be cancelled at the end of the current billing period.",
+        currentPeriodEnd: subscription.currentPeriodEnd,
+      });
       return;
     }
 

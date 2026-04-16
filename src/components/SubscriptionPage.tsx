@@ -95,15 +95,10 @@ export function SubscriptionPage() {
     setActionLoading(tierId);
     try {
       const res = await subscriptionApi.checkout(tierId);
-      if (res.checkoutUrl) {
-        window.location.href = res.checkoutUrl;
-        return;
-      }
-
       if (res.message) {
         toast.success(res.message);
       }
-      await load();
+      await Promise.all([load(), refreshUser()]);
     } catch (err: any) {
       toast.error(err?.message || t.subscription.failedCheckout);
     } finally {
@@ -155,7 +150,7 @@ export function SubscriptionPage() {
   const currentTier = mySub?.tier || "FREE";
   const currentPaymentMethod = mySub?.subscription?.paymentMethod;
   const isComplimentaryCreator = currentPaymentMethod === "CREATOR_CODE";
-  const isStripeSubscription = currentPaymentMethod === "FIAT_STRIPE";
+  const isSmfiSubscription = currentPaymentMethod === "FIAT_STRIPE";
   const isUsdtSubscription = currentPaymentMethod === "CRYPTO_USDT";
 
   return (
@@ -254,8 +249,8 @@ export function SubscriptionPage() {
 
               {/* Price */}
               <div className="mb-4">
-                <span className="text-3xl font-bold text-white">${tier.monthlyPriceUsd}</span>
-                {tier.monthlyPriceUsd > 0 && <span className="text-xs text-slate-500">{t.subscription.perMonth}</span>}
+                <span className="text-3xl font-bold text-white">{tier.monthlyPriceSmfi ?? 0}</span>
+                <span className="text-xs text-slate-500"> SMFI{(tier.monthlyPriceSmfi ?? 0) > 0 ? t.subscription.perMonth : ""}</span>
               </div>
 
               {/* Features */}
@@ -285,7 +280,7 @@ export function SubscriptionPage() {
                 ) : (
                 <button
                   onClick={handleCancel}
-                  disabled={!isStripeSubscription || actionLoading === "cancel" || mySub?.subscription?.cancelAtPeriodEnd}
+                  disabled={!isSmfiSubscription || actionLoading === "cancel" || mySub?.subscription?.cancelAtPeriodEnd}
                   className="w-full py-2.5 rounded-xl text-xs font-medium border border-red-500/25 text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {actionLoading === "cancel" ? <RefreshCw size={12} className="animate-spin" /> : <XCircle size={12} />}

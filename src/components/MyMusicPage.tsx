@@ -324,7 +324,7 @@ export function MyMusicPage() {
 
       {mintModalTrack && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={() => setMintModalTrack(null)}>
-          <div className="rounded-2xl p-5 w-full max-w-md space-y-4" style={{ background: "rgba(15,23,42,0.98)", border: "1px solid rgba(100,116,139,0.2)" }} onClick={e => e.stopPropagation()}>
+          <div className="rounded-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto space-y-4" style={{ background: "rgba(15,23,42,0.98)", border: "1px solid rgba(100,116,139,0.2)" }} onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-bold text-white flex items-center gap-2"><Gem size={16} className="text-purple-400" /> {t.myMusic.mintNft}</h3>
@@ -332,7 +332,7 @@ export function MyMusicPage() {
               </div>
               <div className="text-right">
                 <p className="text-[10px] text-slate-500 uppercase tracking-wider">Market Value</p>
-                <p className="text-sm font-bold text-cyan-400">${marketValuePreview}</p>
+                <p className="text-sm font-bold text-cyan-400">{marketValuePreview} SMFI</p>
               </div>
             </div>
 
@@ -374,7 +374,7 @@ export function MyMusicPage() {
 
             <div className="rounded-xl bg-slate-800/40 border border-slate-700/20 p-3 text-xs text-slate-400 space-y-1">
               <div className="flex items-center justify-between"><span>Total fractions</span><span className="text-white">{parseInt(mintForm.totalSupply) || 0}</span></div>
-              <div className="flex items-center justify-between"><span>Per-fraction price</span><span className="text-white">${(parseFloat(mintForm.pricePerFraction) || 0).toFixed(2)}</span></div>
+              <div className="flex items-center justify-between"><span>Per-fraction price</span><span className="text-white">{(parseFloat(mintForm.pricePerFraction) || 0).toFixed(2)} SMFI</span></div>
               <div className="flex items-center justify-between"><span>Royalty rate</span><span className="text-white">{Math.min(50, Math.max(0, parseInt(mintForm.royaltyPercent) || 0))}%</span></div>
             </div>
 

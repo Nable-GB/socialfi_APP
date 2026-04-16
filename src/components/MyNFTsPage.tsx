@@ -114,7 +114,7 @@ function ListModal({ nft, onClose, onListed }: { nft: ApiNft; onClose: () => voi
     setLoading(true);
     try {
       await nftApi.listForSale(nft.id, p);
-      toast.success(`"${nft.name}" ${t.myNfts.listingSuccess} ${p} SFT!`);
+      toast.success(`"${nft.name}" ${t.myNfts.listingSuccess} ${p} SMFI!`);
       onListed();
       onClose();
     } catch (err: any) {
@@ -145,7 +145,7 @@ function ListModal({ nft, onClose, onListed }: { nft: ApiNft; onClose: () => voi
           <button onClick={handleList} disabled={loading}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-40 transition-all hover:opacity-90"
             style={{ background: "linear-gradient(135deg, #a855f7, #6366f1)" }}>
-            {loading ? t.myNfts.listingBtn : `${t.myNfts.listForPrice} ${price || t.myNfts.unknownPrice} SFT`}
+            {loading ? t.myNfts.listingBtn : `${t.myNfts.listForPrice} ${price || t.myNfts.unknownPrice} SMFI`}
           </button>
         </div>
       </div>
@@ -192,7 +192,7 @@ function MyNftCard({ nft, onList, onCancelListing, cancelling }: {
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-xs text-slate-500">{t.myNfts.listedFor}</span>
-              <span className="text-sm font-bold font-mono text-emerald-400">{parseFloat(activeListing.price).toFixed(2)} SFT</span>
+              <span className="text-sm font-bold font-mono text-emerald-400">{parseFloat(activeListing.price).toFixed(2)} SMFI</span>
             </div>
             <button onClick={() => onCancelListing(activeListing.id)} disabled={cancelling}
               className="w-full py-1.5 rounded-xl text-xs font-semibold text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-all flex items-center justify-center gap-1.5 disabled:opacity-40">

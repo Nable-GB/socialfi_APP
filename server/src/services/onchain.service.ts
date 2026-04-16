@@ -80,7 +80,7 @@ export async function sendTokens(toAddress: string, amount: string): Promise<Tra
  * Get the operator wallet's token balance (for monitoring).
  */
 export async function getOperatorBalance(): Promise<{ balance: string; symbol: string }> {
-  if (!isOnChainEnabled()) return { balance: "0", symbol: "SFT" };
+  if (!isOnChainEnabled()) return { balance: "0", symbol: "SMFI" };
 
   const { provider, wallet } = getOperatorWallet();
   const token = new ethers.Contract(env.TOKEN_CONTRACT_ADDRESS, ERC20_ABI, provider);

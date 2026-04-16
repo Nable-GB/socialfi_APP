@@ -62,7 +62,10 @@ interface UserCompetitionEntry extends CompetitionEntry {
 interface Brochure {
   id: string;
   name: string;
-  price: number;
+  totalPrice: number;
+  pricePerFraction: number;
+  maxSupply: number;
+  isFractionalized: boolean;
   isSold: boolean;
   soldAt?: string;
   track?: {
@@ -173,7 +176,10 @@ function normalizeBrochures(data: any): Brochure[] {
   return (data?.brochures ?? data ?? []).map((brochure: any, index: number) => ({
     id: String(brochure?.id ?? `brochure-${index + 1}`),
     name: String(brochure?.name ?? "Untitled Brochure"),
-    price: Number(brochure?.price ?? 0),
+    totalPrice: Number(brochure?.totalPrice ?? brochure?.price ?? 0),
+    pricePerFraction: Number(brochure?.pricePerFraction ?? brochure?.price ?? 0),
+    maxSupply: Number(brochure?.maxSupply ?? 1),
+    isFractionalized: Boolean(brochure?.isFractionalized),
     isSold: Boolean(brochure?.isSold),
     soldAt: brochure?.soldAt,
     track: brochure?.track
@@ -255,10 +261,10 @@ function createDemoMyEntries(current: Competition): UserCompetitionEntry[] {
 
 function createDemoBrochures(): Brochure[] {
   return [
-    { id: "demo-brochure-1", name: "Midnight Signal Press Kit", price: 180, isSold: false, track: { id: "bro-track-1", title: "Midnight Signal", coverUrl: getCover("brochure-signal"), genre: "Synthwave", playCount: 9780, artist: { displayName: "Astral Nova", username: "astralnova" } } },
-    { id: "demo-brochure-2", name: "Blue Static Collector Sheet", price: 145, isSold: false, track: { id: "bro-track-2", title: "Blue Static", coverUrl: getCover("brochure-static"), genre: "Alt Pop", playCount: 9150, artist: { displayName: "Lumen Park", username: "lumenpark" } } },
-    { id: "demo-brochure-3", name: "Velvet Run Tour Edition", price: 210, isSold: false, track: { id: "bro-track-3", title: "Velvet Run", coverUrl: getCover("brochure-velvet"), genre: "R&B", playCount: 8840, artist: { displayName: "Kairo Beats", username: "kairobeats" } } },
-    { id: "demo-brochure-4", name: "Afterimage Lyric Zine", price: 120, isSold: false, track: { id: "bro-track-4", title: "Afterimage", coverUrl: getCover("brochure-afterimage"), genre: "Indie", playCount: 7905, artist: { displayName: "North Lane", username: "northlane" } } },
+    { id: "demo-brochure-1", name: "Midnight Signal Press Kit", totalPrice: 180, pricePerFraction: 1.8, maxSupply: 100, isFractionalized: true, isSold: false, track: { id: "bro-track-1", title: "Midnight Signal", coverUrl: getCover("brochure-signal"), genre: "Synthwave", playCount: 9780, artist: { displayName: "Astral Nova", username: "astralnova" } } },
+    { id: "demo-brochure-2", name: "Blue Static Collector Sheet", totalPrice: 145, pricePerFraction: 145, maxSupply: 1, isFractionalized: false, isSold: false, track: { id: "bro-track-2", title: "Blue Static", coverUrl: getCover("brochure-static"), genre: "Alt Pop", playCount: 9150, artist: { displayName: "Lumen Park", username: "lumenpark" } } },
+    { id: "demo-brochure-3", name: "Velvet Run Tour Edition", totalPrice: 210, pricePerFraction: 2.1, maxSupply: 100, isFractionalized: true, isSold: false, track: { id: "bro-track-3", title: "Velvet Run", coverUrl: getCover("brochure-velvet"), genre: "R&B", playCount: 8840, artist: { displayName: "Kairo Beats", username: "kairobeats" } } },
+    { id: "demo-brochure-4", name: "Afterimage Lyric Zine", totalPrice: 120, pricePerFraction: 120, maxSupply: 1, isFractionalized: false, isSold: false, track: { id: "bro-track-4", title: "Afterimage", coverUrl: getCover("brochure-afterimage"), genre: "Indie", playCount: 7905, artist: { displayName: "North Lane", username: "northlane" } } },
   ];
 }
 
@@ -512,7 +518,7 @@ export function CompetePage() {
   const enteredTrackIds = new Set(myEntries.map((entry) => entry.track.id));
   const eligibleCreatorTracks = creatorTracks.filter((track) => track.status === "PUBLISHED" && !enteredTrackIds.has(track.id));
   const brochureAveragePrice = brochures.length > 0
-    ? brochures.reduce((sum, brochure) => sum + brochure.price, 0) / brochures.length
+    ? brochures.reduce((sum, brochure) => sum + brochure.totalPrice, 0) / brochures.length
     : 0;
 
   return (
@@ -841,8 +847,9 @@ export function CompetePage() {
                       </div>
                       <div className="flex items-end justify-between gap-3 mt-3">
                         <div>
-                          <p className="text-xs text-slate-500">{t.brochureHub.avgPrice}</p>
-                          <p className="text-sm font-bold text-purple-300">{brochure.price} SMFI</p>
+                          <p className="text-xs text-slate-500">{brochure.isFractionalized ? "Price per fraction" : "Total price"}</p>
+                          <p className="text-sm font-bold text-purple-300">{brochure.isFractionalized ? brochure.pricePerFraction : brochure.totalPrice} SMFI</p>
+                          <p className="text-[10px] text-slate-500 mt-1">{brochure.isFractionalized ? `${brochure.maxSupply} max supply · ${brochure.totalPrice} SMFI total` : "Single brochure sale"}</p>
                         </div>
                         {brochure.isSold ? (
                           <span className="text-[10px] text-slate-500 font-semibold">{t.brochureHub.sold}</span>

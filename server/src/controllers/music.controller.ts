@@ -2,11 +2,8 @@ import { Request, Response } from "express";
 import { updateEntryScore } from "./competition.controller.js";
 import prisma from "../lib/prisma.js";
 import {
-  TEST_CREATOR_UPLOAD_CREDITS,
   getEffectiveSubscriptionTier,
-  getEffectiveUploadCredits,
   hasCreatorTier,
-  isCreatorAccessForced,
   refreshCreatorCodeEntitlementsForUser,
 } from "../services/subscription.service.js";
 
@@ -134,7 +131,7 @@ export async function createTrack(req: Request, res: Response): Promise<void> {
     await refreshCreatorCodeEntitlementsForUser(userId);
 
     const { title, description, lyrics, genre, tags, moodTags, bpm, key, duration, isAiGenerated, aiModel, aiPrompt, audioUrl, coverUrl, albumId, status } = req.body;
-    const uploadCreditCost = 1000;
+    const uploadSmfiCost = 1000;
 
     if (!title || !audioUrl) {
       res.status(400).json({ error: "title and audioUrl are required" });
@@ -143,7 +140,7 @@ export async function createTrack(req: Request, res: Response): Promise<void> {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { uploadCredits: true, subscriptionTier: true },
+      select: { offChainBalance: true, subscriptionTier: true },
     } as any) as any;
 
     if (!user) {
@@ -160,21 +157,13 @@ export async function createTrack(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const effectiveUploadCredits = getEffectiveUploadCredits(user.uploadCredits);
+    const effectiveSmfiBalance = Number(user.offChainBalance ?? 0);
 
-    if (isCreatorAccessForced() && (user.uploadCredits ?? 0) < effectiveUploadCredits) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { uploadCredits: TEST_CREATOR_UPLOAD_CREDITS },
-      });
-      user.uploadCredits = TEST_CREATOR_UPLOAD_CREDITS;
-    }
-
-    if (effectiveUploadCredits < uploadCreditCost) {
+    if (effectiveSmfiBalance < uploadSmfiCost) {
       res.status(403).json({
-        error: "Not enough upload credits",
-        requiredCredits: uploadCreditCost,
-        remainingCredits: effectiveUploadCredits,
+        error: "Insufficient SMFI balance",
+        requiredSmfi: uploadSmfiCost,
+        remainingSmfi: effectiveSmfiBalance,
       });
       return;
     }
@@ -203,7 +192,7 @@ export async function createTrack(req: Request, res: Response): Promise<void> {
     const [, track] = await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
-        data: { uploadCredits: { decrement: uploadCreditCost } as any },
+        data: { offChainBalance: { decrement: uploadSmfiCost } as any },
       } as any),
       prisma.track.create({
         data: trackData,
@@ -213,7 +202,7 @@ export async function createTrack(req: Request, res: Response): Promise<void> {
       }),
     ]);
 
-    res.status(201).json({ success: true, track, uploadCreditsRemaining: effectiveUploadCredits - uploadCreditCost, uploadCreditCost });
+    res.status(201).json({ success: true, track, smfiRemaining: effectiveSmfiBalance - uploadSmfiCost, uploadSmfiCost });
   } catch (err) {
     console.error("createTrack error:", err);
     res.status(500).json({ error: "Failed to create track" });

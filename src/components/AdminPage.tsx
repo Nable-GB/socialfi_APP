@@ -218,7 +218,7 @@ export function AdminPage() {
     if (!amount || amount <= 0) { toast.error(t.admin.enterValidAmount); return; }
     try {
       const res = await adminApi.airdropTokens(Array.from(selectedUsers), amount);
-      toast.success(`${t.admin.airdropped} ${amount} SFT → ${res.airdropped} ${t.admin.toUsers} (${t.admin.totalDistributed}: ${res.totalDistributed} SFT)`);
+      toast.success(`${t.admin.airdropped} ${amount} SMFI → ${res.airdropped} ${t.admin.toUsers} (${t.admin.totalDistributed}: ${res.totalDistributed} SMFI)`);
       setSelectedUsers(new Set());
       fetchStats();
     } catch (err: any) { toast.error(err?.message ?? t.admin.airdropFailed); }
@@ -404,7 +404,7 @@ export function AdminPage() {
             <StatCard label={t.admin.activeCampaigns} value={stats.campaigns.active}
               sub={`${stats.campaigns.total} ${t.admin.total}`}
               icon={<ShoppingBag size={16} />} color="#6366f1" />
-            <StatCard label={t.admin.rewardsPaid} value={`${parseFloat(stats.rewards.totalPaid).toFixed(0)} SFT`}
+            <StatCard label={t.admin.rewardsPaid} value={`${parseFloat(stats.rewards.totalPaid).toFixed(0)} SMFI`}
               sub={`${stats.rewards.pendingWithdrawals.count} ${t.admin.pendingWithdrawals}`}
               icon={<Zap size={16} />} color="#10b981" />
             <StatCard label={t.admin.revenue} value={`$${parseFloat(stats.revenue.totalFiat).toFixed(0)}`}
@@ -426,7 +426,7 @@ export function AdminPage() {
                 <ArrowUpRight size={15} className="text-amber-400" />
                 <p className="text-sm text-slate-300">
                   <strong className="text-amber-400">{stats.rewards.pendingWithdrawals.count}</strong> {t.admin.queuedWithdrawals}
-                  {t.admin.totalling} <strong className="text-white">{parseFloat(stats.rewards.pendingWithdrawals.amount).toFixed(2)} SFT</strong>
+                  {t.admin.totalling} <strong className="text-white">{parseFloat(stats.rewards.pendingWithdrawals.amount).toFixed(2)} SMFI</strong>
                 </p>
               </div>
               <button onClick={handleDistribute} disabled={distributing || !stats.onChainEnabled}
@@ -528,7 +528,7 @@ export function AdminPage() {
               <input type="number" value={airdropAmount} onChange={e => setAirdropAmount(e.target.value)}
                 className="w-24 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white font-mono focus:outline-none"
                 placeholder={t.admin.amount} />
-              <span className="text-xs text-slate-400">{t.admin.sftEach}</span>
+              <span className="text-xs text-slate-400">{t.admin.smfiEach}</span>
               <button onClick={handleAirdrop}
                 className="px-4 py-1.5 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
                 style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}>
@@ -576,7 +576,7 @@ export function AdminPage() {
                           <td className="px-4 py-3 font-mono text-white">${parseFloat(c.budget).toFixed(0)}</td>
                           <td className="px-4 py-3">
                             <p className="font-mono text-cyan-400">{parseFloat(c.rewardPoolDistributed).toFixed(0)}</p>
-                            <p className="text-slate-600">/ {parseFloat(c.rewardPoolTotal).toFixed(0)} SFT</p>
+                            <p className="text-slate-600">/ {parseFloat(c.rewardPoolTotal).toFixed(0)} SMFI</p>
                           </td>
                           <td className="px-4 py-3">
                             <p className="text-white">{c.impressionsDelivered.toLocaleString()} / {c.impressionsTotal.toLocaleString()}</p>
@@ -886,11 +886,11 @@ export function AdminPage() {
         <div className="space-y-4">
           {/* Summary */}
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label={t.admin.totalRewardsPaid} value={`${parseFloat(stats.rewards.totalPaid).toFixed(0)} SFT`}
+            <StatCard label={t.admin.totalRewardsPaid} value={`${parseFloat(stats.rewards.totalPaid).toFixed(0)} SMFI`}
               icon={<Zap size={16} />} color="#10b981" />
             <StatCard label={t.admin.pendingWithdrawalsLabel}
               value={stats.rewards.pendingWithdrawals.count}
-              sub={`${parseFloat(stats.rewards.pendingWithdrawals.amount).toFixed(2)} ${t.admin.sftQueued}`}
+              sub={`${parseFloat(stats.rewards.pendingWithdrawals.amount).toFixed(2)} ${t.admin.smfiQueued}`}
               icon={<ArrowUpRight size={16} />} color="#f59e0b" />
           </div>
 

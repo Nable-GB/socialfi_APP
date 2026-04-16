@@ -180,7 +180,7 @@ export function ExplorePage({ onOpenProfile }: { onOpenProfile?: (userId: string
                   ))}
                 </div>
                 {track.lyrics && (
-                  <p className="text-[10px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{track.lyrics}</p>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">{track.lyrics}</p>
                 )}
               </div>
               <div className="text-right flex-shrink-0 text-[10px] text-slate-500 space-y-1">

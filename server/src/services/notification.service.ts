@@ -107,7 +107,7 @@ export function notifyRewardEarned(userId: string, amount: string, txId: string)
     userId,
     type: "REWARD_EARNED",
     title: "Reward Earned! 🎉",
-    message: `You earned ${parseFloat(amount).toFixed(4)} SFT tokens`,
+    message: `You earned ${parseFloat(amount).toFixed(4)} SMFI tokens`,
     relatedTxId: txId,
   });
 }
@@ -118,8 +118,8 @@ export function notifyWithdrawalDone(userId: string, amount: string, txHash: str
     type: "WITHDRAWAL_DONE",
     title: "Withdrawal Processed",
     message: txHash
-      ? `${parseFloat(amount).toFixed(4)} SFT sent on-chain ✅`
-      : `${parseFloat(amount).toFixed(4)} SFT withdrawal queued`,
+      ? `${parseFloat(amount).toFixed(4)} SMFI sent on-chain ✅`
+      : `${parseFloat(amount).toFixed(4)} SMFI withdrawal queued`,
   });
 }
 
@@ -128,6 +128,6 @@ export function notifyAirdrop(userId: string, amount: number) {
     userId,
     type: "AIRDROP",
     title: "Airdrop Received! 🎁",
-    message: `You received an airdrop of ${amount} SFT tokens`,
+    message: `You received an airdrop of ${amount} SMFI tokens`,
   });
 }
