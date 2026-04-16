@@ -144,7 +144,7 @@ export function NowPlayingModal({ open, onClose }: { open: boolean; onClose: () 
                 <div className="flex flex-col items-center text-center">
                   <div className="relative mb-6 sm:mb-7 mt-2">
                     <div className="absolute inset-[-16px] rounded-[32px] bg-gradient-to-br from-cyan-400/18 via-indigo-400/8 to-fuchsia-400/12 blur-2xl opacity-80" />
-                    <div className={`relative w-64 h-64 sm:w-80 sm:h-80 rounded-[28px] overflow-hidden premium-artwork-frame ${isPlaying ? "premium-artwork-spin" : "premium-artwork-rest"}`}>
+                    <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-[28px] overflow-hidden premium-artwork-frame premium-artwork-rest">
                       {currentTrack.coverUrl ? (
                         <img src={currentTrack.coverUrl} alt={currentTrack.title} className="w-full h-full object-cover" />
                       ) : (

@@ -334,11 +334,6 @@
   animation: fade-in 0.3s ease forwards;
 }
 
-@keyframes premium-artwork-spin {
-  from { transform: rotate(0deg) scale(1); }
-  to   { transform: rotate(360deg) scale(1); }
-}
-
 .premium-artwork-frame {
   box-shadow: 0 24px 70px rgba(2, 6, 23, 0.45), 0 0 0 1px rgba(255,255,255,0.05);
   transform-origin: center center;
@@ -356,10 +351,6 @@
 
 .premium-artwork-rest {
   transform: scale(1);
-}
-
-.premium-artwork-spin {
-  animation: premium-artwork-spin 18s linear infinite;
 }
 
 .premium-play-button {
