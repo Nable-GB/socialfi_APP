@@ -224,6 +224,9 @@ export const usersApi = {
   getProfile: (userId: string) =>
     request<{ user: ApiUser & { posts: ApiPost[]; isFollowing: boolean } }>(`/api/users/${userId}`),
 
+  getFollowing: () =>
+    request<{ users: (ApiUser & { isFollowing: boolean })[] }>("/api/users/me/following"),
+
   search: (q: string, limit = 20) => {
     const qs = new URLSearchParams({ q, limit: String(limit) });
     return request<{ users: (ApiUser & { isFollowing: boolean })[] }>(`/api/users/search?${qs}`);
@@ -377,6 +380,12 @@ export const adminApi = {
     request<{ success: boolean; airdropped: number; amountEach: number; totalDistributed: number }>(
       "/api/admin/rewards/airdrop",
       { method: "POST", body: JSON.stringify({ userIds, amount, description }) }
+    ),
+
+  grantUserTokens: (userId: string, amount: number, description?: string) =>
+    request<{ success: boolean; userId: string; amount: number }>(
+      "/api/admin/rewards/grant",
+      { method: "POST", body: JSON.stringify({ userId, amount, description }) }
     ),
 
   getCreatorCodes: (params?: { page?: number; limit?: number; search?: string; active?: boolean }) => {

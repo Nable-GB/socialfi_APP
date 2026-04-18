@@ -341,6 +341,13 @@ export default function App() {
   };
 
   const openLandingPage = () => {
+    if (isAuthenticated) {
+      setShowLanding(false);
+      setForceLanding(false);
+      navigateTo(defaultPage);
+      return;
+    }
+
     setAuthOpen(false);
     setForceLanding(true);
     try {
@@ -387,7 +394,7 @@ export default function App() {
         setShowLanding(false);
       }
     }
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading, isAuthenticated, appEnteredKey]);
 
   const urlParams = new URLSearchParams(window.location.search);
   const verifyToken = window.location.pathname === "/verify-email" ? urlParams.get("token") : null;

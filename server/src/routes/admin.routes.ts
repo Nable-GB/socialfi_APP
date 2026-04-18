@@ -7,6 +7,7 @@ import {
   updateCampaignStatus,
   distributeRewards,
   airdropTokens,
+  grantTokensToUser,
   getPayoutHealth,
   getPayoutQueue,
   createPayoutRelease,
@@ -52,6 +53,7 @@ router.post("/creator-code-redemptions/:id/revoke", revokeCreatorCodeRedemption)
 // Rewards
 router.post("/rewards/distribute", distributeRewards);
 router.post("/rewards/airdrop", airdropTokens);
+router.post("/rewards/grant", grantTokensToUser);
 
 // Payout health
 router.get("/payout-health", getPayoutHealth);

@@ -27,20 +27,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(tokenStorage.get());
   const [isLoading, setIsLoading] = useState(true);
 
-  // On mount: if token exists, fetch current user
+  // Restore user whenever the current token changes
   useEffect(() => {
-    if (token) {
-      authApi.getMe()
-        .then(({ user }) => setUser(user))
-        .catch(() => {
-          tokenStorage.clear();
-          setToken(null);
-        })
-        .finally(() => setIsLoading(false));
-    } else {
+    let cancelled = false;
+
+    if (!token) {
+      setUser(null);
       setIsLoading(false);
+      return () => {
+        cancelled = true;
+      };
     }
-  }, []);
+
+    setIsLoading(true);
+    authApi.getMe()
+      .then(({ user }) => {
+        if (!cancelled) setUser(user);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          tokenStorage.clear();
+          setUser(null);
+          setToken(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   const login = useCallback(async (email: string, password: string) => {
     const { token: newToken, refreshToken, user: newUser } = await authApi.login({ email, password });

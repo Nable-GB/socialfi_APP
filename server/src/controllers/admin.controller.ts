@@ -4,6 +4,7 @@ import { z } from "zod";
 import prisma from "../lib/prisma.js";
 import { sendTokens, isOnChainEnabled, getOperatorBalance } from "../services/onchain.service.js";
 import { env } from "../config/env.js";
+import { notifyAirdrop } from "../services/notification.service.js";
 import {
   applyActiveSubscriptionEntitlements,
   generateCreatorCodeValue,
@@ -802,6 +803,12 @@ const airdropSchema = z.object({
   description: z.string().max(200).optional(),
 });
 
+const grantRewardSchema = z.object({
+  userId: z.string().uuid(),
+  amount: z.number().positive(),
+  description: z.string().max(200).optional(),
+});
+
 export async function airdropTokens(req: Request, res: Response): Promise<void> {
   try {
     const { userIds, amount, description } = airdropSchema.parse(req.body);
@@ -830,6 +837,8 @@ export async function airdropTokens(req: Request, res: Response): Promise<void> 
       },
     });
 
+    await Promise.all(userIds.map((userId) => notifyAirdrop(userId, amount).catch(() => {})));
+
     res.json({
       success: true,
       airdropped: results.length,
@@ -842,6 +851,48 @@ export async function airdropTokens(req: Request, res: Response): Promise<void> 
       return;
     }
     console.error("AdminAirdrop error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function grantTokensToUser(req: Request, res: Response): Promise<void> {
+  try {
+    const { userId, amount, description } = grantRewardSchema.parse(req.body);
+    const amountDecimal = new Prisma.Decimal(amount);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.rewardTransaction.create({
+        data: {
+          userId,
+          type: "AIRDROP",
+          amount: amountDecimal,
+          description: description ?? `Admin grant of ${amount} SMFI`,
+          status: "CONFIRMED",
+        },
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          offChainBalance: { increment: amountDecimal },
+          totalEarned: { increment: amountDecimal },
+        },
+      });
+    });
+
+    notifyAirdrop(userId, amount).catch(() => {});
+
+    res.json({
+      success: true,
+      userId,
+      amount,
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Validation failed", details: err.errors });
+      return;
+    }
+    console.error("AdminGrantTokens error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }

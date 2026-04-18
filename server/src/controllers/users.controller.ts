@@ -259,6 +259,35 @@ export async function getUserProfile(req: Request, res: Response): Promise<void>
   }
 }
 
+// ─── GET /api/users/me/following ──────────────────────────────────────────
+
+export async function getFollowingUsers(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+
+    const follows = await prisma.follow.findMany({
+      where: { followerId: userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        following: {
+          select: PUBLIC_USER_SELECT,
+        },
+      },
+      take: 100,
+    });
+
+    res.json({
+      users: follows.map((follow) => ({
+        ...follow.following,
+        isFollowing: true,
+      })),
+    });
+  } catch (err) {
+    console.error("GetFollowingUsers error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 // ─── POST /api/users/:id/follow ───────────────────────────────────────────
 
 export async function toggleFollow(req: Request, res: Response): Promise<void> {

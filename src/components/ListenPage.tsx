@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, Headphones, TrendingUp, Users, UserCheck, Music, RefreshCw } from "lucide-react";
+import { Search, Sparkles, TrendingUp, Users, UserCheck, Music, RefreshCw } from "lucide-react";
 import { musicApi, usersApi, type ApiTrack, type ApiUser } from "../lib/api";
 import { usePlayer } from "../contexts/PlayerContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useLang } from "../contexts/LangContext";
-import { MusicFeedPage } from "./MusicFeedPage";
+import { SocialFeedPage } from "./SocialFeedPage";
 import { toast } from "sonner";
 
 type SearchUser = ApiUser & { isFollowing: boolean };
@@ -12,7 +12,7 @@ type SearchUser = ApiUser & { isFollowing: boolean };
 export function ListenPage({ onOpenProfile }: { onOpenProfile?: (userId: string) => void }) {
   const { isAuthenticated } = useAuth();
   const { t } = useLang();
-  const [tab, setTab] = useState<"feed" | "discover">("feed");
+  const [tab, setTab] = useState<"forYou" | "following" | "discover">("forYou");
   const [search, setSearch] = useState("");
   const [activeSearchTab, setActiveSearchTab] = useState<"people" | "tracks">("tracks");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
@@ -56,7 +56,8 @@ export function ListenPage({ onOpenProfile }: { onOpenProfile?: (userId: string)
   };
 
   const tabs = [
-    { id: "feed" as const, label: t.listenHub.feed, icon: Headphones },
+    { id: "forYou" as const, label: t.listenHub.forYou, icon: Sparkles },
+    { id: "following" as const, label: t.listenHub.followingFeed, icon: Users },
     { id: "discover" as const, label: t.listenHub.discover, icon: TrendingUp },
   ];
 
@@ -79,7 +80,9 @@ export function ListenPage({ onOpenProfile }: { onOpenProfile?: (userId: string)
         ))}
       </div>
 
-      {tab === "feed" && <MusicFeedPage />}
+      {tab === "forYou" && <SocialFeedPage mode="forYou" onOpenDiscover={() => setTab("discover")} />}
+
+      {tab === "following" && <SocialFeedPage mode="following" onOpenDiscover={() => setTab("discover")} />}
 
       {tab === "discover" && (
         <div className="space-y-4">

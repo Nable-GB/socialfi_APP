@@ -120,6 +120,9 @@ export function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [distributing, setDistributing] = useState(false);
   const [airdropAmount, setAirdropAmount] = useState("10");
+  const [grantAmounts, setGrantAmounts] = useState<Record<string, string>>({});
+  const [grantNotes, setGrantNotes] = useState<Record<string, string>>({});
+  const [grantingUserId, setGrantingUserId] = useState<string | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [creatorCodes, setCreatorCodes] = useState<AdminCreatorCode[]>([]);
   const [creatorCodeTotal, setCreatorCodeTotal] = useState(0);
@@ -222,6 +225,28 @@ export function AdminPage() {
       setSelectedUsers(new Set());
       fetchStats();
     } catch (err: any) { toast.error(err?.message ?? t.admin.airdropFailed); }
+  };
+
+  const handleGrantToUser = async (userId: string) => {
+    const amount = parseFloat(grantAmounts[userId] ?? "");
+    if (!amount || amount <= 0) {
+      toast.error(t.admin.enterValidAmount);
+      return;
+    }
+
+    try {
+      setGrantingUserId(userId);
+      await adminApi.grantUserTokens(userId, amount, grantNotes[userId]?.trim() || undefined);
+      toast.success(`${t.admin.grantSuccess}: ${amount} SMFI`);
+      setGrantAmounts((prev) => ({ ...prev, [userId]: "" }));
+      setGrantNotes((prev) => ({ ...prev, [userId]: "" }));
+      fetchUsers(userPage, userSearch);
+      fetchStats();
+    } catch (err: any) {
+      toast.error(err?.message ?? t.admin.grantFailed);
+    } finally {
+      setGrantingUserId(null);
+    }
   };
 
   const resetCreatorCodeForm = () => {
@@ -491,13 +516,40 @@ export function AdminPage() {
                         </td>
                         <td className="px-4 py-3 text-slate-500">{new Date(u.createdAt).toLocaleDateString()}</td>
                         <td className="px-4 py-3">
-                          <select value={u.role}
-                            onChange={e => handleUpdateRole(u.id, e.target.value)}
-                            className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none">
-                            <option value="USER">USER</option>
-                            <option value="MERCHANT">MERCHANT</option>
-                            <option value="ADMIN">ADMIN</option>
-                          </select>
+                          <div className="space-y-2 min-w-[220px]">
+                            <select value={u.role}
+                              onChange={e => handleUpdateRole(u.id, e.target.value)}
+                              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none">
+                              <option value="USER">USER</option>
+                              <option value="MERCHANT">MERCHANT</option>
+                              <option value="ADMIN">ADMIN</option>
+                            </select>
+                            <div className="flex gap-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={grantAmounts[u.id] ?? ""}
+                                onChange={e => setGrantAmounts(prev => ({ ...prev, [u.id]: e.target.value }))}
+                                placeholder={t.admin.amount}
+                                className="w-24 rounded-lg bg-slate-800 border border-slate-700 px-2 py-1 text-xs text-white font-mono focus:outline-none"
+                              />
+                              <button
+                                onClick={() => handleGrantToUser(u.id)}
+                                disabled={grantingUserId === u.id}
+                                className="px-3 py-1 rounded-lg text-xs font-semibold text-white transition-all disabled:opacity-50"
+                                style={{ background: "linear-gradient(135deg,#06b6d4,#6366f1)" }}
+                              >
+                                {grantingUserId === u.id ? t.admin.granting : t.admin.grantSmfi}
+                              </button>
+                            </div>
+                            <input
+                              value={grantNotes[u.id] ?? ""}
+                              onChange={e => setGrantNotes(prev => ({ ...prev, [u.id]: e.target.value }))}
+                              placeholder={t.admin.grantNotePlaceholder}
+                              className="w-full rounded-lg bg-slate-800 border border-slate-700 px-2 py-1 text-xs text-white focus:outline-none"
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))}
