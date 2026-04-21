@@ -1,24 +1,33 @@
 import { useState, useEffect } from "react";
 import { subscriptionApi } from "../lib/api";
+import type { ApiSubscriptionTier } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
-import { Crown, Check, Zap, Star, RefreshCw, XCircle } from "lucide-react";
+import { Crown, Check, Zap, Star, RefreshCw, XCircle, Sparkles, Trophy, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useLang } from "../contexts/LangContext";
 
 const TIER_COLORS: Record<string, { bg: string; border: string; text: string; badge: string }> = {
   FREE: { bg: "rgba(100,116,139,0.08)", border: "rgba(100,116,139,0.2)", text: "#94a3b8", badge: "bg-slate-700/30 text-slate-400" },
-  CREATOR: { bg: "rgba(34,211,238,0.08)", border: "rgba(34,211,238,0.25)", text: "#22d3ee", badge: "bg-cyan-500/15 text-cyan-400" },
+  PRO: { bg: "rgba(34,211,238,0.08)", border: "rgba(34,211,238,0.25)", text: "#22d3ee", badge: "bg-cyan-500/15 text-cyan-400" },
+  PREMIUM: { bg: "rgba(168,85,247,0.08)", border: "rgba(168,85,247,0.25)", text: "#c084fc", badge: "bg-purple-500/15 text-purple-300" },
 };
+
+const TIER_ICONS = {
+  FREE: Star,
+  PRO: Zap,
+  PREMIUM: Sparkles,
+} as const;
 
 export function SubscriptionPage() {
   const { refreshUser } = useAuth();
   const { t } = useLang();
-  const [tiers, setTiers] = useState<any[]>([]);
-  const [mySub, setMySub] = useState<{ tier: string; subscription: any; pendingReview?: any } | null>(null);
+  const [tiers, setTiers] = useState<ApiSubscriptionTier[]>([]);
+  const [mySub, setMySub] = useState<Awaited<ReturnType<typeof subscriptionApi.getMySubscription>> | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [creatorCode, setCreatorCode] = useState("");
   const [redeemError, setRedeemError] = useState<string | null>(null);
+  const [topArtistInfo, setTopArtistInfo] = useState<Awaited<ReturnType<typeof subscriptionApi.getTiers>>["topArtistInfo"] | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -28,6 +37,7 @@ export function SubscriptionPage() {
         subscriptionApi.getMySubscription(),
       ]);
       setTiers(tiersRes.tiers);
+      setTopArtistInfo((tiersRes as any).topArtistInfo ?? null);
       setMySub(subRes);
     } catch {
       // ignore
@@ -38,7 +48,9 @@ export function SubscriptionPage() {
 
   const getTierLabel = (tierId: string, fallback?: string) => {
     if (tierId === "FREE") return t.subscription.tierFree;
-    if (tierId === "CREATOR" || tierId === "PRO" || tierId === "PREMIUM") return t.subscription.tierCreator;
+    if (tierId === "PRO") return t.subscription.tierPro;
+    if (tierId === "PREMIUM") return t.subscription.tierPremium;
+    if (tierId === "CREATOR") return t.subscription.tierPro;
     return fallback ?? tierId;
   };
 
@@ -52,13 +64,24 @@ export function SubscriptionPage() {
       ];
     }
 
-    if (tierId === "CREATOR" || tierId === "PRO" || tierId === "PREMIUM") {
+    if (tierId === "PRO" || tierId === "CREATOR") {
       return [
         t.subscription.featureUploadMusic,
         t.subscription.featureVirtualNftMinting,
         t.subscription.featureCreatorUploadCredits,
         t.subscription.featureMarketplaceTrading,
         t.subscription.featureCompetitionEntry,
+        t.subscription.featureArtistProfileTools,
+      ];
+    }
+
+    if (tierId === "PREMIUM") {
+      return [
+        t.subscription.featureEverythingInPro,
+        t.subscription.featureHigherDailyCaps,
+        t.subscription.featureFasterPromotionTools,
+        t.subscription.featurePrioritySupport,
+        t.subscription.featurePremiumVisibility,
       ];
     }
 
@@ -147,7 +170,7 @@ export function SubscriptionPage() {
     <div className="flex justify-center py-20"><RefreshCw size={20} className="text-slate-500 animate-spin" /></div>
   );
 
-  const currentTier = mySub?.tier || "FREE";
+  const currentTier = mySub?.tier === "CREATOR" ? "PRO" : (mySub?.tier || "FREE");
   const currentPaymentMethod = mySub?.subscription?.paymentMethod;
   const isComplimentaryCreator = currentPaymentMethod === "CREATOR_CODE";
   const isSmfiSubscription = currentPaymentMethod === "FIAT_STRIPE";
@@ -168,6 +191,20 @@ export function SubscriptionPage() {
           </div>
         </div>
 
+        <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr_0.9fr]">
+          <div className="rounded-2xl border border-slate-700/20 bg-slate-950/40 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">{t.subscription.planOverviewLabel}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">{t.subscription.planOverviewBody}</p>
+          </div>
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-amber-200">
+              <Trophy size={15} />
+              {t.subscription.topArtistTitle}
+            </div>
+            <p className="mt-2 text-xs leading-5 text-amber-100/80">{t.subscription.topArtistBody}</p>
+          </div>
+        </div>
+
         {/* Current plan badge */}
         <div className="mt-4 flex items-center gap-2">
           <span className="text-xs text-slate-500">{t.subscription.currentPlan}</span>
@@ -179,7 +216,7 @@ export function SubscriptionPage() {
               {t.subscription.complimentaryAccess}
             </span>
           )}
-          {mySub?.subscription?.cancelAtPeriodEnd && (
+          {mySub?.subscription?.cancelAtPeriodEnd && mySub.subscription.currentPeriodEnd && (
             <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-500/15 text-red-400 border border-red-500/25">
               {t.subscription.cancels} {new Date(mySub.subscription.currentPeriodEnd).toLocaleDateString()}
             </span>
@@ -220,11 +257,17 @@ export function SubscriptionPage() {
 
       {/* Tiers */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {tiers.map((tier: any) => {
-          const colors = TIER_COLORS[tier.id] || TIER_COLORS.FREE;
-          const features = getTierFeatures(tier.id, tier.features);
-          const isCurrent = currentTier === tier.id;
-          const isUpgrade = tier.id === "CREATOR" && currentTier === "FREE";
+        {tiers.map((tier) => {
+          const tierId = tier.id === "CREATOR" ? "PRO" : tier.id;
+          const Icon = TIER_ICONS[tierId as keyof typeof TIER_ICONS] ?? Crown;
+          const colors = TIER_COLORS[tierId] || TIER_COLORS.FREE;
+          const features = getTierFeatures(tierId, tier.features);
+          const isCurrent = currentTier === tierId;
+          const isPaidTier = tierId !== "FREE";
+          const currentRank = currentTier === "PREMIUM" ? 2 : currentTier === "PRO" ? 1 : 0;
+          const tierRank = tierId === "PREMIUM" ? 2 : tierId === "PRO" ? 1 : 0;
+          const canUpgrade = isPaidTier && currentRank < tierRank;
+          const isDowngrade = isPaidTier && currentRank > tierRank;
 
           return (
             <div key={tier.id} className="glass rounded-2xl p-5 border transition-all hover:scale-[1.01]"
@@ -236,9 +279,8 @@ export function SubscriptionPage() {
               {/* Tier badge */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  {tier.id === "FREE" && <Star size={16} style={{ color: colors.text }} />}
-                  {tier.id === "CREATOR" && <Zap size={16} style={{ color: colors.text }} />}
-                  <h2 className="text-lg font-bold" style={{ color: colors.text }}>{getTierLabel(tier.id, tier.name)}</h2>
+                  <Icon size={16} style={{ color: colors.text }} />
+                  <h2 className="text-lg font-bold" style={{ color: colors.text }}>{getTierLabel(tierId, tier.name)}</h2>
                 </div>
                 {isCurrent && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: `${colors.text}20`, color: colors.text }}>
@@ -246,6 +288,12 @@ export function SubscriptionPage() {
                   </span>
                 )}
               </div>
+
+              {tierId === "PREMIUM" && (
+                <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-purple-400/25 bg-purple-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-purple-200">
+                  <ShieldCheck size={12} /> {t.subscription.recommendedBadge}
+                </div>
+              )}
 
               {/* Price */}
               <div className="mb-4">
@@ -287,21 +335,43 @@ export function SubscriptionPage() {
                   {mySub?.subscription?.cancelAtPeriodEnd ? t.subscription.cancellationPending : t.subscription.cancelSubscription}
                 </button>
                 )
-              ) : isUpgrade ? (
+              ) : canUpgrade ? (
                 <button
-                  onClick={() => handleSubscribe(tier.id)}
+                  onClick={() => handleSubscribe(tierId)}
                   disabled={!!actionLoading}
                   className="w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   style={{ background: `linear-gradient(135deg, ${colors.text}, ${colors.border})` }}
                 >
-                  {actionLoading === tier.id ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
-                  {t.subscription.subscribeTo} {getTierLabel(tier.id, tier.name)}
+                  {actionLoading === tierId ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
+                  {t.subscription.subscribeTo} {getTierLabel(tierId, tier.name)}
                 </button>
+              ) : isDowngrade ? (
+                <div className="rounded-xl border border-slate-700/25 bg-slate-900/30 px-3 py-3 text-center text-xs text-slate-400">
+                  {t.subscription.downgradeManaged}
+                </div>
               ) : null}
             </div>
           );
         })}
       </div>
+
+      {topArtistInfo && (
+        <div className="glass rounded-2xl border border-amber-500/15 bg-amber-500/[0.05] p-5">
+          <div className="flex items-center gap-2 text-sm font-semibold text-amber-200">
+            <Trophy size={16} />
+            {topArtistInfo.name ?? t.subscription.topArtistTitle}
+          </div>
+          <p className="mt-2 text-xs leading-5 text-slate-300">{topArtistInfo.how ?? t.subscription.topArtistBody}</p>
+          <div className="mt-4 space-y-2">
+            {(topArtistInfo.privileges ?? []).map((privilege: string) => (
+              <div key={privilege} className="flex items-start gap-2 text-xs text-slate-300">
+                <Check size={12} className="mt-0.5 text-amber-300" />
+                {privilege}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Subscription details */}
       {mySub?.subscription && (

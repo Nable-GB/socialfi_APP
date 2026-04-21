@@ -145,8 +145,8 @@ export async function enterCompetition(req: Request, res: Response): Promise<voi
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { subscriptionTier: true } });
     if (!user || !hasCreatorTier(user.subscriptionTier)) {
       res.status(403).json({
-        error: "Creator subscription required to enter competitions",
-        requiredTier: "CREATOR",
+        error: "Pro or Premium subscription required to enter competitions",
+        requiredTier: "PRO",
         currentTier: getEffectiveSubscriptionTier(user?.subscriptionTier),
       });
       return;

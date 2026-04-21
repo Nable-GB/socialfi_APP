@@ -3,6 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import prisma from "../lib/prisma.js";
 import { notifyFollow } from "../services/notification.service.js";
+import { activateWelcomeReward } from "../services/reward.service.js";
 import { sanitizeText } from "../middleware/sanitize.js";
 
 // ─── Validation ─────────────────────────────────────────────────────────────
@@ -60,7 +61,14 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
       select: PUBLIC_USER_SELECT,
     });
 
-    res.json({ user: updated });
+    let welcomeReward: Awaited<ReturnType<typeof activateWelcomeReward>> | undefined;
+    try {
+      welcomeReward = await activateWelcomeReward(userId);
+    } catch (rewardErr) {
+      console.error("ActivateWelcomeReward after profile update error:", rewardErr);
+    }
+
+    res.json({ user: updated, welcomeReward });
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Validation failed", details: err.errors });
@@ -134,7 +142,14 @@ export async function linkWallet(req: Request, res: Response): Promise<void> {
       select: PUBLIC_USER_SELECT,
     });
 
-    res.json({ user: updated, message: "Wallet linked successfully" });
+    let welcomeReward: Awaited<ReturnType<typeof activateWelcomeReward>> | undefined;
+    try {
+      welcomeReward = await activateWelcomeReward(userId);
+    } catch (rewardErr) {
+      console.error("ActivateWelcomeReward after wallet link error:", rewardErr);
+    }
+
+    res.json({ user: updated, message: "Wallet linked successfully", welcomeReward });
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Validation failed", details: err.errors });

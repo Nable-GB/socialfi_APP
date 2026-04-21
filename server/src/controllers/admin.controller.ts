@@ -571,7 +571,7 @@ export async function createCreatorCode(req: Request, res: Response): Promise<vo
     const creatorCode = await prisma.creatorCode.create({
       data: {
         code: normalizedCode,
-        tier: "CREATOR",
+        tier: "PRO",
         isActive: true,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         maxRedemptions,

@@ -19,7 +19,7 @@ router.get("/users/:id", getUserNfts);
 router.get("/:id", getNft);
 
 // Auth-required routes
-router.post("/mint", requireAuth, requireTier("CREATOR"), mintNft);
+router.post("/mint", requireAuth, requireTier("PRO"), mintNft);
 router.get("/my", requireAuth, getMyNfts);
 router.post("/:id/list", requireAuth, listNftForSale);
 router.delete("/listings/:id", requireAuth, cancelListing);

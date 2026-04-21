@@ -111,10 +111,9 @@ enum ListingStatus {
 
 enum SubscriptionTier {
   FREE
-  CREATOR   // 10000 SMFI/month — can upload music & create NFT Brochures
-  // PRO and PREMIUM kept as aliases during migration window
-  PRO       // @deprecated — maps to CREATOR
-  PREMIUM   // @deprecated — maps to FREE (no longer a paid tier)
+  CREATOR   // Legacy alias retained during migration; treated as PRO in app logic
+  PRO       // Base paid creator tier
+  PREMIUM   // Higher paid tier with stronger limits and perks
 }
 
 enum SubscriptionStatus {
@@ -193,6 +192,7 @@ model User {
   // --- Top Artist Status (earned via competition, not subscription) ---
   isTopArtist      Boolean   @default(false)
   topArtistSince   DateTime?
+  welcomeRewardGrantedAt DateTime?
 
   // --- Off-chain Token Balance ---
   offChainBalance Decimal   @default(0) @db.Decimal(20, 8) // Accumulated but undistributed tokens
@@ -515,7 +515,7 @@ model Subscription {
 model CreatorCode {
   id               String                 @id @default(uuid())
   code             String                 @unique
-  tier             SubscriptionTier       @default(CREATOR)
+  tier             SubscriptionTier       @default(PRO)
   isActive         Boolean                @default(true)
   expiresAt        DateTime?
   maxRedemptions   Int?

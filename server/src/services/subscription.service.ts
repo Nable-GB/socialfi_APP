@@ -6,6 +6,9 @@ import prisma from "../lib/prisma.js";
 export const CREATOR_MONTHLY_UPLOAD_CREDITS = 3000;
 export const TEST_CREATOR_UPLOAD_CREDITS = 9000;
 export const CREATOR_CODE_PERIOD_DAYS = 30;
+export const CREATOR_ACCESS_TIERS = ["CREATOR", "PRO", "PREMIUM"] as const;
+
+export type EffectiveSubscriptionTier = "FREE" | "PRO" | "PREMIUM";
 
 type SubscriptionTx = Prisma.TransactionClient;
 
@@ -23,15 +26,15 @@ type CreatorCodeSubscriptionRecord = SubscriptionEntitlementRecord & {
   createdAt: Date;
 };
 
-const LEGACY_CREATOR_TIERS = new Set(["CREATOR", "PRO", "PREMIUM"]);
+const LEGACY_CREATOR_TIERS = new Set(CREATOR_ACCESS_TIERS);
 
 export function isCreatorAccessForced(): boolean {
   return env.FORCE_CREATOR_ACCESS;
 }
 
-export function getEffectiveSubscriptionTier(tier: string | null | undefined): "CREATOR" | "FREE" {
-  if (isCreatorAccessForced()) return "CREATOR";
-  return normalizeCreatorTier(tier);
+export function getEffectiveSubscriptionTier(tier: string | null | undefined): EffectiveSubscriptionTier {
+  if (isCreatorAccessForced()) return "PRO";
+  return normalizeSubscriptionTier(tier);
 }
 
 export function getEffectiveUploadCredits(uploadCredits: number | null | undefined): number {
@@ -43,11 +46,21 @@ export function getEffectiveUploadCredits(uploadCredits: number | null | undefin
 }
 
 export function hasCreatorTier(tier: string | null | undefined): boolean {
-  return getEffectiveSubscriptionTier(tier) === "CREATOR";
+  return getSubscriptionTierRank(getEffectiveSubscriptionTier(tier)) >= getSubscriptionTierRank("PRO");
 }
 
-export function normalizeCreatorTier(tier: string | null | undefined): "CREATOR" | "FREE" {
-  return tier && LEGACY_CREATOR_TIERS.has(tier) ? "CREATOR" : "FREE";
+export function getSubscriptionTierRank(tier: string | null | undefined): number {
+  const normalized = normalizeSubscriptionTier(tier);
+  if (normalized === "PREMIUM") return 2;
+  if (normalized === "PRO") return 1;
+  return 0;
+}
+
+export function normalizeSubscriptionTier(tier: string | null | undefined): EffectiveSubscriptionTier {
+  if (!tier) return "FREE";
+  if (tier === "PREMIUM") return "PREMIUM";
+  if (LEGACY_CREATOR_TIERS.has(tier)) return "PRO";
+  return "FREE";
 }
 
 export function normalizeCreatorCodeValue(code: string): string {
@@ -95,7 +108,7 @@ export async function refreshCreatorCodeEntitlementsForUser(userId: string, now 
         userId,
         status: "ACTIVE",
         paymentMethod: "CREATOR_CODE" as any,
-        tier: { in: ["CREATOR", "PRO", "PREMIUM"] as any },
+        tier: { in: [...CREATOR_ACCESS_TIERS] as any },
       },
       orderBy: { createdAt: "desc" },
       select: {
@@ -147,10 +160,10 @@ export async function refreshCreatorCodeEntitlementsForUser(userId: string, now 
 export async function applyActiveSubscriptionEntitlements(
   tx: SubscriptionTx,
   subscription: SubscriptionEntitlementRecord,
-): Promise<{ normalizedTier: "CREATOR" | "FREE"; creditsGranted: number }> {
-  const normalizedTier = normalizeCreatorTier(subscription.tier);
+): Promise<{ normalizedTier: EffectiveSubscriptionTier; creditsGranted: number }> {
+  const normalizedTier = normalizeSubscriptionTier(subscription.tier);
 
-  if (normalizedTier !== "CREATOR" || subscription.status !== "ACTIVE") {
+  if (normalizedTier === "FREE" || subscription.status !== "ACTIVE") {
     await syncUserSubscriptionTier(tx, subscription.userId);
     return { normalizedTier, creditsGranted: 0 };
   }
@@ -161,7 +174,7 @@ export async function applyActiveSubscriptionEntitlements(
     currentBoundary && (!alreadyGrantedThrough || currentBoundary.getTime() > alreadyGrantedThrough.getTime()),
   );
 
-  const userData: Prisma.UserUpdateInput = { subscriptionTier: "CREATOR" };
+  const userData: Prisma.UserUpdateInput = { subscriptionTier: normalizedTier };
   if (shouldGrantCredits) {
     userData.uploadCredits = { increment: CREATOR_MONTHLY_UPLOAD_CREDITS };
   }
@@ -184,28 +197,37 @@ export async function applyActiveSubscriptionEntitlements(
   };
 }
 
-export async function syncUserSubscriptionTier(tx: SubscriptionTx, userId: string): Promise<"CREATOR" | "FREE"> {
+export async function syncUserSubscriptionTier(tx: SubscriptionTx, userId: string): Promise<EffectiveSubscriptionTier> {
   if (isCreatorAccessForced()) {
     await tx.user.update({
       where: { id: userId },
       data: {
-        subscriptionTier: "CREATOR",
+        subscriptionTier: "PRO",
         uploadCredits: { set: TEST_CREATOR_UPLOAD_CREDITS },
       },
     });
-    return "CREATOR";
+    return "PRO";
   }
 
-  const activeCreatorSubscription = await tx.subscription.findFirst({
+  const activeCreatorSubscriptions = await tx.subscription.findMany({
     where: {
       userId,
       status: "ACTIVE",
-      tier: { in: ["CREATOR", "PRO", "PREMIUM"] as any },
+      tier: { in: [...CREATOR_ACCESS_TIERS] as any },
     },
-    select: { id: true },
+    select: { tier: true },
   });
 
-  const nextTier = activeCreatorSubscription ? "CREATOR" : "FREE";
+  const nextTier = activeCreatorSubscriptions.reduce<EffectiveSubscriptionTier>(
+    (highestTier, subscription) => {
+      const candidateTier = normalizeSubscriptionTier(subscription.tier);
+      return getSubscriptionTierRank(candidateTier) > getSubscriptionTierRank(highestTier)
+        ? candidateTier
+        : highestTier;
+    },
+    "FREE",
+  );
+
   await tx.user.update({
     where: { id: userId },
     data: { subscriptionTier: nextTier },

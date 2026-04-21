@@ -151,7 +151,7 @@ export async function createTrack(req: Request, res: Response): Promise<void> {
     if (!hasCreatorTier(user.subscriptionTier)) {
       res.status(403).json({
         error: "Upgrade required",
-        message: "Uploading music requires an active Creator subscription",
+        message: "Uploading music requires an active Pro or Premium subscription",
         currentTier: getEffectiveSubscriptionTier(user.subscriptionTier),
       });
       return;

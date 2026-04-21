@@ -233,7 +233,7 @@ export const usersApi = {
   },
 
   updateProfile: (body: { displayName?: string; bio?: string; avatarUrl?: string }) =>
-    request<{ user: ApiUser }>("/api/users/profile", {
+    request<{ user: ApiUser; welcomeReward?: ApiWelcomeReward }>("/api/users/profile", {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
@@ -245,7 +245,7 @@ export const usersApi = {
     }),
 
   linkWallet: (walletAddress: string) =>
-    request<{ user: ApiUser; message: string }>("/api/users/link-wallet", {
+    request<{ user: ApiUser; message: string; welcomeReward?: ApiWelcomeReward }>("/api/users/link-wallet", {
       method: "POST",
       body: JSON.stringify({ walletAddress }),
     }),
@@ -418,10 +418,10 @@ export const adminApi = {
 
 // ─── Subscriptions ────────────────────────────────────────────────────────────
 export const subscriptionApi = {
-  getTiers: () => request<{ tiers: any[] }>("/api/subscriptions/tiers"),
-  getMySubscription: () => request<{ tier: string; subscription: any; pendingReview?: any }>("/api/subscriptions/me"),
-  checkout: (tier: string) => request<{ success?: boolean; message?: string; demoMode?: boolean; subscription?: any }>("/api/subscriptions/checkout", { method: "POST", body: JSON.stringify({ tier }) }),
-  redeemCode: (code: string) => request<{ success: boolean; message: string; code: string; creditsGranted: number; subscription: any }>("/api/subscriptions/redeem-code", { method: "POST", body: JSON.stringify({ code }) }),
+  getTiers: () => request<{ tiers: ApiSubscriptionTier[]; topArtistInfo?: ApiTopArtistInfo }>("/api/subscriptions/tiers"),
+  getMySubscription: () => request<{ tier: "FREE" | "CREATOR" | "PRO" | "PREMIUM"; subscription: ApiSubscriptionRecord | null; pendingReview?: ApiSubscriptionReview | null }>("/api/subscriptions/me"),
+  checkout: (tier: string) => request<{ success?: boolean; message?: string; demoMode?: boolean; subscription?: ApiSubscriptionRecord }>("/api/subscriptions/checkout", { method: "POST", body: JSON.stringify({ tier }) }),
+  redeemCode: (code: string) => request<{ success: boolean; message: string; code: string; creditsGranted: number; subscription: ApiSubscriptionRecord }>("/api/subscriptions/redeem-code", { method: "POST", body: JSON.stringify({ code }) }),
   cancel: () => request<{ success: boolean; message: string; demoMode?: boolean; currentPeriodEnd?: string }>("/api/subscriptions/cancel", { method: "POST" }),
 };
 
@@ -602,6 +602,46 @@ export interface ApiUser {
   totalEarned?: string;
   isVerified?: boolean;
   _count?: { followers: number; following: number; posts: number };
+}
+
+export interface ApiWelcomeReward {
+  eligible: boolean;
+  awarded: boolean;
+  amount: string | null;
+}
+
+export interface ApiSubscriptionTier {
+  id: "FREE" | "CREATOR" | "PRO" | "PREMIUM";
+  name: string;
+  monthlyPriceSmfi: number;
+  features: string[];
+}
+
+export interface ApiTopArtistInfo {
+  name: string;
+  how: string;
+  privileges: string[];
+}
+
+export interface ApiSubscriptionRecord {
+  id: string;
+  tier: "CREATOR" | "PRO" | "PREMIUM";
+  status: string;
+  paymentMethod?: string;
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+  cancelAtPeriodEnd?: boolean;
+}
+
+export interface ApiSubscriptionReview {
+  id: string;
+  tier: "CREATOR" | "PRO" | "PREMIUM";
+  paymentMethod?: string;
+  cryptoTxHash?: string;
+  cryptoWalletAddress?: string;
+  createdAt?: string;
+  reviewedAt?: string | null;
+  reviewNotes?: string | null;
 }
 
 export interface ApiPost {

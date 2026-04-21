@@ -33,10 +33,10 @@ export async function createBrochure(req: Request, res: Response): Promise<void>
     if (!track) { res.status(404).json({ error: "Track not found" }); return; }
     if (track.artistId !== userId) { res.status(403).json({ error: "Not your track" }); return; }
 
-    // Check CREATOR tier
+    // Check paid creator tier
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { subscriptionTier: true } });
     if (!user || !hasCreatorTier(user.subscriptionTier)) {
-      res.status(403).json({ error: "Creator subscription required to create NFT Brochures" });
+      res.status(403).json({ error: "Pro or Premium subscription required to create NFT Brochures" });
       return;
     }
 

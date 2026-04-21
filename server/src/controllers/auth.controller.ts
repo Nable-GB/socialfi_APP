@@ -133,7 +133,7 @@ export async function register(req: Request, res: Response): Promise<void> {
         referralCode: generateReferralCode(),
         referredById,
         ...(isCreatorAccessForced() ? {
-          subscriptionTier: "CREATOR",
+          subscriptionTier: "PRO",
           uploadCredits: TEST_CREATOR_UPLOAD_CREDITS,
         } : {}),
       },
@@ -220,7 +220,7 @@ export async function getNonce(req: Request, res: Response): Promise<void> {
       update: {
         nonce,
         ...(isCreatorAccessForced() ? {
-          subscriptionTier: "CREATOR",
+          subscriptionTier: "PRO",
           uploadCredits: TEST_CREATOR_UPLOAD_CREDITS,
         } : {}),
       },
@@ -231,7 +231,7 @@ export async function getNonce(req: Request, res: Response): Promise<void> {
         authProvider: "WALLET",
         referralCode: generateReferralCode(),
         ...(isCreatorAccessForced() ? {
-          subscriptionTier: "CREATOR",
+          subscriptionTier: "PRO",
           uploadCredits: TEST_CREATOR_UPLOAD_CREDITS,
         } : {}),
       },

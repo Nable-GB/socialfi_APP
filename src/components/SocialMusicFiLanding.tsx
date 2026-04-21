@@ -5,6 +5,7 @@ import {
   Play, Headphones, Radio, Gem, Rocket, Globe, UserPlus, Share2, Crown,
 } from "lucide-react";
 import { useLang, type Lang } from "../contexts/LangContext";
+import { PRODUCT_PHASES, type ProductPhaseStatus } from "../lib/productAlignment";
 
 // ─── Animated SVG Background ─────────────────────────────────────────────────
 
@@ -269,12 +270,14 @@ function FeatureCard({ icon: Icon, title, description, index }: {
 
 // ─── Roadmap Item ────────────────────────────────────────────────────────────
 
-function RoadmapItem({ phase, title, description, icon: Icon, index }: {
+function RoadmapItem({ phase, title, description, status, icon: Icon, index, isLast }: {
   phase: string;
   title: string;
   description: string;
+  status: string;
   icon: typeof Rocket;
   index: number;
+  isLast: boolean;
 }) {
   return (
     <motion.div
@@ -295,7 +298,7 @@ function RoadmapItem({ phase, title, description, icon: Icon, index }: {
         >
           <Icon size={20} className="text-white" />
         </motion.div>
-        {index < 1 && (
+        {!isLast && (
           <motion.div
             className="w-0.5 flex-1 mt-2"
             style={{ background: "linear-gradient(to bottom, #8b5cf6, transparent)", transformOrigin: "top" }}
@@ -309,7 +312,10 @@ function RoadmapItem({ phase, title, description, icon: Icon, index }: {
 
       {/* Content */}
       <div className="pb-12">
-        <span className="text-xs font-bold uppercase tracking-widest text-cyan-400 mb-1 block">{phase}</span>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-widest text-cyan-400 block">{phase}</span>
+          <span className="rounded-full border border-slate-700/25 bg-slate-900/60 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">{status}</span>
+        </div>
         <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
         <p className="text-sm text-slate-400 leading-relaxed max-w-lg">{description}</p>
       </div>
@@ -338,8 +344,29 @@ export function SocialMusicFiLanding({ onLaunchApp, onApplyArtist }: { onLaunchA
   ];
 
   const roadmap = [
-    { phase: lp.phase1, title: lp.phase1Title, description: lp.phase1Desc, icon: Gem },
-    { phase: lp.phase2, title: lp.phase2Title, description: lp.phase2Desc, icon: Globe },
+    ...PRODUCT_PHASES.map((phase) => {
+      const iconMap = {
+        gem: Gem,
+        trophy: Crown,
+        globe: Globe,
+        coins: Coins,
+      } as const;
+
+      const statusMap: Record<ProductPhaseStatus, string> = {
+        live: lp.statusLive,
+        rolling: lp.statusRolling,
+        planned: lp.statusPlanned,
+        later: lp.statusLater,
+      };
+
+      return {
+        phase: lp[phase.id as keyof typeof lp] as string,
+        title: lp[`${phase.id}Title` as keyof typeof lp] as string,
+        description: lp[`${phase.id}Desc` as keyof typeof lp] as string,
+        status: statusMap[phase.status],
+        icon: iconMap[phase.icon],
+      };
+    }),
   ];
 
   const incentivePlan = [
@@ -795,8 +822,13 @@ export function SocialMusicFiLanding({ onLaunchApp, onApplyArtist }: { onLaunchA
 
           <div className="pl-2">
             {roadmap.map((item, i) => (
-              <RoadmapItem key={i} {...item} index={i} />
+              <RoadmapItem key={i} {...item} index={i} isLast={i === roadmap.length - 1} />
             ))}
+          </div>
+
+          <div className="mt-8 rounded-3xl border border-amber-500/15 bg-amber-500/[0.06] p-5 text-sm leading-7 text-slate-300">
+            <div className="font-semibold uppercase tracking-[0.18em] text-amber-200">{lp.roadmapRuleLabel}</div>
+            <div className="mt-2">{lp.roadmapRuleBody}</div>
           </div>
         </div>
       </AnimatedSection>

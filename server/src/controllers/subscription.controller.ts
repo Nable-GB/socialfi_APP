@@ -22,20 +22,35 @@ function getStripe(): Stripe {
 // ─── Tier Config ─────────────────────────────────────────────────────────────
 
 export const SUBSCRIPTION_TIERS = {
-  CREATOR: {
-    name: "Creator",
+  PRO: {
+    name: "Pro",
     monthlyPriceSmfi: 10000,
     features: [
       "Upload music to the platform",
-      "Mint virtual NFTs (non-dividend NFTs)",
-      "Buy and sell NFTs with SMFI tokens",
+      "Mint virtual NFTs and create NFT brochures",
       "Use SMFI balance to upload music (1000 SMFI per track)",
-      "Create NFT Brochure for your tracks (promotional, sold once)",
-      "Enter monthly competition to become a Top Artist",
-      "Artist profile & branding tools",
+      "Enter monthly competitions for Top Artist status",
+      "Core artist profile and release tools",
     ],
   },
-};
+  PREMIUM: {
+    name: "Premium",
+    monthlyPriceSmfi: 25000,
+    features: [
+      "Everything in Pro",
+      "Higher daily earning caps",
+      "Faster promotion and support handling",
+      "Priority artist visibility and release support",
+      "Best fit for active artists preparing bigger launches",
+    ],
+  },
+} as const;
+
+function normalizeRequestedTier(tier: unknown): "PRO" | "PREMIUM" | null {
+  if (tier === "CREATOR" || tier === "PRO") return "PRO";
+  if (tier === "PREMIUM") return "PREMIUM";
+  return null;
+}
 
 // ─── GET /api/subscriptions/tiers — List available tiers ─────────────────────
 
@@ -53,7 +68,8 @@ export async function getSubscriptionTiers(_req: Request, res: Response): Promis
           "Follow artists and build your feed",
         ],
       },
-      { id: "CREATOR", ...SUBSCRIPTION_TIERS.CREATOR },
+      { id: "PRO", ...SUBSCRIPTION_TIERS.PRO },
+      { id: "PREMIUM", ...SUBSCRIPTION_TIERS.PREMIUM },
     ],
     topArtistInfo: {
       name: "Top Artist",
@@ -269,14 +285,16 @@ export async function redeemCreatorCode(req: Request, res: Response): Promise<vo
 
 export async function createSubscriptionCheckout(req: Request, res: Response): Promise<void> {
   try {
-    const { tier } = req.body;
+    const normalizedTier = normalizeRequestedTier(req.body?.tier);
     const userId = req.user!.userId;
-    const creatorPlanCostSmfi = SUBSCRIPTION_TIERS.CREATOR.monthlyPriceSmfi;
 
-    if (!tier || !["CREATOR"].includes(tier)) {
-      res.status(400).json({ error: "Invalid tier. Must be CREATOR." });
+    if (!normalizedTier) {
+      res.status(400).json({ error: "Invalid tier. Must be CREATOR, PRO, or PREMIUM." });
       return;
     }
+
+    const tierConfig = SUBSCRIPTION_TIERS[normalizedTier];
+    const planCostSmfi = tierConfig.monthlyPriceSmfi;
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -293,7 +311,7 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
           where: {
             userId,
             status: "ACTIVE",
-            tier: "CREATOR" as any,
+            tier: { in: ["CREATOR", "PRO", "PREMIUM"] as any },
           },
           orderBy: { createdAt: "desc" },
         });
@@ -305,7 +323,7 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
         const createdSubscription = await tx.subscription.create({
           data: {
             userId,
-            tier: "CREATOR" as any,
+            tier: normalizedTier as any,
             paymentMethod: "FIAT_STRIPE",
             status: "ACTIVE",
             currentPeriodStart: now,
@@ -320,7 +338,7 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
 
       sendDemoModeResponse(res, {
         success: true,
-        message: "Creator plan activated in demo mode.",
+        message: `${normalizedTier} plan activated in demo mode.`,
         subscription: {
           id: subscription.id,
           tier: subscription.tier,
@@ -344,8 +362,8 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
       return;
     }
 
-    if (Number(user.offChainBalance ?? 0) < creatorPlanCostSmfi) {
-      res.status(400).json({ error: `Insufficient SMFI balance. Need ${creatorPlanCostSmfi} SMFI.` });
+    if (Number(user.offChainBalance ?? 0) < planCostSmfi) {
+      res.status(400).json({ error: `Insufficient SMFI balance. Need ${planCostSmfi} SMFI.` });
       return;
     }
 
@@ -356,14 +374,14 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
       await tx.user.update({
         where: { id: userId },
         data: {
-          offChainBalance: { decrement: creatorPlanCostSmfi },
+          offChainBalance: { decrement: planCostSmfi },
         },
       });
 
       const createdSubscription = await tx.subscription.create({
         data: {
           userId,
-          tier: "CREATOR" as any,
+          tier: normalizedTier as any,
           paymentMethod: "FIAT_STRIPE",
           status: "ACTIVE",
           currentPeriodStart: now,
@@ -378,7 +396,7 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
 
     res.json({
       success: true,
-      message: `Creator plan activated for ${creatorPlanCostSmfi} SMFI.`,
+      message: `${normalizedTier} plan activated for ${planCostSmfi} SMFI.`,
       subscription: {
         id: subscription.id,
         tier: subscription.tier,
@@ -471,6 +489,7 @@ export async function cancelSubscription(req: Request, res: Response): Promise<v
 export async function createUsdtCheckout(req: Request, res: Response): Promise<void> {
   try {
     const { txHash, walletAddress } = req.body;
+    const normalizedTier = normalizeRequestedTier(req.body?.tier) ?? "PRO";
     const userId = req.user!.userId;
 
     if (!txHash || typeof txHash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
@@ -505,8 +524,8 @@ export async function createUsdtCheckout(req: Request, res: Response): Promise<v
       }),
     ]);
 
-    if (user.subscriptionTier === "CREATOR" as any || activeCreatorSubscription) {
-      res.status(400).json({ error: "Already subscribed as Creator." });
+    if (user.subscriptionTier !== "FREE" || activeCreatorSubscription) {
+      res.status(400).json({ error: "Already subscribed to a paid membership." });
       return;
     }
 
@@ -523,7 +542,7 @@ export async function createUsdtCheckout(req: Request, res: Response): Promise<v
       const pendingSubscription = await prisma.subscription.create({
         data: {
           userId,
-          tier: "CREATOR" as any,
+          tier: normalizedTier as any,
           paymentMethod: "CRYPTO_USDT",
           cryptoTxHash: txHash,
           cryptoWalletAddress: normalizedWalletAddress,
@@ -551,7 +570,7 @@ export async function createUsdtCheckout(req: Request, res: Response): Promise<v
     const pendingSubscription = await prisma.subscription.create({
       data: {
         userId,
-        tier: "CREATOR" as any,
+          tier: normalizedTier as any,
         paymentMethod: "CRYPTO_USDT",
         cryptoTxHash: txHash,
         cryptoWalletAddress: normalizedWalletAddress,
@@ -561,7 +580,7 @@ export async function createUsdtCheckout(req: Request, res: Response): Promise<v
 
     res.json({
       success: true,
-      message: "USDT payment submitted for admin review. Your Creator subscription will be activated within 24 hours.",
+      message: `USDT payment submitted for admin review. Your ${normalizedTier} subscription will be activated within 24 hours.`,
       subscriptionId: pendingSubscription.id,
       txHash,
       walletAddress: normalizedWalletAddress,

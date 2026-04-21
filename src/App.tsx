@@ -7,6 +7,7 @@ import {
   Mail,
   X,
   Headphones,
+  Radio,
   Trophy,
   Upload,
   User as UserIcon,
@@ -28,6 +29,7 @@ import { MePage } from "./components/MePage";
 import { FABMenu } from "./components/FABMenu";
 import { OnboardingFlow } from "./components/OnboardingFlow";
 import { NotificationCenter } from "./components/NotificationCenter";
+import { ProductOverviewPage } from "./components/ProductOverviewPage";
 import { authApi } from "./lib/api";
 import { toast } from "sonner";
 
@@ -236,6 +238,7 @@ function DesktopNav({ activeNav, setActiveNav, onOpenAuth }: { activeNav: string
 
   const navItems = [
     { id: "listen", icon: Headphones, label: t.nav.listen },
+    { id: "overview", icon: Radio, label: t.nav.overview },
     { id: "compete", icon: Trophy, label: t.nav.compete },
     { id: "create", icon: Upload, label: t.nav.create },
     { id: "me", icon: UserIcon, label: t.nav.me },
@@ -267,6 +270,7 @@ function BottomNav({ mobileTab, setMobileTab }: { mobileTab: string; setMobileTa
 
   const navItems = [
     { id: "listen", icon: Headphones, label: t.nav.listen },
+    { id: "overview", icon: Radio, label: t.nav.overview },
     { id: "compete", icon: Trophy, label: t.nav.compete },
     { id: "create", icon: Upload, label: t.nav.create },
     { id: "me", icon: UserIcon, label: t.nav.me },
@@ -597,6 +601,7 @@ export default function App() {
 
           <main className="min-w-0 rounded-[1.75rem] panel-sci p-5 lg:p-6 overflow-hidden">
             {activeNav === "listen" && <ListenPage />}
+            {activeNav === "overview" && <ProductOverviewPage />}
             {activeNav === "compete" && <CompetePage />}
             {activeNav === "create" && <CreatePage onOpenAuth={() => setAuthOpen(true)} onNavigate={navigateTo} />}
             {activeNav === "me" && <MePage onOpenAuth={() => setAuthOpen(true)} />}
@@ -606,6 +611,7 @@ export default function App() {
 
         <div className={`lg:hidden ${currentTrack ? "pb-52" : "pb-24"} pt-4`}>
           {mobileTab === "listen" && <ListenPage />}
+          {mobileTab === "overview" && <ProductOverviewPage />}
           {mobileTab === "compete" && <CompetePage />}
           {mobileTab === "create" && <CreatePage onOpenAuth={() => setAuthOpen(true)} onNavigate={navigateTo} />}
           {mobileTab === "me" && <MePage onOpenAuth={() => setAuthOpen(true)} />}

@@ -54,13 +54,16 @@ export function SettingsPage() {
     if (!displayName.trim()) { toast.error(t.settings.displayNameEmpty); return; }
     setSavingProfile(true);
     try {
-      await usersApi.updateProfile({
+      const result = await usersApi.updateProfile({
         displayName: displayName.trim(),
         bio: bio.trim(),
         avatarUrl: avatarUrl.trim() || undefined,
       });
       await refreshUser();
       toast.success(t.settings.profileUpdated);
+      if (result.welcomeReward?.awarded && result.welcomeReward.amount) {
+        toast.success(`${t.transactions.typeSignupBonus}: +${result.welcomeReward.amount} ${t.transactions.ledgerUnit}`);
+      }
     } catch (err: any) {
       toast.error(err?.message ?? t.settings.updateFailed);
     } finally {
@@ -89,9 +92,12 @@ export function SettingsPage() {
     setLinkingWallet(true);
     try {
       const address = wallet.address || await wallet.connect();
-      await usersApi.linkWallet(address);
+      const result = await usersApi.linkWallet(address);
       await refreshUser();
       toast.success(t.settings.walletLinked);
+      if (result.welcomeReward?.awarded && result.welcomeReward.amount) {
+        toast.success(`${t.transactions.typeSignupBonus}: +${result.welcomeReward.amount} ${t.transactions.ledgerUnit}`);
+      }
     } catch (err: any) {
       toast.error(err?.message ?? t.settings.linkFailed);
     } finally {

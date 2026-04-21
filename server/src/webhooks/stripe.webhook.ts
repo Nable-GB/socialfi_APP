@@ -180,8 +180,7 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
     const subscription = event.data.object as Stripe.Subscription;
     const userId = subscription.metadata?.userId;
     const tier = subscription.metadata?.tier as "PRO" | "PREMIUM" | "CREATOR" | undefined;
-    // Normalize legacy PRO/PREMIUM to CREATOR
-    const normalizedTier = tier === "PRO" || tier === "PREMIUM" ? "CREATOR" : tier;
+    const normalizedTier = tier === "CREATOR" ? "PRO" : tier;
 
     if (userId && normalizedTier) {
       try {

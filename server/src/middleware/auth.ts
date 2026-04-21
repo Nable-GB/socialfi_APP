@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
-import { getEffectiveSubscriptionTier, isCreatorAccessForced } from "../services/subscription.service.js";
+import { getEffectiveSubscriptionTier, getSubscriptionTierRank, isCreatorAccessForced } from "../services/subscription.service.js";
 
 export interface JwtPayload {
   userId: string;
@@ -63,10 +63,10 @@ export function requireRole(...roles: string[]) {
 
 /**
  * Middleware: Require a minimum subscription tier.
- * Tier hierarchy: FREE < CREATOR
- * Legacy: PRO maps to CREATOR, PREMIUM maps to CREATOR for backward compat.
+ * Tier hierarchy: FREE < PRO < PREMIUM.
+ * Legacy CREATOR rows are treated as PRO during the migration window.
  */
-const TIER_RANK: Record<string, number> = { FREE: 0, CREATOR: 1, PRO: 1, PREMIUM: 1 };
+const TIER_RANK: Record<string, number> = { FREE: 0, CREATOR: 1, PRO: 1, PREMIUM: 2 };
 
 export function requireTier(...allowedTiers: string[]) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -87,7 +87,7 @@ export function requireTier(...allowedTiers: string[]) {
         select: { subscriptionTier: true },
       });
 
-  const userTier = getEffectiveSubscriptionTier(user?.subscriptionTier);
+      const userTier = getEffectiveSubscriptionTier(user?.subscriptionTier);
 
       if (allowedTiers.includes(userTier)) {
         next();
@@ -96,7 +96,7 @@ export function requireTier(...allowedTiers: string[]) {
 
       // Also allow if user's tier rank is >= the minimum required
       const minRequired = Math.min(...allowedTiers.map(t => TIER_RANK[t] ?? 99));
-      if ((TIER_RANK[userTier] ?? 0) >= minRequired) {
+      if (getSubscriptionTierRank(userTier) >= minRequired) {
         next();
         return;
       }

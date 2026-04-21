@@ -12,6 +12,25 @@ export const REWARD_SPLIT = {
   AFFILIATE: 0.05,  // 5%  → referral/affiliate payouts
 } as const;
 
+export const SIGNUP_BONUS_AMOUNT = new Prisma.Decimal(25);
+
+type WelcomeRewardResult = {
+  eligible: boolean;
+  awarded: boolean;
+  amount: string | null;
+};
+
+function hasCompletedWelcomeProfile(user: {
+  displayName?: string | null;
+  bio?: string | null;
+  avatarUrl?: string | null;
+  walletAddress?: string | null;
+}): boolean {
+  const hasDisplayName = Boolean(user.displayName?.trim());
+  const hasProfileSignal = Boolean(user.bio?.trim() || user.avatarUrl || user.walletAddress);
+  return hasDisplayName && hasProfileSignal;
+}
+
 /**
  * Calculate the token reward allocations for a campaign.
  * Called when payment is confirmed (Stripe webhook or crypto verification).
@@ -24,6 +43,63 @@ export function calculateRewardSplit(totalRewardPool: Prisma.Decimal) {
     liquidityPool: new Prisma.Decimal(pool * REWARD_SPLIT.LIQUIDITY),
     affiliatePool: new Prisma.Decimal(pool * REWARD_SPLIT.AFFILIATE),
   };
+}
+
+export async function activateWelcomeReward(userId: string): Promise<WelcomeRewardResult> {
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        displayName: true,
+        bio: true,
+        avatarUrl: true,
+        walletAddress: true,
+        welcomeRewardGrantedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (!hasCompletedWelcomeProfile(user)) {
+      return { eligible: false, awarded: false, amount: null };
+    }
+
+    if (user.welcomeRewardGrantedAt) {
+      return { eligible: true, awarded: false, amount: SIGNUP_BONUS_AMOUNT.toString() };
+    }
+
+    const grantedAt = new Date();
+    const claim = await tx.user.updateMany({
+      where: {
+        id: userId,
+        welcomeRewardGrantedAt: null,
+      },
+      data: {
+        welcomeRewardGrantedAt: grantedAt,
+        offChainBalance: { increment: SIGNUP_BONUS_AMOUNT },
+        totalEarned: { increment: SIGNUP_BONUS_AMOUNT },
+      },
+    });
+
+    if (claim.count === 0) {
+      return { eligible: true, awarded: false, amount: SIGNUP_BONUS_AMOUNT.toString() };
+    }
+
+    await tx.rewardTransaction.create({
+      data: {
+        userId,
+        type: "SIGNUP_BONUS",
+        amount: SIGNUP_BONUS_AMOUNT,
+        description: "Welcome reward activated after basic profile setup",
+        status: "CONFIRMED",
+      },
+    });
+
+    return { eligible: true, awarded: true, amount: SIGNUP_BONUS_AMOUNT.toString() };
+  });
 }
 
 /**

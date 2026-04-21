@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "db:verify:tier-migration": "tsx scripts/verify-tier-migration.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:music": "tsx prisma/seed-music.ts",
     "db:seed:demo": "tsx prisma/seed-demo-showcase.ts",
