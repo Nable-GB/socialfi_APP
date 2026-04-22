@@ -147,16 +147,16 @@ export function SocialFeedPage({ mode, onOpenDiscover, onOpenAuth }: SocialFeedP
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/15 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/15 bg-cyan-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">
                     {mode === "forYou" ? <Sparkles size={12} /> : <Users size={12} />}
                     {mode === "forYou" ? t.listenHub.forYou : t.listenHub.followingFeed}
                   </div>
-                  <h2 className="mt-4 max-w-2xl text-[1.9rem] font-black tracking-[-0.035em] text-white sm:text-[2.05rem] sm:leading-[1.05]">{spotlightTitle}</h2>
-                  <p className="mt-2.5 max-w-2xl text-sm leading-6 text-slate-300">{spotlightSubtitle}</p>
+                  <h2 className="mt-4 max-w-xl text-[1.45rem] font-black tracking-[-0.035em] leading-[1] text-white sm:text-[1.65rem] sm:leading-[1.03] xl:text-[1.8rem]">{spotlightTitle}</h2>
+                  <p className="mt-2.5 max-w-xl text-[13px] leading-5 text-slate-300 sm:text-sm sm:leading-6">{spotlightSubtitle}</p>
                 </div>
                 <button
                   onClick={onOpenDiscover}
-                  className="hidden sm:inline-flex items-center gap-2 rounded-2xl border border-cyan-400/15 bg-cyan-500/10 px-4 py-2.5 text-xs font-semibold text-cyan-200 transition-colors hover:bg-cyan-500/15"
+                  className="hidden sm:inline-flex items-center gap-2 rounded-2xl border border-cyan-400/15 bg-cyan-500/10 px-3.5 py-2 text-[11px] font-semibold text-cyan-200 transition-colors hover:bg-cyan-500/15"
                 >
                   <Disc3 size={14} />
                   {t.listenHub.discoverMusic}
@@ -166,15 +166,15 @@ export function SocialFeedPage({ mode, onOpenDiscover, onOpenAuth }: SocialFeedP
               <div className="grid gap-2.5 sm:grid-cols-3">
                 <div className="rounded-2xl border border-slate-700/25 bg-slate-950/35 px-3.5 py-3">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">{t.listenHub.postsLabel}</div>
-                  <div className="mt-1.5 text-[1.55rem] font-bold leading-none text-white">{formatCompactNumber(visiblePosts.length)}</div>
+                  <div className="mt-1.5 text-[1.35rem] font-bold leading-none text-white sm:text-[1.45rem]">{formatCompactNumber(visiblePosts.length)}</div>
                 </div>
                 <div className="rounded-2xl border border-slate-700/25 bg-slate-950/35 px-3.5 py-3">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">{t.listenHub.creatorsLabel}</div>
-                  <div className="mt-1.5 text-[1.55rem] font-bold leading-none text-white">{formatCompactNumber(mode === "following" ? followingIds.size : trendingTracks.length)}</div>
+                  <div className="mt-1.5 text-[1.35rem] font-bold leading-none text-white sm:text-[1.45rem]">{formatCompactNumber(mode === "following" ? followingIds.size : trendingTracks.length)}</div>
                 </div>
                 <div className="rounded-2xl border border-slate-700/25 bg-slate-950/35 px-3.5 py-3">
                   <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500">{t.listenHub.playsLabel}</div>
-                  <div className="mt-1.5 text-[1.55rem] font-bold leading-none text-white">{formatCompactNumber(totalTrackPlays)}</div>
+                  <div className="mt-1.5 text-[1.35rem] font-bold leading-none text-white sm:text-[1.45rem]">{formatCompactNumber(totalTrackPlays)}</div>
                 </div>
               </div>
 
@@ -191,7 +191,7 @@ export function SocialFeedPage({ mode, onOpenDiscover, onOpenAuth }: SocialFeedP
                       className="min-h-[96px] resize-none border-white/8 bg-slate-950/50 text-sm leading-6 text-white placeholder:text-slate-500"
                     />
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-xs text-slate-500">
+                      <p className="text-[11px] leading-5 text-slate-500 sm:text-xs">
                         {isAuthenticated ? t.listenHub.composerHint : t.feed.signInToPost}
                       </p>
                       <div className="flex items-center gap-2">
@@ -220,8 +220,8 @@ export function SocialFeedPage({ mode, onOpenDiscover, onOpenAuth }: SocialFeedP
             <div className="space-y-3 rounded-[1.5rem] border border-slate-700/25 bg-slate-950/32 p-3.5 sm:p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">{t.listenHub.queueTitle}</div>
-                  <p className="mt-2 text-xs leading-6 text-slate-400">{t.listenHub.queueSubtitle}</p>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">{t.listenHub.queueTitle}</div>
+                  <p className="mt-2 text-[11px] leading-5 text-slate-400 sm:text-xs sm:leading-6">{t.listenHub.queueSubtitle}</p>
                 </div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-700/25 bg-slate-900/60 text-cyan-300">
                   <Disc3 size={16} />
@@ -246,8 +246,8 @@ export function SocialFeedPage({ mode, onOpenDiscover, onOpenAuth }: SocialFeedP
                         <Flame size={11} />
                         {t.listenHub.trendingTitle}
                       </div>
-                      <p className="mt-2 truncate text-sm font-semibold leading-5 text-white">{featuredTrack.title}</p>
-                      <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
+                      <p className="mt-2 truncate text-[13px] font-semibold leading-5 text-white sm:text-sm">{featuredTrack.title}</p>
+                      <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-400 sm:text-xs">
                         <span className="truncate">{getArtistName(featuredTrack)}</span>
                         {featuredTrack.artist?.isVerified && <BadgeCheck size={13} className="shrink-0 text-cyan-300" />}
                       </div>
@@ -274,8 +274,8 @@ export function SocialFeedPage({ mode, onOpenDiscover, onOpenAuth }: SocialFeedP
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold leading-5 text-slate-100">{track.title}</p>
-                      <p className="truncate text-xs text-slate-500">{getArtistName(track)}</p>
+                      <p className="truncate text-[13px] font-semibold leading-5 text-slate-100 sm:text-sm">{track.title}</p>
+                      <p className="truncate text-[11px] text-slate-500 sm:text-xs">{getArtistName(track)}</p>
                     </div>
                     <div className="text-[11px] font-mono text-slate-500">{formatCompactNumber(track.playCount)}</div>
                   </button>
@@ -288,11 +288,11 @@ export function SocialFeedPage({ mode, onOpenDiscover, onOpenAuth }: SocialFeedP
         <section className="rounded-[1.6rem] border border-slate-700/20 bg-[linear-gradient(180deg,rgba(6,12,25,0.98),rgba(7,14,28,0.92))] p-3.5 shadow-[0_20px_60px_rgba(2,12,27,0.22)] sm:p-4">
           <div className="flex items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">{t.listenHub.feedColumnTitle}</div>
-              <h3 className="mt-2 text-lg font-bold text-white">{mode === "forYou" ? t.listenHub.socialTitle : t.listenHub.followingFeed}</h3>
-              <p className="mt-1 text-xs leading-5 text-slate-400">{mode === "forYou" ? t.listenHub.socialSubtitle : t.listenHub.followingSubtitle}</p>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">{t.listenHub.feedColumnTitle}</div>
+              <h3 className="mt-2 text-base font-bold text-white sm:text-[17px]">{mode === "forYou" ? t.listenHub.socialTitle : t.listenHub.followingFeed}</h3>
+              <p className="mt-1 text-[11px] leading-5 text-slate-400 sm:text-xs">{mode === "forYou" ? t.listenHub.socialSubtitle : t.listenHub.followingSubtitle}</p>
             </div>
-            <div className="hidden rounded-full border border-cyan-500/15 bg-cyan-500/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300 sm:inline-flex">
+            <div className="hidden rounded-full border border-cyan-500/15 bg-cyan-500/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300 sm:inline-flex">
               {formatCompactNumber(visiblePosts.length)} {t.listenHub.postsLabel}
             </div>
           </div>
@@ -369,9 +369,9 @@ export function SocialFeedPage({ mode, onOpenDiscover, onOpenAuth }: SocialFeedP
         <section className="rounded-[1.6rem] border border-slate-700/20 bg-[linear-gradient(180deg,rgba(8,14,30,0.92),rgba(6,12,24,0.88))] p-3.5 shadow-[0_18px_50px_rgba(2,12,27,0.18)] sm:p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">{t.listenHub.pulseTitle}</div>
-              <h3 className="mt-2 text-sm font-semibold text-white">{t.musicFeed.title}</h3>
-              <p className="mt-1 text-xs leading-relaxed text-slate-500">{t.listenHub.pulseSubtitle}</p>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">{t.listenHub.pulseTitle}</div>
+              <h3 className="mt-2 text-[13px] font-semibold text-white sm:text-sm">{t.musicFeed.title}</h3>
+              <p className="mt-1 text-[11px] leading-5 text-slate-500 sm:text-xs sm:leading-relaxed">{t.listenHub.pulseSubtitle}</p>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-700/25 bg-slate-900/70 text-cyan-300">
               <Sparkles size={16} />
@@ -402,8 +402,8 @@ export function SocialFeedPage({ mode, onOpenDiscover, onOpenAuth }: SocialFeedP
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold leading-5 text-slate-100">{track.title}</p>
-                    <p className="truncate text-xs text-slate-500">{getArtistName(track)}</p>
+                    <p className="truncate text-[13px] font-semibold leading-5 text-slate-100 sm:text-sm">{track.title}</p>
+                    <p className="truncate text-[11px] text-slate-500 sm:text-xs">{getArtistName(track)}</p>
                   </div>
                   <div className="text-[11px] font-mono text-slate-500">{formatCompactNumber(track.playCount)}</div>
                 </button>
@@ -413,8 +413,8 @@ export function SocialFeedPage({ mode, onOpenDiscover, onOpenAuth }: SocialFeedP
         </section>
 
         <section className="rounded-[1.6rem] border border-cyan-500/15 bg-[linear-gradient(135deg,rgba(34,211,238,0.12),rgba(99,102,241,0.16))] p-4 shadow-[0_18px_50px_rgba(8,145,178,0.12)]">
-          <h3 className="text-sm font-semibold text-white">{t.listenHub.discoverMusic}</h3>
-          <p className="mt-1 text-xs leading-relaxed text-slate-100/75">{t.listenHub.socialRailCopy}</p>
+          <h3 className="text-[13px] font-semibold text-white sm:text-sm">{t.listenHub.discoverMusic}</h3>
+          <p className="mt-1 text-[11px] leading-5 text-slate-100/75 sm:text-xs sm:leading-relaxed">{t.listenHub.socialRailCopy}</p>
           <button
             onClick={onOpenDiscover}
             className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-white/15"
