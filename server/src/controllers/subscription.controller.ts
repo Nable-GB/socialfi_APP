@@ -203,7 +203,7 @@ export async function redeemCreatorCode(req: Request, res: Response): Promise<vo
       });
 
       if (activeCreatorSubscription) {
-        throw new Error("You already have active Creator access.");
+        throw new Error("You already have an active Pro or Premium subscription.");
       }
 
       const subscription = await tx.subscription.create({
@@ -239,7 +239,7 @@ export async function redeemCreatorCode(req: Request, res: Response): Promise<vo
 
     res.json({
       success: true,
-      message: "Creator access activated successfully.",
+      message: "Creator code redeemed successfully.",
       code: result.creatorCode.code,
       redemptionId: result.redemption.id,
       creditsGranted: result.entitlement.creditsGranted,
@@ -265,7 +265,7 @@ export async function redeemCreatorCode(req: Request, res: Response): Promise<vo
       || err.message === "Creator code has expired."
       || err.message === "Creator code redemption limit has been reached."
       || err.message === "You have already redeemed this Creator code."
-      || err.message === "You already have active Creator access."
+      || err.message === "You already have an active Pro or Premium subscription."
     )) {
       res.status(400).json({ error: err.message });
       return;
@@ -352,7 +352,7 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
     }
 
     if (isCreatorAccessForced()) {
-      res.status(400).json({ error: "Creator access is already enabled for all users during testing." });
+      res.status(400).json({ error: "Pro access is already enabled for all users during testing." });
       return;
     }
 
@@ -386,7 +386,7 @@ export async function createSubscriptionCheckout(req: Request, res: Response): P
           status: "ACTIVE",
           currentPeriodStart: now,
           currentPeriodEnd: periodEnd,
-          reviewNotes: `Activated with off-chain SMFI payment of ${creatorPlanCostSmfi} SMFI`,
+          reviewNotes: `Activated with off-chain SMFI payment of ${planCostSmfi} SMFI`,
         },
       });
 
@@ -443,7 +443,7 @@ export async function cancelSubscription(req: Request, res: Response): Promise<v
     }
 
     if (subscription.paymentMethod === "CREATOR_CODE") {
-      res.status(400).json({ error: "Complimentary Creator access redeemed with a code cannot be cancelled from your account." });
+      res.status(400).json({ error: "Complimentary Pro access redeemed with a Creator code cannot be cancelled from your account." });
       return;
     }
 
@@ -562,7 +562,7 @@ export async function createUsdtCheckout(req: Request, res: Response): Promise<v
     }
 
     if (isCreatorAccessForced()) {
-      res.status(400).json({ error: "Creator access is already enabled for all users during testing." });
+      res.status(400).json({ error: "Pro access is already enabled for all users during testing." });
       return;
     }
 

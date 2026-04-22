@@ -96,36 +96,38 @@ export function FeedPost({ post, onClaimReward, onLike, onComment, onClaimAdRewa
   };
 
   const avatarUrl = post.author.avatarUrl ?? `https://api.dicebear.com/9.x/avataaars/svg?seed=${post.author.username}`;
+  const createdDate = new Date(post.createdAt).toLocaleDateString();
+  const actionButtonClassName = "inline-flex items-center gap-1.5 rounded-full border border-slate-800/80 bg-slate-950/55 px-3 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:border-slate-700 hover:bg-slate-900/80";
 
   return (
     <>
-      <article className={`rounded-2xl p-5 feed-item border ${
+      <article className={`rounded-[1.45rem] p-4 shadow-[0_18px_44px_rgba(2,6,23,0.18)] feed-item border sm:p-5 ${
         post.isSponsored
-          ? 'border-indigo-500/25 bg-gradient-to-br from-slate-900/90 to-slate-800/80'
-          : 'glass border-slate-700/10'
+          ? 'border-indigo-500/25 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(30,41,59,0.92))]'
+          : 'border-slate-800/70 bg-[linear-gradient(180deg,rgba(2,6,23,0.96),rgba(10,15,28,0.92))]'
       }`}>
         {post.isSponsored && (
-          <div className="flex items-center gap-2 mb-3 pb-2.5 border-b border-indigo-500/20">
+          <div className="mb-3 flex items-center gap-2 border-b border-indigo-500/20 pb-2.5">
             <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" style={{boxShadow:'0 0 4px #818cf8'}} />
             <span className="text-xs font-medium text-indigo-400 font-mono tracking-wider">{t.feed.sponsored}</span>
           </div>
         )}
-        <div className="flex items-start gap-3">
-          <img src={avatarUrl} alt={post.author.username} className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-slate-700/40" />
+        <div className="flex items-start gap-3.5">
+          <img src={avatarUrl} alt={post.author.username} className="h-10 w-10 rounded-full object-cover flex-shrink-0 border border-slate-700/40 shadow-[0_8px_20px_rgba(15,23,42,0.28)]" />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="font-semibold text-sm text-slate-100">{post.author.displayName ?? post.author.username}</span>
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <span className="text-[15px] font-semibold tracking-[-0.01em] text-slate-100">{post.author.displayName ?? post.author.username}</span>
               {post.author.isVerified && <CheckCircle size={13} className="text-cyan-400" />}
-              <span className="text-xs text-slate-600 font-mono">@{post.author.username}</span>
-              <span className="text-xs text-slate-700 font-mono ml-auto">{new Date(post.createdAt).toLocaleDateString()}</span>
+              <span className="text-xs text-slate-500 font-mono">@{post.author.username}</span>
+              <span className="ml-auto rounded-full border border-slate-800/80 bg-slate-950/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{createdDate}</span>
             </div>
-            <p className="mt-2 text-sm leading-relaxed text-slate-300 whitespace-pre-wrap">{post.content}</p>
+            <p className="mt-2.5 text-[15px] leading-7 text-slate-300 whitespace-pre-wrap">{post.content}</p>
           </div>
         </div>
 
         {/* Media preview */}
         {post.mediaUrl && (
-          <div className="mt-3 rounded-xl overflow-hidden border border-slate-700/20 max-h-96 bg-slate-800/30">
+          <div className="mt-4 overflow-hidden rounded-[1.15rem] border border-slate-800/80 bg-slate-900/40 max-h-96">
             {post.mediaUrl.match(/\.(mp4|webm|mov)(\?|$)/i) ? (
               <video
                 src={post.mediaUrl}
@@ -149,7 +151,7 @@ export function FeedPost({ post, onClaimReward, onLike, onComment, onClaimAdRewa
           <button
             onClick={handleEarn}
             disabled={post.rewardClaimed}
-            className="mt-4 w-full py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-[1rem] py-3 text-sm font-bold transition-all"
             style={post.rewardClaimed ? {
               background:'rgba(16,185,129,0.15)', border:'1px solid rgba(16,185,129,0.3)', color:'#34d399', cursor:'default'
             } : {
@@ -163,31 +165,31 @@ export function FeedPost({ post, onClaimReward, onLike, onComment, onClaimAdRewa
         )}
 
         {/* Actions */}
-        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-700/10">
+        <div className="mt-4 flex flex-wrap items-center gap-2.5 border-t border-slate-800/80 pt-3.5">
           <button onClick={handleLike}
-            className="flex items-center gap-1.5 text-slate-400 hover:text-pink-400 transition-colors">
+            className={`${actionButtonClassName} hover:text-pink-400`}>
             <Heart size={16} className={liked ? 'text-pink-400 fill-pink-400' : ''} />
             <span className="text-xs font-mono">{likeCount}</span>
           </button>
           <button onClick={handleOpenComments}
-            className="flex items-center gap-1.5 text-slate-400 hover:text-cyan-400 transition-colors">
+            className={`${actionButtonClassName} hover:text-cyan-400`}>
             <MessageCircle size={16} />
             <span className="text-xs font-mono">{commentCount}</span>
           </button>
           <button onClick={() => { navigator.clipboard.writeText(`https://smfi.app/post/${post.id}`); toast.success(t.feed.linkCopied); }}
-            className="flex items-center gap-1.5 text-slate-400 hover:text-indigo-400 transition-colors">
+            className={`${actionButtonClassName} hover:text-indigo-400`}>
             <Share2 size={16} />
             <span className="text-xs font-mono">{post.sharesCount}</span>
           </button>
           {post.adCampaign?.targetUrl && (
             <a href={post.adCampaign.targetUrl} target="_blank" rel="noreferrer"
-              className="ml-auto flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300">
+              className="ml-auto inline-flex items-center gap-1 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-300 transition-colors hover:bg-indigo-500/15 hover:text-indigo-200">
               <ExternalLink size={12} />{t.feed.learnMore}
             </a>
           )}
           {isOwner && !post.isSponsored && (
             <button onClick={handleDelete}
-              className="ml-auto flex items-center gap-1 text-slate-600 hover:text-red-400 transition-colors">
+              className="ml-auto inline-flex items-center gap-1 rounded-full border border-slate-800/80 bg-slate-950/55 px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-300">
               <Trash2 size={14} />
             </button>
           )}

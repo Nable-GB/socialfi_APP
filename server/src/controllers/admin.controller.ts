@@ -405,7 +405,7 @@ export async function approveUsdtSubscription(req: Request, res: Response): Prom
     });
 
     if (duplicateActive) {
-      res.status(400).json({ error: "User already has an active Creator subscription." });
+      res.status(400).json({ error: "User already has an active Pro or Premium subscription." });
       return;
     }
 
@@ -434,7 +434,7 @@ export async function approveUsdtSubscription(req: Request, res: Response): Prom
       success: true,
       subscription: result.approvedSubscription,
       creditsGranted: result.entitlement.creditsGranted,
-      message: "USDT Creator subscription approved successfully.",
+      message: "USDT Pro subscription approved successfully.",
     });
   } catch (err) {
     if (err instanceof z.ZodError) {

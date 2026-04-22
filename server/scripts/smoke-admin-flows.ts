@@ -117,10 +117,10 @@ async function main() {
   console.log(`Redeemed Creator code and granted legacy entitlement value ${redemption.creditsGranted}`);
 
   const creatorCodeSubscriptionState = await request<{ tier: string; subscription: JsonRecord | null; pendingReview: JsonRecord | null }>("/api/subscriptions/me", {}, creatorCodeUser.token);
-  if (creatorCodeSubscriptionState.tier !== "CREATOR" || creatorCodeSubscriptionState.subscription?.paymentMethod !== "CREATOR_CODE") {
+  if (creatorCodeSubscriptionState.tier !== "PRO" || creatorCodeSubscriptionState.subscription?.paymentMethod !== "CREATOR_CODE") {
     throw new Error(`Creator code subscription state not updated correctly: ${JSON.stringify(creatorCodeSubscriptionState)}`);
   }
-  console.log("Creator code user moved to CREATOR tier via complimentary access");
+  console.log("Creator code user moved to PRO tier via complimentary access");
 
   const creatorCodeQueue = await request<{ codes: Array<JsonRecord> }>(`/api/admin/creator-codes?search=${encodeURIComponent(creatorCodeValue)}`, {}, admin.token);
   const matchingCode = creatorCodeQueue.codes.find((code) => code.code === creatorCodeValue);
@@ -171,10 +171,10 @@ async function main() {
   console.log(`Approved USDT subscription and granted legacy entitlement value ${approval.creditsGranted}`);
 
   const subscriptionState = await request<{ tier: string; subscription: JsonRecord | null; pendingReview: JsonRecord | null }>("/api/subscriptions/me", {}, tempUser.token);
-  if (subscriptionState.tier !== "CREATOR" || subscriptionState.pendingReview !== null) {
+  if (subscriptionState.tier !== "PRO" || subscriptionState.pendingReview !== null) {
     throw new Error(`Subscription state not updated correctly: ${JSON.stringify(subscriptionState)}`);
   }
-  console.log(`User subscription moved to CREATOR and pending review cleared`);
+  console.log(`User subscription moved to PRO and pending review cleared`);
 
   const trackTitle = `Smoke Flow ${Date.now().toString(36)}`;
   const createdTrack = await request<{ success: boolean; track: JsonRecord }>("/api/music/tracks", {

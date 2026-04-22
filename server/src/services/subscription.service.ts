@@ -26,7 +26,7 @@ type CreatorCodeSubscriptionRecord = SubscriptionEntitlementRecord & {
   createdAt: Date;
 };
 
-const LEGACY_CREATOR_TIERS = new Set(CREATOR_ACCESS_TIERS);
+const LEGACY_CREATOR_TIERS: ReadonlySet<string> = new Set(CREATOR_ACCESS_TIERS);
 
 export function isCreatorAccessForced(): boolean {
   return env.FORCE_CREATOR_ACCESS;
